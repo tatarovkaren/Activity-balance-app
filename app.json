@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Баланс",
+    "name": "Activity Balance",
     "slug": "balans",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -21,8 +21,9 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "output": "single",
-      "name": "Баланс — баланс энергии",
-      "shortName": "Баланс",
+      "name": "Activity Balance — баланс энергии",
+      "shortName": "Activity Balance",
+      "description": "Activity Balance — ваш персональный дашборд баланса энергии: тренировки, повседневная активность, питание и вес в одном визуале.",
       "lang": "ru",
       "themeColor": "#080B10",
       "backgroundColor": "#080B10",
