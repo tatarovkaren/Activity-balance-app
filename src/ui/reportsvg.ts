@@ -75,6 +75,6 @@ export function reportSvg(p: {
       y += 18;
     }
   }
-  g += `<text x="24" y="${H - 16}" font-size="10" fill="${t.muted}" font-family="sans-serif">Activity Balance · оценки по формулам и тренду веса, не медицинская рекомендация</text>`;
+  g += `<text x="24" y="${H - 16}" font-size="10" fill="${t.muted}" font-family="sans-serif">Баланс · оценки по формулам и тренду веса, не медицинская рекомендация</text>`;
   return { svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${g}</svg>`, w: W, h: H };
 }
