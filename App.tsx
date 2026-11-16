@@ -5,6 +5,7 @@ import { todayISO, type ISODate } from './src/core/dates';
 import { StoreProvider, useStore } from './src/data/store';
 import { ThemeProvider, useTheme } from './src/ui/theme';
 import { T } from './src/ui/kit';
+import { I18nProvider, useI18n } from './src/i18n';
 import { LoginScreen } from './src/screens/Login';
 import { DayScreen } from './src/screens/Day';
 import { FactScreen } from './src/screens/Fact';
@@ -15,17 +16,18 @@ import { CuratorScreen } from './src/screens/Curator';
 
 type Tab = 'day' | 'fact' | 'charts' | 'photo' | 'profile' | 'hand';
 
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'day', label: 'День', icon: '◉' },
-  { id: 'fact', label: 'Расход', icon: '⚖' },
-  { id: 'charts', label: 'Графики', icon: '📈' },
-  { id: 'photo', label: 'Фото', icon: '📷' },
-  { id: 'profile', label: 'Профиль', icon: '⚙' },
+const TABS: { id: Exclude<Tab, 'hand'>; icon: string }[] = [
+  { id: 'day', icon: '◉' },
+  { id: 'fact', icon: '⚖' },
+  { id: 'charts', icon: '📈' },
+  { id: 'photo', icon: '📷' },
+  { id: 'profile', icon: '⚙' },
 ];
 
 function Shell() {
   const { ready, session, data, sync } = useStore();
   const t = useTheme();
+  const { tx } = useI18n();
   const { width } = useWindowDimensions();
   const [tab, setTab] = useState<Tab>('day');
   const [sel, setSel] = useState<ISODate>(todayISO());
@@ -66,7 +68,7 @@ function Shell() {
             {tab === 'profile' ? <ProfileScreen openHand={() => setTab('hand')} /> : null}
             {tab === 'hand' ? <HandSetup initial={data.hand} onDone={() => setTab('profile')} /> : null}
             <Text style={{ color: sync.kind === 'offline' ? t.amber : t.muted, fontSize: 12, textAlign: 'center', marginTop: 8 }} testID="syncStatus">
-              {sync.text}
+              {sync.code === 'saved' || sync.code === 'synced' ? tx.sync[sync.code](sync.at || '') : tx.sync[sync.code]}
             </Text>
           </>
         )}
@@ -79,7 +81,7 @@ function Shell() {
               return (
                 <Pressable key={x.id} onPress={() => setTab(x.id)} style={{ flex: 1, alignItems: 'center', paddingVertical: 8 }} testID={'tab-' + x.id}>
                   <T size={16} color={on ? t.amber : t.muted}>{x.icon}</T>
-                  <T size={11} color={on ? t.amber : t.muted}>{x.label}</T>
+                  <T size={11} color={on ? t.amber : t.muted}>{tx.tabs[x.id]}</T>
                 </Pressable>
               );
             })}
@@ -94,9 +96,11 @@ function Shell() {
 function Themed() {
   const { data } = useStore();
   return (
-    <ThemeProvider pref={data.profile.theme}>
-      <Shell />
-    </ThemeProvider>
+    <I18nProvider pref={data.profile.lang}>
+      <ThemeProvider pref={data.profile.theme}>
+        <Shell />
+      </ThemeProvider>
+    </I18nProvider>
   );
 }
 

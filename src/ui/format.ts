@@ -1,64 +1,89 @@
-import { dm, dmy, type ISODate } from '../core/dates';
-import { fmtSignedKg, type AdaptiveResult, type GoalForecast } from '../core/adaptive';
+// Тексты «расхода по факту» и прогноза цели на языке интерфейса. Ядро (core/adaptive) отдаёт
+// коды и числа, здесь они превращаются в строки через словарь (src/i18n).
 
-export const int = (v: number) => Math.round(v).toLocaleString('ru-RU').replace(/,/g, ' ');
-export const kg = (v: number, d = 1) => v.toFixed(d).replace('.', ',');
+import { PARAMS, type AdaptiveResult, type AutoDetail, type ExclReason, type GoalForecast } from '../core/adaptive';
+import type { I18n } from '../i18n/core';
 
-export const RELIABILITY_LABEL = { high: 'высокая', medium: 'средняя', low: 'низкая' } as const;
-
-export function factLine(r: AdaptiveResult): string {
-  return r.slope != null
-    ? `Факт по весу (тренд, ${r.nWts} взвеш., без необычных дней): ${fmtSignedKg(r.slope * 7)} кг/нед`
-    : 'Факт по весу: нужно ≥8 взвешиваний в обычные дни (размах ≥15 дн.)';
+export function reasonText(L: I18n, r: ExclReason): string {
+  return L.tx.common.reason[r];
 }
 
-export function calibLine(r: AdaptiveResult): { main: string; sub: string } {
+export function detailText(L: I18n, d: AutoDetail | undefined): string {
+  if (!d) return '';
+  return d.kind === 'weightJump' ? L.tx.fact.detailWeight(L.f.signed(d.dv, 1)) : L.tx.fact.detailKcal(L.f.int(d.kcal), L.f.int(d.usual));
+}
+
+export function factLine(L: I18n, r: AdaptiveResult): string {
+  return r.slope != null ? L.tx.fact.factLine(r.nWts, L.f.signed(r.slope * 7)) : L.tx.fact.factLineEmpty;
+}
+
+export function calibLine(L: I18n, r: AdaptiveResult): { main: string; sub: string } {
+  const { tx, f } = L;
   if (r.alpha > 0 && r.E != null) {
     const diff = r.formula ? (r.formula / r.E - 1) * 100 : 0;
-    const cmp = Math.abs(diff) < 5 ? 'совпадает' : (diff > 0 ? 'завышает на ' : 'занижает на ') + Math.round(Math.abs(diff)) + '%';
-    return { main: `${int(r.E)} ккал/день`, sub: `по факту · формула ${r.formula ? int(r.formula) : '—'}, ${cmp}` };
+    const pct = Math.round(Math.abs(diff));
+    const cmp = Math.abs(diff) < 5 ? tx.fact.cmpSame : diff > 0 ? tx.fact.cmpOver(pct) : tx.fact.cmpUnder(pct);
+    return { main: `${f.int(r.E)} ${tx.common.kcalPerDay}`, sub: tx.fact.byFact(r.formula ? f.int(r.formula) : '—', cmp) };
   }
   if (r.formula)
     return {
-      main: `${int(r.formula)} ккал/день`,
-      sub: `по формуле — данных пока мало: взвешиваний ${r.nW28} из 14, дней с калориями ${r.nK28} из 20`,
+      main: `${f.int(r.formula)} ${tx.common.kcalPerDay}`,
+      sub: tx.fact.byFormula(r.nW28, PARAMS.MIN_W, r.nK28, PARAMS.MIN_K),
     };
-  return { main: '—', sub: 'нужны вес и калории' };
+  return { main: '—', sub: tx.fact.needData };
 }
 
-export function reliabilityDetails(r: AdaptiveResult): string {
-  const reasons = Object.keys(r.reasons)
-    .map((k) => k + ' ' + r.reasons[k])
-    .join(', ');
-  return (
-    `обычных дней ${r.normal28} из 28` +
-    (r.excl28 ? `, исключено ${r.excl28}${reasons ? ' (' + reasons + ')' : ''}` : '') +
-    (r.gap >= 3 ? ` · пропуск ${r.gap} дн. подряд` : '')
-  );
+export function reliabilityDetails(L: I18n, r: AdaptiveResult): string {
+  const reasons = (Object.keys(r.reasons) as ExclReason[]).map((k) => reasonText(L, k) + ' ' + r.reasons[k]).join(', ');
+  return L.tx.fact.relDetails(r.normal28, r.excl28, reasons, r.gap);
 }
 
-export function goalText(g: GoalForecast): string {
-  const gs = (v: number) => kg(v, 1) + ' кг';
+export function goalText(L: I18n, g: GoalForecast): string {
+  const { tx, f } = L;
+  const gs = (v: number) => f.num(v, 1);
   switch (g.kind) {
     case 'noGoal':
-      return 'Прогноз цели: укажите цель в профиле';
+      return tx.goal.noGoal;
     case 'noWeight':
-      return `Прогноз цели ${gs(g.goal)}: нужен вес`;
+      return tx.goal.noWeight(gs(g.goal));
     case 'reached':
-      return `Цель ${gs(g.goal)}: достигнута по тренду веса`;
+      return tx.goal.reached(gs(g.goal));
     case 'noTrend':
-      return `Прогноз цели ${gs(g.goal)}: появится, когда будет тренд веса (≥8 взвешиваний в обычные дни за 15+ дней)`;
+      return tx.goal.noTrend(gs(g.goal));
     case 'notApproaching':
-      return `Цель ${gs(g.goal)}: при текущем темпе (${fmtSignedKg(g.paceKgWeek)} кг/нед) не приближается · по тренду сейчас ${kg(g.current)} кг`;
+      return tx.goal.notApproaching(gs(g.goal), f.signed(g.paceKgWeek), f.num(g.current));
     case 'tooLong':
-      return `Цель ${gs(g.goal)}: больше 2 лет при текущем темпе (${fmtSignedKg(g.paceKgWeek)} кг/нед)`;
+      return tx.goal.tooLong(gs(g.goal), f.signed(g.paceKgWeek));
     case 'date':
-      return (
-        `Цель ${gs(g.goal)}: ≈ ${dmy(g.date)} (через ${g.days < 14 ? g.days + ' дн.' : Math.round(g.days / 7) + ' нед.'}) · темп ${fmtSignedKg(g.paceKgWeek)} кг/нед по тренду, осталось ${kg(Math.abs(g.left), 2)} кг` +
-        (g.rough ? ' · прогноз грубый, данных мало' : '')
+      return tx.goal.date(
+        gs(g.goal),
+        f.dmy(g.date),
+        g.days < 14 ? tx.common.days(g.days) : tx.common.weeks(Math.round(g.days / 7)),
+        f.signed(g.paceKgWeek),
+        f.num(Math.abs(g.left), 2),
+        g.rough,
       );
   }
 }
 
-export { dm, dmy };
-export type { ISODate };
+/** Короткий текст для колонки «До цели» в кабинете куратора. */
+export function goalShort(L: I18n, g: GoalForecast): string {
+  const { tx, f } = L;
+  return g.kind === 'date'
+    ? f.dmy(g.date)
+    : g.kind === 'reached'
+      ? tx.goal.shortReached
+      : g.kind === 'notApproaching'
+        ? tx.goal.shortNotApproaching
+        : g.kind === 'noTrend'
+          ? tx.goal.shortNoTrend
+          : '—';
+}
+
+/** Итог импорта FatSecret на языке интерфейса. */
+export function importSummaryText(L: I18n, s: { added: number; updated: number; skipped: number; from?: string; to?: string }): string {
+  const n = s.added + s.updated;
+  if (!n) return L.tx.importSummary.none(s.skipped);
+  const range = s.from && s.to ? (s.from === s.to ? L.f.dm(s.from) : `${L.f.dm(s.from)}–${L.f.dm(s.to)}`) : '';
+  return L.tx.importSummary.done(n, range, s.added, s.updated, s.skipped);
+}

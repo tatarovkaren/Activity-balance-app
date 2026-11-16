@@ -1,6 +1,6 @@
 // Импорт: выгрузка FatSecret (один день или период), история веса из CSV, резервная копия.
 
-import { isISODate, dm, type ISODate } from './dates';
+import { isISODate, type ISODate } from './dates';
 import { mergeEntry } from './merge';
 import type { DayEntry, DayMap } from './types';
 
@@ -58,7 +58,19 @@ const RU_MONTHS: Record<string, number> = {
 const EN_MONTHS: Record<string, number> = {
   january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
   july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
+  jan: 1, feb: 2, mar: 3, apr: 4, jun: 6, jul: 7, aug: 8, sep: 9, sept: 9, oct: 10, nov: 11, dec: 12,
 };
+/** Коды ошибок импорта. Текст — в словарях src/i18n (errors.*). */
+export type ImportError =
+  | 'fatsecretNoHeader'
+  | 'fatsecretNoKcal'
+  | 'fatsecretNoDays'
+  | 'fileEmpty'
+  | 'weightNoRows'
+  | 'backupUnreadable'
+  | 'backupNotOurs'
+  | 'backupOtherAccount';
+
 const p2 = (n: number | string) => String(n).padStart(2, '0');
 
 export function normDate(s: string): string {
@@ -76,9 +88,13 @@ export function normDate(s: string): string {
     const mo = RU_MONTHS[m[2]];
     if (mo) return m[3] + '-' + p2(mo) + '-' + p2(m[1]);
   }
-  if ((m = low.match(/([a-z]+)\s+(\d{1,2}),?\s*(\d{4})/))) {
+  if ((m = low.match(/([a-z]+)\.?\s+(\d{1,2}),?\s*(\d{4})/))) {
     const mo = EN_MONTHS[m[1]];
     if (mo) return m[3] + '-' + p2(mo) + '-' + p2(m[2]);
+  }
+  if ((m = low.match(/(\d{1,2})\s+([a-z]+)\.?,?\s+(\d{4})/))) {
+    const mo = EN_MONTHS[m[2]];
+    if (mo) return m[3] + '-' + p2(mo) + '-' + p2(m[1]);
   }
   return s;
 }
@@ -106,7 +122,7 @@ export interface FoodDay {
 
 export type FatSecretParse =
   | { ok: true; days: FoodDay[]; skipped: number }
-  | { ok: false; error: string };
+  | { ok: false; error: ImportError };
 
 /** Разбор выгрузки FatSecret. Пустая ячейка = нет данных; день без калорий пропускается. */
 export function parseFatSecret(text: string): FatSecretParse {
@@ -115,14 +131,14 @@ export function parseFatSecret(text: string): FatSecretParse {
     const t = (r[0] || '').trim().toLowerCase();
     return t === 'дата' || t === 'date';
   });
-  if (headerIdx === -1) return { ok: false, error: 'Не похоже на дневник FatSecret: нет строки заголовка «Дата».' };
+  if (headerIdx === -1) return { ok: false, error: 'fatsecretNoHeader' };
   const headers = rows[headerIdx];
   const dateIdx = 0;
   const kcalIdx = matchCol(headers, ['кал', 'calor', 'energy'], ['калий', 'potass']);
   const fatIdx = matchCol(headers, ['жир', 'fat'], ['н/жир', 'sat']);
   const carbIdx = matchCol(headers, ['углев', 'carb'], []);
   const proteinIdx = matchCol(headers, ['белк', 'protein'], []);
-  if (kcalIdx === -1) return { ok: false, error: 'В файле не нашёлся столбец калорий.' };
+  if (kcalIdx === -1) return { ok: false, error: 'fatsecretNoKcal' };
   const byDate = new Map<ISODate, string[]>();
   for (const r of rows.slice(headerIdx + 1)) {
     if (!isTotalRow(r)) continue;
@@ -130,7 +146,7 @@ export function parseFatSecret(text: string): FatSecretParse {
     if (!isISODate(d)) continue; // строка «Всего» и пр.
     if (!byDate.has(d)) byDate.set(d, r); // первая итоговая строка даты
   }
-  if (!byDate.size) return { ok: false, error: 'В файле не нашлось ни одного дня с датой.' };
+  if (!byDate.size) return { ok: false, error: 'fatsecretNoDays' };
   const days: FoodDay[] = [];
   let skipped = 0;
   for (const d of [...byDate.keys()].sort()) {
@@ -176,21 +192,15 @@ export function applyFoodDays(cur: DayMap, food: FoodDay[], skipped = 0): Import
   return { days: out, added, updated, skipped, from: ds[0], to: ds[ds.length - 1] };
 }
 
-export function importSummaryText(s: ImportSummary): string {
-  const n = s.added + s.updated;
-  if (!n) return 'В файле нет дней с калориями' + (s.skipped ? ` (пустых пропущено ${s.skipped})` : '');
-  const range = s.from && s.to ? (s.from === s.to ? ` (${dm(s.from)})` : ` (${dm(s.from)}–${dm(s.to)})`) : '';
-  return `Импортировано ${n} дн.${range}: новых ${s.added}, обновлено ${s.updated}` + (s.skipped ? `, пустых пропущено ${s.skipped}` : '');
-}
 
 /**
  * История веса из CSV: «дата; вес» в любом из форматов дат (ГГГГ-ММ-ДД, ДД.ММ.ГГГГ, «сентября 30, 2026»),
  * с заголовком или без. Берётся первый столбец, похожий на дату, и столбец «вес/weight»
  * (или первое число 25–350 в строке). Несколько замеров за день — берётся самый ранний (утренний).
  */
-export function parseWeightHistory(text: string): { ok: true; points: { date: ISODate; weight: number }[] } | { ok: false; error: string } {
+export function parseWeightHistory(text: string): { ok: true; points: { date: ISODate; weight: number }[] } | { ok: false; error: ImportError } {
   const rows = parseCSV(text.replace(/^﻿/, ''));
-  if (!rows.length) return { ok: false, error: 'Файл пустой.' };
+  if (!rows.length) return { ok: false, error: 'fileEmpty' };
   let wIdx = -1;
   let dIdx = -1;
   let start = 0;
@@ -235,7 +245,7 @@ export function parseWeightHistory(text: string): { ok: true; points: { date: IS
     const prev = best.get(d);
     if (!prev || tRaw < prev.t) best.set(d, { w: Math.round(w * 100) / 100, t: tRaw });
   }
-  if (!best.size) return { ok: false, error: 'Не нашлось строк «дата — вес».' };
+  if (!best.size) return { ok: false, error: 'weightNoRows' };
   return {
     ok: true,
     points: [...best.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([date, v]) => ({ date, weight: v.w })),
@@ -276,16 +286,16 @@ export function makeBackup(owner: string, data: Backup['data'], now = new Date()
   return { app: BACKUP_APP, version: 1, exportedAt: stamp, owner, data };
 }
 
-export function parseBackup(text: string, owner: string): { ok: true; backup: Backup } | { ok: false; error: string } {
+export function parseBackup(text: string, owner: string): { ok: true; backup: Backup } | { ok: false; error: ImportError } {
   let j: any;
   try {
     j = JSON.parse(text);
   } catch {
-    return { ok: false, error: 'Файл не читается как резервная копия.' };
+    return { ok: false, error: 'backupUnreadable' };
   }
   if (!j || j.app !== BACKUP_APP || !j.data || typeof j.data.days !== 'object')
-    return { ok: false, error: 'Это не резервная копия «Баланса».' };
+    return { ok: false, error: 'backupNotOurs' };
   if (owner && j.owner && j.owner !== owner)
-    return { ok: false, error: 'Это файл другого аккаунта — импорт отменён.' };
+    return { ok: false, error: 'backupOtherAccount' };
   return { ok: true, backup: j as Backup };
 }

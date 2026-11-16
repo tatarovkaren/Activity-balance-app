@@ -2,20 +2,17 @@ import type { ISODate } from './dates';
 
 export type Sex = 'male' | 'female';
 export type ThemePref = 'system' | 'light' | 'dark';
+/** Языки интерфейса. Новый язык: добавить код сюда и словарь в src/i18n (см. docs/i18n.md). */
+export type Lang = 'ru' | 'en';
+export type LangPref = 'system' | Lang;
 export type MeasureFreq = 'week' | '2weeks' | 'month';
 export type Plan = 'free' | 'premium';
 
 /** Причины ручной отметки «Необычный день». «cycle» — только в женском режиме. */
 export type AnomalyReason = 'trip' | 'feast' | 'illness' | 'incomplete' | 'cycle' | 'other';
 
-export const ANOMALY_LABELS: Record<AnomalyReason, string> = {
-  trip: 'поездка',
-  feast: 'застолье',
-  illness: 'болезнь',
-  incomplete: 'неполный дневник',
-  cycle: 'цикл',
-  other: 'другое',
-};
+/** Порядок причин в интерфейсе. Подписи — в словарях src/i18n. */
+export const ANOMALY_REASONS: AnomalyReason[] = ['trip', 'feast', 'illness', 'incomplete', 'cycle', 'other'];
 
 export interface Profile {
   name: string;
@@ -26,6 +23,8 @@ export interface Profile {
   stepGoal: number;
   measureFreq: MeasureFreq;
   theme: ThemePref;
+  /** Язык интерфейса: «как в системе» по умолчанию. */
+  lang: LangPref;
   /** Миффлин — Сан Жеор по умолчанию; «по сухой массе» (Кетч — МакАрдл) — если есть замер % жира. */
   bmrFormula: 'mifflin' | 'lean';
   /** Норма белка, г на кг общего веса (задаёт куратор). */
@@ -44,6 +43,7 @@ export const DEFAULT_PROFILE: Profile = {
   stepGoal: 10000,
   measureFreq: 'month',
   theme: 'system',
+  lang: 'system',
   bmrFormula: 'mifflin',
   proteinPerKg: undefined,
   diaryWeights: 'raw',

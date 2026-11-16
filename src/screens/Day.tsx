@@ -1,23 +1,26 @@
 import React, { useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
-import { dayDiff, dm, shiftDate, todayISO, weekday, longDate, ageAt, type ISODate } from '../core/dates';
-import { bodyFatNorm, FREQ_LABEL, measureHint, navyBodyFat } from '../core/body';
+import { dayDiff, shiftDate, todayISO, ageAt, type ISODate } from '../core/dates';
+import { bodyFatNorm, measureHint, navyBodyFat } from '../core/body';
 import { classifyWorkout, KCAL_PER_KG, macroKcal } from '../core/energy';
-import { fmtSignedKg } from '../core/adaptive';
-import { applyFoodDays, importSummaryText, parseFatSecret } from '../core/importers';
-import { ANOMALY_LABELS, type AnomalyReason } from '../core/types';
+import { applyFoodDays, parseFatSecret } from '../core/importers';
+import { ANOMALY_REASONS, type AnomalyReason } from '../core/types';
 import { useStore } from '../data/store';
 import { useDerived } from '../data/derived';
 import { Bar, Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, TextField, Fields } from '../ui/kit';
 import { useTheme } from '../ui/theme';
-import { calibLine, int, kg, RELIABILITY_LABEL } from '../ui/format';
+import { calibLine, detailText, importSummaryText } from '../ui/format';
+import { errorText, useI18n } from '../i18n';
 import { pickTextFile, downloadBlob, svgToPng } from '../ui/files';
 import { reportSvg } from '../ui/reportsvg';
 
-const WORKOUT_CHIPS = ['Силовая', 'Орбитрек', 'Бег', 'Ходьба', 'Велотренажёр', 'Плавание'];
-
 export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d: ISODate) => void; openFact: () => void }) {
   const t = useTheme();
+  const L = useI18n();
+  const { tx, f } = L;
+  const D = tx.day;
+  const { dm, int } = f;
+  const kg = f.num;
   const { data, setDay, clearDay, replaceDays, setKeep } = useStore();
   const { profile, days, keep } = data;
   const e = days[sel] || {};
@@ -43,14 +46,9 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
       }
     }
     const ago = last ? dayDiff(last, sel) : 0;
-    weighHint =
-      sel === today
-        ? new Date().getHours() < 12
-          ? 'Веса ещё нет — взвесьтесь натощак, после туалета.'
-          : 'Веса нет. Днём он выше утреннего на 0,5–1,5 кг — лучше завтра утром натощак.'
-        : 'В этот день веса нет — в тренд не идёт.';
-    if (last) weighHint += ` Последнее: ${dm(last)}${ago > 1 ? ` (${ago} дн. назад)` : ''}.`;
-    if (ago >= 3) weighHint += ' Без взвешиваний расход по факту уточняется медленнее.';
+    weighHint = sel === today ? (new Date().getHours() < 12 ? D.weight.hintMorning : D.weight.hintAfternoon) : D.weight.hintPast;
+    if (last) weighHint += D.weight.hintLast(dm(last), ago);
+    if (ago >= 3) weighHint += D.weight.hintSlow;
   }
 
   // ---- КБЖУ ----
@@ -70,32 +68,30 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
 
   const r = d.adaptive;
   const anomalyOptions: { v: AnomalyReason | 'none'; label: string }[] = [
-    { v: 'none', label: 'нет' },
-    ...(Object.keys(ANOMALY_LABELS) as AnomalyReason[])
-      .filter((k) => k !== 'cycle' || profile.sex === 'female')
-      .map((k) => ({ v: k, label: ANOMALY_LABELS[k] })),
+    { v: 'none', label: tx.common.no },
+    ...ANOMALY_REASONS.filter((k) => k !== 'cycle' || profile.sex === 'female').map((k) => ({ v: k, label: tx.common.reason[k] })),
   ];
 
   const importCsv = async () => {
     const f = await pickTextFile(['text/csv', 'text/comma-separated-values', 'application/vnd.ms-excel', '*/*']);
     if (!f) return;
     const p = parseFatSecret(f.text);
-    if (!p.ok) return setImportMsg({ text: p.error, ok: false });
+    if (!p.ok) return setImportMsg({ text: errorText(L, p.error), ok: false });
     const s = applyFoodDays(days, p.days, p.skipped);
     replaceDays(s.days);
-    setImportMsg({ text: importSummaryText(s), ok: true });
+    setImportMsg({ text: importSummaryText(L, s), ok: true });
     if (p.days.length === 1 && p.days[0].date !== sel) setSel(p.days[0].date);
   };
 
   const makeReport = async (send: boolean) => {
-    const rep = reportSvg({ date: sel, name: profile.name || 'Клиент', profile, e, energy: en, adaptive: r, prevWeight: prevW });
+    const rep = reportSvg(L, { date: sel, name: profile.name || D.report.clientFallback, profile, e, energy: en, adaptive: r, prevWeight: prevW });
     if (Platform.OS === 'web' && !send) {
       const b = await svgToPng(rep.svg, rep.w, rep.h);
-      if (b) downloadBlob(`report-${sel}.png`, b);
+      if (b) downloadBlob(`${tx.report.file}-${sel}.png`, b);
     }
     if (send) {
       set({ reportSentAt: Date.now() });
-      setReportMsg(data.curator ? `Отчёт за ${dm(sel)} отправлен куратору (${data.curator.name}).` : 'Куратор не подключён — подключите его в профиле. Отчёт сохранён как отправленный.');
+      setReportMsg(data.curator ? D.report.sent(dm(sel), data.curator.name) : D.report.noCurator);
     }
   };
 
@@ -104,70 +100,70 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
       {/* шапка с датой */}
       <Row style={{ justifyContent: 'space-between', marginBottom: 12 }}>
         <View style={{ flexShrink: 1 }}>
-          <T muted size={11} style={{ letterSpacing: 1.5 }}>ПРОЦЕСС · ДИСЦИПЛИНА</T>
+          <T muted size={11} style={{ letterSpacing: 1.5 }}>{D.motto}</T>
           <T size={22} bold>
-            {sel === today ? 'Сегодня' : sel === shiftDate(today, -1) ? 'Вчера' : longDate(sel)}, {weekday(sel)}
+            {D.title(sel === today ? tx.common.today : sel === shiftDate(today, -1) ? tx.common.yesterday : f.longDate(sel), f.weekday(sel), sel >= shiftDate(today, -1))}
           </T>
-          {e.reportSentAt ? <T muted size={12}>Отчёт куратору отправлен</T> : null}
+          {e.reportSentAt ? <T muted size={12}>{D.reportSent}</T> : null}
         </View>
         <Row gap={6}>
           <Btn small title="‹" onPress={() => setSel(shiftDate(sel, -1))} testID="prevDay" />
-          {sel !== today ? <Btn small title="Сегодня" onPress={() => setSel(today)} /> : null}
+          {sel !== today ? <Btn small title={tx.common.today} onPress={() => setSel(today)} /> : null}
           <Btn small title="›" onPress={() => setSel(shiftDate(sel, 1))} disabled={sel >= today} testID="nextDay" />
         </Row>
       </Row>
 
       <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
         {/* Вес */}
-        <Card title="Утренний вес" accent={t.blue} style={{ flexGrow: 1, flexBasis: 160 }}>
-          <NumField big value={e.weight} onChange={(v) => set({ weight: v })} placeholder="0,00" digits={2} suffix="кг" testID="weight" />
+        <Card title={D.weight.title} accent={t.blue} style={{ flexGrow: 1, flexBasis: 160 }}>
+          <NumField big value={e.weight} onChange={(v) => set({ weight: v })} placeholder={D.weight.placeholder} digits={2} suffix={tx.common.kg} testID="weight" />
           <Gap h={6} />
           {dW != null ? (
             <T size={13} color={dW <= 0 ? t.green : t.red}>
-              Δ к вчерашнему: {dW <= 0 ? '▼' : '▲'} {kg(Math.abs(dW), 2)} кг
+              {D.weight.delta(dW <= 0 ? '▼' : '▲', kg(Math.abs(dW), 2))}
             </T>
           ) : null}
-          {w7.length ? <T muted size={12}>Среднее за неделю: {kg(w7.reduce((a, b) => a + b, 0) / w7.length, 2)} кг ({w7.length} дн.)</T> : null}
+          {w7.length ? <T muted size={12}>{D.weight.weekAvg(kg(w7.reduce((a, b) => a + b, 0) / w7.length, 2), w7.length)}</T> : null}
           {weighHint ? <Note>{weighHint}</Note> : null}
         </Card>
 
         {/* Шаги */}
-        <Card title="Шаги" accent={t.green} style={{ flexGrow: 1, flexBasis: 160 }}>
+        <Card title={D.steps.title} accent={t.green} style={{ flexGrow: 1, flexBasis: 160 }}>
           <NumField big value={e.steps} onChange={(v) => set({ steps: v == null ? undefined : Math.round(v) })} placeholder="0" testID="steps" />
           <Gap h={8} />
           <Bar value={(e.steps || 0) / (profile.stepGoal || 10000)} color={t.green} />
           <Gap h={4} />
-          <T muted size={12}>цель {int(profile.stepGoal)}{e.steps ? ` · ${Math.round(((e.steps || 0) / profile.stepGoal) * 100)}%` : ''}</T>
+          <T muted size={12}>{D.steps.goal(int(profile.stepGoal))}{e.steps ? ` · ${Math.round(((e.steps || 0) / profile.stepGoal) * 100)}%` : ''}</T>
         </Card>
       </View>
 
       {/* КБЖУ */}
       <Card
-        title="Питание · КБЖУ"
+        title={D.food.title}
         accent={t.amber}
-        right={<Btn small title="Импорт FatSecret" onPress={importCsv} testID="importCsv" />}
+        right={<Btn small title={D.food.importFs} onPress={importCsv} testID="importCsv" />}
       >
-        <NumField big label="Ккал" value={kcalShown} onChange={(v) => set({ kcal: v == null ? undefined : Math.round(v), kcalManual: v != null })} placeholder="0" testID="kcal" />
+        <NumField big label={D.food.kcal} value={kcalShown} onChange={(v) => set({ kcal: v == null ? undefined : Math.round(v), kcalManual: v != null })} placeholder="0" testID="kcal" />
         <Gap h={6} />
         <Fields>
-          <NumField label="Б, г" value={e.protein} onChange={(v) => set({ protein: v })} digits={1} testID="protein" />
-          <NumField label="Ж, г" value={e.fat} onChange={(v) => set({ fat: v })} digits={1} testID="fat" />
-          <NumField label="У, г" value={e.carbs} onChange={(v) => set({ carbs: v })} digits={1} testID="carbs" />
+          <NumField label={D.food.p} value={e.protein} onChange={(v) => set({ protein: v })} digits={1} testID="protein" />
+          <NumField label={D.food.f} value={e.fat} onChange={(v) => set({ fat: v })} digits={1} testID="fat" />
+          <NumField label={D.food.c} value={e.carbs} onChange={(v) => set({ carbs: v })} digits={1} testID="carbs" />
         </Fields>
         <Gap h={6} />
         <T muted size={12}>
-          {e.kcalManual ? 'Ккал введены вручную · ' : autoKcal != null ? 'Ккал = Б×4 + Ж×9 + У×4 · ' : ''}
-          {profile.proteinPerKg && d.weight ? `норма белка ${Math.round(profile.proteinPerKg * d.weight)} г (${kg(profile.proteinPerKg)} г/кг)` : 'выгрузка FatSecret: один день или период — все дни сразу'}
+          {e.kcalManual ? D.food.manual : autoKcal != null ? D.food.auto : ''}
+          {profile.proteinPerKg && d.weight ? D.food.proteinNorm(int(profile.proteinPerKg * d.weight), kg(profile.proteinPerKg)) : D.food.fsHint}
         </T>
         {importMsg ? <Note color={importMsg.ok ? t.green : t.red}>{importMsg.text}</Note> : null}
       </Card>
 
       {/* Тренировка */}
-      <Card title="Тренировка" accent={t.red}>
-        <TextField value={e.workoutType} onChange={(v) => set({ workoutType: v })} placeholder="Тип: силовая, орбитрек, бег…" testID="workoutType" />
+      <Card title={D.workout.title} accent={t.red}>
+        <TextField value={e.workoutType} onChange={(v) => set({ workoutType: v })} placeholder={D.workout.typePlaceholder} testID="workoutType" />
         <Gap h={6} />
         <Row gap={6}>
-          {WORKOUT_CHIPS.map((c) => (
+          {D.workout.chips.map((c) => (
             <Pressable key={c} onPress={() => set({ workoutType: c })}>
               <T size={12} color={(e.workoutType || '').toLowerCase() === c.toLowerCase() ? t.red : t.muted}>{c}</T>
             </Pressable>
@@ -175,13 +171,13 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
         </Row>
         <Gap h={8} />
         <Fields>
-          <NumField label="Время, мин" value={e.workoutMin} onChange={(v) => set({ workoutMin: v })} testID="workoutMin" />
-          <NumField label="Пульс ср." value={e.hrAvg} onChange={(v) => set({ hrAvg: v })} testID="hrAvg" />
-          <NumField label="Пульс макс." value={e.hrMax} onChange={(v) => set({ hrMax: v })} />
+          <NumField label={D.workout.minutes} value={e.workoutMin} onChange={(v) => set({ workoutMin: v })} testID="workoutMin" />
+          <NumField label={D.workout.hrAvg} value={e.hrAvg} onChange={(v) => set({ hrAvg: v })} testID="hrAvg" />
+          <NumField label={D.workout.hrMax} value={e.hrMax} onChange={(v) => set({ hrMax: v })} />
         </Fields>
         <Gap h={8} />
         <NumField
-          label="Шаги на тренировке"
+          label={D.workout.steps}
           value={e.workoutSteps}
           onChange={(v) => set({ workoutSteps: v == null ? undefined : Math.round(v) })}
           disabled={!stepsFieldOn}
@@ -189,112 +185,114 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
           testID="workoutSteps"
         />
         <T muted size={12}>
-          {!stepsFieldOn
-            ? 'только для кардио на ногах'
-            : e.workoutSteps != null
-              ? 'из трекера — учтено точно'
-              : `оценка ${Math.round(d.pace.pace)} шаг/мин (${d.pace.personal ? 'по вашим тренировкам' : 'по умолчанию'}) — впишите из трекера`}
+          {!stepsFieldOn ? D.workout.stepsOnlyLegs : e.workoutSteps != null ? D.workout.stepsTracker : D.workout.stepsEstimate(Math.round(d.pace.pace), d.pace.personal)}
         </T>
         {kind !== 'none' ? (
-          <T muted size={12}>{kind === 'strength' ? 'Силовая считается по нагрузке, не по пульсу.' : kind === 'cardioNoSteps' ? 'Кардио без шагов: шаги не вычитаются.' : ''}</T>
+          <T muted size={12}>{kind === 'strength' ? D.workout.strengthNote : kind === 'cardioNoSteps' ? D.workout.noStepsNote : ''}</T>
         ) : null}
         <Divider />
         {en ? (
           <>
             <T>
-              Расход энергии: <T bold mono>{int(en.total)}</T> ккал
+              {D.workout.expenditure}
+              <T bold mono>{int(en.total)}</T> {tx.common.kcal}
             </T>
-            <T muted size={12}>
-              БМР {int(en.bmr)} · шаги {int(en.neat)} · трен. {int(en.train)} · переваривание {int(en.tef)}
-            </T>
+            <T muted size={12}>{D.workout.breakdown(int(en.bmr), int(en.neat), int(en.train), int(en.tef))}</T>
             {en.workoutStepsDeducted > 0 ? (
-              <T muted size={12}>
-                шаги на тренировке (−{int(en.workoutStepsDeducted)}, {en.workoutStepsSource === 'tracker' ? 'из трекера' : 'оценка'}) учтены в тренировке
-              </T>
+              <T muted size={12}>{D.workout.stepsDeducted(int(en.workoutStepsDeducted), en.workoutStepsSource === 'tracker')}</T>
             ) : null}
           </>
         ) : (
-          <T muted size={13}>Расход появится, когда будут вес (за день или 3 дня до), рост и дата рождения.</T>
+          <T muted size={13}>{D.workout.noEnergy}</T>
         )}
       </Card>
 
       {/* Баланс */}
-      <Card title="Баланс энергии" accent={t.amber}>
+      <Card title={D.balance.title} accent={t.amber}>
         {en && en.intake ? (
           <T>
-            Сегодня: съедено <T bold>{int(en.intake)}</T> · расход <T bold>{int(en.total)}</T> →{' '}
+            {D.balance.today}
+            <T bold>{int(en.intake)}</T>
+            {D.balance.spent}
+            <T bold>{int(en.total)}</T> →{' '}
             {en.total - en.intake >= 0 ? (
-              <T color={t.green} bold>дефицит {int(en.total - en.intake)} ккал</T>
+              <T color={t.green} bold>{D.balance.deficit(int(en.total - en.intake))}</T>
             ) : (
-              <T color={t.red} bold>профицит {int(en.intake - en.total)} ккал</T>
+              <T color={t.red} bold>{D.balance.surplus(int(en.intake - en.total))}</T>
             )}
           </T>
         ) : (
-          <T muted>Сегодня: — (нужны калории и вес)</T>
+          <T muted>{D.balance.todayEmpty}</T>
         )}
         <Gap h={4} />
         {d.week && d.week.n >= 3 ? (
           <T muted size={13}>
-            7 дней ({d.week.n} дн.): ср. съедено {int(d.week.intake)} · ср. расход {int(d.week.total)} →{' '}
-            {d.week.total >= d.week.intake ? 'дефицит' : 'профицит'} {int(Math.abs(d.week.total - d.week.intake))} ккал/день · ожидаемо{' '}
-            {fmtSignedKg((-(d.week.total - d.week.intake) * 7) / KCAL_PER_KG)} кг/нед
+            {D.balance.week(
+              d.week.n,
+              int(d.week.intake),
+              int(d.week.total),
+              d.week.total >= d.week.intake,
+              int(Math.abs(d.week.total - d.week.intake)),
+              f.signed((-(d.week.total - d.week.intake) * 7) / KCAL_PER_KG),
+            )}
           </T>
         ) : (
-          <T muted size={13}>7 дней: нужно минимум 3 дня с калориями</T>
+          <T muted size={13}>{D.balance.weekEmpty}</T>
         )}
         <Divider />
         <Pressable onPress={openFact} testID="openFact">
           {r ? (
             <>
               <T>
-                Расход по факту: <T bold mono color={t.amber}>{calibLine(r).main}</T>
+                {D.balance.fact}
+                <T bold mono color={t.amber}>{calibLine(L, r).main}</T>
               </T>
-              <T muted size={12}>{calibLine(r).sub}</T>
+              <T muted size={12}>{calibLine(L, r).sub}</T>
               <T size={12} color={r.reliability === 'high' ? t.green : r.reliability === 'low' ? t.amber : t.text}>
-                Надёжность: {RELIABILITY_LABEL[r.reliability]} · подробнее ›
+                {D.balance.reliability(tx.common.reliability[r.reliability])}
               </T>
             </>
           ) : (
-            <T muted>Расход по факту появится, когда будут вес и калории.</T>
+            <T muted>{D.balance.factEmpty}</T>
           )}
         </Pressable>
         {r?.autoList.slice(-3).map((a) => (
           <Row key={a.d} gap={6}>
-            <Note>⚠ {dm(a.d)} похож на необычный день ({a.why})</Note>
-            <Btn kind="link" small title="вернуть в расчёт" onPress={() => setKeep(a.d, true)} />
+            <Note>{D.balance.autoDay(dm(a.d), detailText(L, a.detail))}</Note>
+            <Btn kind="link" small title={D.balance.returnToCalc} onPress={() => setKeep(a.d, true)} />
           </Row>
         ))}
       </Card>
 
       {/* Замеры */}
-      <Card title={`Замеры тела · ${FREQ_LABEL[profile.measureFreq]}`} accent={t.teal}>
-        {mh.kind === 'next' ? <T muted size={13}>Следующий замер: {dm(mh.date)}.{mh.date.slice(0, 4)} (через {mh.inDays} дн.)</T> : null}
-        {mh.kind === 'due' ? <Note>Пора сделать замер: последний {dm(mh.last)}.{mh.last.slice(0, 4)} ({mh.agoDays} дн. назад)</Note> : null}
-        {mh.kind === 'first' ? <Note>Сделайте первый замер: шея и живот{profile.sex === 'female' ? ' и бёдра' : ''} утром натощак</Note> : null}
+      <Card title={D.body.title(tx.common.freq[profile.measureFreq])} accent={t.teal}>
+        {mh.kind === 'next' ? <T muted size={13}>{D.body.next(f.dmy(mh.date), mh.inDays)}</T> : null}
+        {mh.kind === 'due' ? <Note>{D.body.due(f.dmy(mh.last), mh.agoDays)}</Note> : null}
+        {mh.kind === 'first' ? <Note>{D.body.first(profile.sex === 'female')}</Note> : null}
         <Gap h={6} />
         <Fields>
-          <NumField label="Шея, см" value={e.neck} onChange={(v) => set({ neck: v })} digits={1} />
-          <NumField label="Живот (у пупка), см" value={e.waist} onChange={(v) => set({ waist: v })} digits={1} />
-          {profile.sex === 'female' ? <NumField label="Бёдра, см" value={e.hips} onChange={(v) => set({ hips: v })} digits={1} /> : null}
+          <NumField label={D.body.neck} value={e.neck} onChange={(v) => set({ neck: v })} digits={1} />
+          <NumField label={D.body.waist} value={e.waist} onChange={(v) => set({ waist: v })} digits={1} />
+          {profile.sex === 'female' ? <NumField label={D.body.hips} value={e.hips} onChange={(v) => set({ hips: v })} digits={1} /> : null}
         </Fields>
         <Gap h={8} />
         <Row style={{ justifyContent: 'space-between' }}>
           <View>
-            <T muted size={11}>% ЖИРА (ВМС США)</T>
+            <T muted size={11}>{D.body.fat}</T>
             <T bold mono size={20}>{bf != null ? kg(bf) + '%' : '—'}</T>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            <T muted size={11}>ВОЗРАСТ · НОРМА</T>
+            <T muted size={11}>{D.body.ageNorm}</T>
             <T mono>{age != null && norm ? `${age} · ${norm[0]}–${norm[1]}%` : '—'}</T>
           </View>
         </Row>
       </Card>
 
       {/* Комментарий */}
-      <Card title="Комментарий и самочувствие" accent={t.violet}>
-        <TextField multiline value={e.comment} onChange={(v) => set({ comment: v })} placeholder="Сон, настроение, что было необычного…" testID="comment" />
+      <Card title={D.comment.title} accent={t.violet}>
+        <TextField multiline value={e.comment} onChange={(v) => set({ comment: v })} placeholder={D.comment.placeholder} testID="comment" />
         <Gap h={8} />
-        <T muted size={12}>Самочувствие</T>
+        <T muted size={12}>{D.comment.wellbeing}</T>
         <Row gap={6}>
           {[...Array(10)].map((_, i) => {
             const n = i + 1;
@@ -311,7 +309,7 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
           })}
         </Row>
         <Gap h={10} />
-        <T muted size={12}>Необычный день</T>
+        <T muted size={12}>{D.comment.unusual}</T>
         <Seg
           testID="anomaly"
           color={t.violet}
@@ -320,26 +318,26 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
           onChange={(v) => set({ anomaly: v === 'none' ? undefined : v })}
         />
         <Gap h={4} />
-        <T muted size={12}>Необычные дни не попадают в «расход по факту», чтобы вода и соль не выдавались за жир.</T>
+        <T muted size={12}>{D.comment.unusualNote}</T>
         {profile.sex === 'female' && e.anomaly === 'cycle' ? (
-          <Note color={t.violet}>Прибавка может быть из-за фазы цикла — это вода, а не жир. День не испортит расчёт.</Note>
+          <Note color={t.violet}>{D.comment.cycleNote}</Note>
         ) : null}
       </Card>
 
       <Row gap={8} style={{ marginBottom: 6 }}>
-        <Btn kind="solid" title="Отправить отчёт куратору" onPress={() => makeReport(true)} style={{ flexGrow: 1 }} testID="sendReport" />
-        {Platform.OS === 'web' ? <Btn title="Отчёт картинкой" onPress={() => makeReport(false)} style={{ flexGrow: 1 }} /> : null}
+        <Btn kind="solid" title={D.report.send} onPress={() => makeReport(true)} style={{ flexGrow: 1 }} testID="sendReport" />
+        {Platform.OS === 'web' ? <Btn title={D.report.image} onPress={() => makeReport(false)} style={{ flexGrow: 1 }} /> : null}
       </Row>
       {reportMsg ? <Note color={t.green}>{reportMsg}</Note> : null}
       <Gap h={6} />
       {confirmClear ? (
         <Row>
-          <T muted size={13}>Очистить все поля за {dm(sel)}? Цели и настройки не трогаются.</T>
-          <Btn small title="Очистить" color={t.red} kind="solid" onPress={() => { clearDay(sel); setConfirmClear(false); }} />
-          <Btn small title="Отмена" onPress={() => setConfirmClear(false)} />
+          <T muted size={13}>{D.clear.ask(dm(sel))}</T>
+          <Btn small title={D.clear.yes} color={t.red} kind="solid" onPress={() => { clearDay(sel); setConfirmClear(false); }} />
+          <Btn small title={tx.common.cancel} onPress={() => setConfirmClear(false)} />
         </Row>
       ) : (
-        <Btn kind="link" small title="Очистить день" color={t.muted} onPress={() => setConfirmClear(true)} />
+        <Btn kind="link" small title={D.clear.link} color={t.muted} onPress={() => setConfirmClear(true)} />
       )}
     </View>
   );

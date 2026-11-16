@@ -30,13 +30,6 @@ export const CARD_MM = { w: 85.6, h: 53.98 };
 
 export type HandUnit = 'palm' | 'fist' | 'cupped' | 'thumb' | 'fingertip';
 
-export const HAND_UNIT_LABEL: Record<HandUnit, string> = {
-  palm: 'ладонь (толщиной ~1,5 см)',
-  fist: 'кулак',
-  cupped: 'горсть',
-  thumb: 'большой палец',
-  fingertip: 'кончик пальца',
-};
 
 /** Объём одной единицы руки, мл. Параметры стартовые, уточняются на взвешенных эталонах. */
 export function handUnitMl(unit: HandUnit, h: HandProfile): number {
@@ -99,7 +92,8 @@ export interface DraftComponent {
   amount: Amount;
   /** Вес для дневника «сухим/сырым», если пользователь так ведёт дневник. */
   diaryGrams?: number;
-  diaryNote?: string;
+  /** Что записать в дневник: сухая крупа (уварка > 1) или сырой вес (мясо, рыба). Текст — в словарях. */
+  diaryKind?: 'dry' | 'raw';
 }
 
 export type PhotoQuality = 'good' | 'topOnly' | 'poor';
@@ -135,7 +129,7 @@ const r1 = (x: number) => Math.round(x * 10) / 10;
 export function resolveFood(ci: ComponentInput): { name: string; food?: Food; per100: { kcal: number; p: number; f: number; c: number; density: number } } | null {
   const food = ci.foodId ? FOOD_BY_ID[ci.foodId] : undefined;
   if (food) return { name: ci.name || food.name, food, per100: food };
-  if (ci.per100) return { name: ci.name || 'Продукт', per100: { density: 1, ...ci.per100 } };
+  if (ci.per100) return { name: ci.name || '', per100: { density: 1, ...ci.per100 } };
   return null;
 }
 
@@ -164,8 +158,7 @@ export function buildComponent(ci: ComponentInput, opts: DraftOptions): DraftCom
   // Пересчёт уварки: ккал те же, меняется только вес для дневника.
   if (opts.diaryWeights === 'raw' && res.food?.cookYield) {
     comp.diaryGrams = r0(grams / res.food.cookYield);
-    comp.diaryNote =
-      res.food.cookYield > 1 ? `≈${comp.diaryGrams} г сухой крупы` : `≈${comp.diaryGrams} г в сыром виде`;
+    comp.diaryKind = res.food.cookYield > 1 ? 'dry' : 'raw';
   }
   return comp;
 }

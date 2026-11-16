@@ -5,6 +5,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 import type { ISODate } from '../core/dates';
+import { AppError } from '../core/errors';
 import type { DayEntry, DayMap, KeepMap, Profile } from '../core/types';
 
 const URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -26,8 +27,8 @@ export const NATIVE_OAUTH: OAuthProvider[] = ['google', 'apple'];
 
 export async function signInOAuth(p: OAuthProvider) {
   const sb = supabase();
-  if (!sb) throw new Error('Сервер не подключён');
-  if (!NATIVE_OAUTH.includes(p)) throw new Error('Вход через Яндекс ID и VK ID появится после подключения шлюза');
+  if (!sb) throw new AppError('serverNotConnected');
+  if (!NATIVE_OAUTH.includes(p)) throw new AppError('gatewayMissing');
   const redirectTo = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin + window.location.pathname : undefined;
   const { error } = await sb.auth.signInWithOAuth({ provider: p as 'google' | 'apple', options: { redirectTo } });
   if (error) throw error;
@@ -35,14 +36,14 @@ export async function signInOAuth(p: OAuthProvider) {
 
 export async function sendEmailCode(email: string) {
   const sb = supabase();
-  if (!sb) throw new Error('Сервер не подключён');
+  if (!sb) throw new AppError('serverNotConnected');
   const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
   if (error) throw error;
 }
 
 export async function verifyEmailCode(email: string, token: string) {
   const sb = supabase();
-  if (!sb) throw new Error('Сервер не подключён');
+  if (!sb) throw new AppError('serverNotConnected');
   const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
   if (error) throw error;
 }
@@ -128,7 +129,7 @@ export async function curatorClients(sinceISO: ISODate): Promise<CuratorClientRo
 
 export async function linkCurator(code: string): Promise<string> {
   const sb = supabase();
-  if (!sb) throw new Error('Сервер не подключён');
+  if (!sb) throw new AppError('serverNotConnected');
   const { data, error } = await sb.rpc('link_curator_by_code', { invite_code: code.trim().toUpperCase() });
   if (error) throw error;
   return data as string;
@@ -136,7 +137,7 @@ export async function linkCurator(code: string): Promise<string> {
 
 export async function addCuratorComment(clientId: string, date: ISODate, text: string) {
   const sb = supabase();
-  if (!sb) throw new Error('Сервер не подключён');
+  if (!sb) throw new AppError('serverNotConnected');
   const { error } = await sb.from('day_comments').insert({ client_id: clientId, date, text });
   if (error) throw error;
 }

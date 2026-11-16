@@ -27,6 +27,18 @@ export interface DemoSpec {
   /** Не взвешивался последние N дней. */
   noWeighTail?: number;
   noReportToday?: boolean;
+  /** Названия тренировок на языке интерфейса. */
+  labels?: DemoLabels;
+}
+
+/** Тексты демо-данных на языке интерфейса (из словаря demo.*). */
+export interface DemoLabels {
+  strength: string;
+  elliptical: string;
+  /** Имя демо-пользователя. */
+  me?: string;
+  /** 7 имён клиентов кабинета куратора. */
+  clients?: string[];
 }
 
 export function generateDemo(spec: DemoSpec, today: ISODate): DayMap {
@@ -60,11 +72,11 @@ export function generateDemo(spec: DemoSpec, today: ISODate): DayMap {
       e.kcalManual = true;
       e.steps = Math.round(8000 + r() * 7000);
       if (dow === 1 || dow === 3 || dow === 5) {
-        e.workoutType = 'Силовая';
+        e.workoutType = spec.labels?.strength || 'Силовая';
         e.workoutMin = 60;
         e.hrAvg = 118;
       } else if (dow === 2 || dow === 6) {
-        e.workoutType = 'Орбитрек';
+        e.workoutType = spec.labels?.elliptical || 'Орбитрек';
         e.workoutMin = 30 + Math.round(r() * 12);
         e.hrAvg = 125 + Math.round(r() * 15);
         if (r() > 0.4) e.workoutSteps = Math.round(e.workoutMin * (85 + r() * 10));
@@ -82,10 +94,10 @@ export function generateDemo(spec: DemoSpec, today: ISODate): DayMap {
   return out;
 }
 
-export function demoProfile(): Profile {
+export function demoProfile(labels?: DemoLabels): Profile {
   return {
     ...DEFAULT_PROFILE,
-    name: 'Демо',
+    name: labels?.me || 'Демо',
     sex: 'male',
     birthDate: '1980-03-14',
     heightCm: 176,
@@ -102,7 +114,8 @@ export interface DemoClient {
 }
 
 /** Клиенты для демо кабинета куратора. */
-export function demoClients(today: ISODate): DemoClient[] {
+export function demoClients(today: ISODate, labels?: DemoLabels): DemoClient[] {
+  const names = labels?.clients?.length === 7 ? labels.clients : ['Анна К.', 'Дмитрий С.', 'Ольга П.', 'Сергей В.', 'Мария Л.', 'Алексей Н.', 'Елена Р.'];
   const mk = (
     id: string,
     name: string,
@@ -115,23 +128,23 @@ export function demoClients(today: ISODate): DemoClient[] {
     id,
     name,
     profile: { ...DEFAULT_PROFILE, name, sex, heightCm: h, birthDate: birth, goalWeightKg: goal, stepGoal: 10000 },
-    days: generateDemo({ ...spec, sex }, today),
+    days: generateDemo({ ...spec, sex, labels }, today),
   });
   return [
-    mk('c1', 'Анна К.', 'female', 165, '1991-05-02', 60, { seed: 11, startWeight: 66.5, trueTdee: 2050, intake: 1600, days: 63 }),
-    mk('c2', 'Дмитрий С.', 'male', 182, '1985-09-20', 85, { seed: 22, startWeight: 94, trueTdee: 2900, intake: 2300, days: 70 }),
-    mk('c3', 'Ольга П.', 'female', 170, '1988-01-11', 65, { seed: 33, startWeight: 73.5, trueTdee: 2150, intake: 1900, days: 50, noWeighTail: 3 }),
-    mk('c4', 'Сергей В.', 'male', 178, '1979-12-03', 80, { seed: 44, startWeight: 86, trueTdee: 2600, intake: 2150, days: 60 }),
-    mk('c5', 'Мария Л.', 'female', 160, '1995-07-30', 55, { seed: 55, startWeight: 60, trueTdee: 1950, intake: 1600, days: 45, tripAt: 42 }),
-    mk('c6', 'Алексей Н.', 'male', 185, '1990-04-17', 84, { seed: 66, startWeight: 77, trueTdee: 2750, intake: 3050, days: 56, noReportToday: true }),
-    mk('c7', 'Елена Р.', 'female', 168, '1983-10-09', 62, { seed: 77, startWeight: 69, trueTdee: 2000, intake: 1650, days: 5 }),
+    mk('c1', names[0], 'female', 165, '1991-05-02', 60, { seed: 11, startWeight: 66.5, trueTdee: 2050, intake: 1600, days: 63 }),
+    mk('c2', names[1], 'male', 182, '1985-09-20', 85, { seed: 22, startWeight: 94, trueTdee: 2900, intake: 2300, days: 70 }),
+    mk('c3', names[2], 'female', 170, '1988-01-11', 65, { seed: 33, startWeight: 73.5, trueTdee: 2150, intake: 1900, days: 50, noWeighTail: 3 }),
+    mk('c4', names[3], 'male', 178, '1979-12-03', 80, { seed: 44, startWeight: 86, trueTdee: 2600, intake: 2150, days: 60 }),
+    mk('c5', names[4], 'female', 160, '1995-07-30', 55, { seed: 55, startWeight: 60, trueTdee: 1950, intake: 1600, days: 45, tripAt: 42 }),
+    mk('c6', names[5], 'male', 185, '1990-04-17', 84, { seed: 66, startWeight: 77, trueTdee: 2750, intake: 3050, days: 56, noReportToday: true }),
+    mk('c7', names[6], 'female', 168, '1983-10-09', 62, { seed: 77, startWeight: 69, trueTdee: 2000, intake: 1650, days: 5 }),
   ];
 }
 
 /** Демо-дневник самого пользователя: 70 дней, поездка, пропуск 4 дня. */
-export function demoDays(today: ISODate): DayMap {
+export function demoDays(today: ISODate, labels?: DemoLabels): DayMap {
   return generateDemo(
-    { seed: 7, sex: 'male', startWeight: 81.5, trueTdee: 2480, intake: 1850, days: 70, tripAt: 40, gap: [52, 4] },
+    { seed: 7, sex: 'male', startWeight: 81.5, trueTdee: 2480, intake: 1850, days: 70, tripAt: 40, gap: [52, 4], labels },
     today,
   );
 }

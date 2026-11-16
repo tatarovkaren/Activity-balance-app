@@ -117,8 +117,8 @@ describe('расход по факту', () => {
     const ctx = { profile: demoProfile(), days };
     const a = adaptiveTDEE(shiftDate(today, -22), ctx, {})!;
     const b = adaptiveTDEE(shiftDate(today, -22), { ...ctx, days: noMarks }, {})!;
-    expect(a.exclList.some((x) => !x.auto && x.why === 'поездка')).toBe(true);
-    expect(b.exclList.every((x) => x.why !== 'поездка')).toBe(true);
+    expect(a.exclList.some((x) => !x.auto && x.why === 'trip')).toBe(true);
+    expect(b.exclList.every((x) => x.why !== 'trip')).toBe(true);
   });
   it('вернуть в расчёт возвращает автонаходку', () => {
     const today = '2026-11-16';

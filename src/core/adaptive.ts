@@ -1,10 +1,10 @@
 // «Расход по факту» — адаптивная оценка без необычных дней (ТЗ v35, раздел «Баланс энергии»).
 // Ключевая функция продукта: честность важнее скорости реакции.
 
-import { dayDiff, dm, shiftDate, type ISODate } from './dates';
+import { dayDiff, shiftDate, type ISODate } from './dates';
 import { lastBodyFat } from './body';
 import { dayKcal, energyModel, KCAL_PER_KG, PaceIndex, weightNear, type EnergyResult } from './energy';
-import { ANOMALY_LABELS, type DayEntry, type DayMap, type KeepMap, type Profile } from './types';
+import type { AnomalyReason, DayEntry, DayMap, KeepMap, Profile } from './types';
 
 export const PARAMS = {
   MIN_W: 14, // взвешиваний за 28 дней для полного доверия
@@ -46,12 +46,27 @@ export function wls(pts: [number, number, number][]): WLSFit | null {
   return { slope: b, at: (x) => my + b * (x - mx) };
 }
 
+/**
+ * Причина исключения дня: ручная отметка или автонаходка.
+ * Автонаходка «мало калорий» считается как «неполный дневник» (incomplete), скачок веса — weightJump.
+ * Текст подписей — в словарях src/i18n, ядро отдаёт только коды и числа.
+ */
+export type ExclReason = AnomalyReason | 'weightJump';
+
+/** Пояснение автонаходки: отклонение веса от тренда (кг) или калории дня против обычных. */
+export type AutoDetail = { kind: 'weightJump'; dv: number } | { kind: 'lowKcal'; kcal: number; usual: number };
+
+export interface AutoItem {
+  d: ISODate;
+  detail: AutoDetail;
+}
+
 export interface ExclItem {
   d: ISODate;
-  why: string;
+  why: ExclReason;
   auto: boolean;
-  /** Пояснение автонаходки: «вес +1,3 кг к тренду». */
-  t: string;
+  /** Пояснение автонаходки (только для auto). */
+  detail?: AutoDetail;
 }
 
 export interface SeriesPoint {
@@ -77,12 +92,12 @@ export interface AdaptiveResult {
   excl28: number;
   normal28: number;
   exclShare: number;
-  reasons: Record<string, number>;
+  reasons: Partial<Record<ExclReason, number>>;
   gap: number;
   reliability: Reliability;
-  autoList: { d: ISODate; why: string }[];
+  autoList: AutoItem[];
   exclList: ExclItem[];
-  kept: { d: ISODate; why: string }[];
+  kept: AutoItem[];
   recList: ISODate[];
   series: SeriesPoint[];
 }
@@ -134,7 +149,7 @@ export function adaptiveTDEE(sel: ISODate, ctx: ModelCtx, keep: KeepMap): Adapti
 
   const W: Record<string, number> = {};
   const K: Record<string, number> = {};
-  const man: Record<string, string> = {};
+  const man: Record<string, AnomalyReason | undefined> = {};
   const F: Record<string, number> = {};
   let lastW = 0;
   for (const d of days) {
@@ -144,28 +159,29 @@ export function adaptiveTDEE(sel: ISODate, ctx: ModelCtx, keep: KeepMap): Adapti
     if (wv > 0) lastW = wv;
     const k = dayKcal(e) || 0;
     K[d] = k > 0 ? k : 0;
-    man[d] = e.anomaly ? ANOMALY_LABELS[e.anomaly] : '';
+    man[d] = e.anomaly;
     const m = all[d] && K[d] > 0 ? model(e, d, lastW || undefined) : null;
     F[d] = m ? m.total : 0;
   }
 
   // Проход 1: необычные дни (ручные главнее авто), дни восстановления для тренда.
   const excl: Record<string, boolean> = {};
-  const why: Record<string, string> = {};
+  const why: Record<string, ExclReason> = {};
   const auto: Record<string, boolean> = {};
   const rec: Record<string, boolean> = {};
-  const autoList: { d: ISODate; why: string }[] = [];
-  const kept: { d: ISODate; why: string }[] = [];
+  const autoList: AutoItem[] = [];
+  const kept: AutoItem[] = [];
   let wRun = 0;
   let exRun = 0;
   let lastExEnd = -99;
   let lastExRun = 0;
   days.forEach((d, i) => {
-    if (man[d]) {
+    const manual = man[d];
+    if (manual) {
       excl[d] = true;
-      why[d] = man[d];
+      why[d] = manual;
     } else {
-      let a: { r: string; t: string } | null = null;
+      let a: { r: ExclReason; detail: AutoDetail } | null = null;
       if (W[d] > 0 && wRun < 3) {
         const pts: [number, number, number][] = [];
         for (let j = Math.max(0, i - 21); j < i; j++) {
@@ -178,10 +194,7 @@ export function adaptiveTDEE(sel: ISODate, ctx: ModelCtx, keep: KeepMap): Adapti
             const pred = f.at(i);
             const dv = W[d] - pred;
             if (Math.abs(dv) > Math.max(1.0, 0.015 * pred))
-              a = {
-                r: 'скачок веса',
-                t: 'вес ' + (dv > 0 ? '+' : '−') + Math.abs(dv).toFixed(1).replace('.', ',') + ' кг к тренду',
-              };
+              a = { r: 'weightJump', detail: { kind: 'weightJump', dv: Math.round(dv * 10) / 10 } };
           }
         }
       }
@@ -195,16 +208,16 @@ export function adaptiveTDEE(sel: ISODate, ctx: ModelCtx, keep: KeepMap): Adapti
           ks.sort((x, y) => x - y);
           const med = ks[Math.floor(ks.length / 2)];
           if (K[d] < 0.5 * med)
-            a = { r: 'неполный дневник', t: 'ккал ' + Math.round(K[d]) + ' при обычных ~' + Math.round(med) };
+            a = { r: 'incomplete', detail: { kind: 'lowKcal', kcal: Math.round(K[d]), usual: Math.round(med) } };
         }
       }
       if (a && !keep[d]) {
         excl[d] = true;
         why[d] = a.r;
         auto[d] = true;
-        autoList.push({ d, why: a.t });
-      } else if (a && keep[d]) kept.push({ d, why: a.t });
-      wRun = a && a.r === 'скачок веса' ? wRun + 1 : 0;
+        autoList.push({ d, detail: a.detail });
+      } else if (a && keep[d]) kept.push({ d, detail: a.detail });
+      wRun = a && a.r === 'weightJump' ? wRun + 1 : 0;
     }
     if (excl[d]) {
       exRun++;
@@ -227,7 +240,7 @@ export function adaptiveTDEE(sel: ISODate, ctx: ModelCtx, keep: KeepMap): Adapti
     let nK28 = 0;
     let excl28 = 0;
     let normal28 = 0;
-    const reasons: Record<string, number> = {};
+    const reasons: Partial<Record<ExclReason, number>> = {};
     for (let j = Math.max(0, i - P.WIN + 1); j <= i; j++) {
       const d = days[j];
       const age = i - j;
@@ -324,7 +337,7 @@ export function adaptiveTDEE(sel: ISODate, ctx: ModelCtx, keep: KeepMap): Adapti
             d,
             why: why[d],
             auto: !!auto[d],
-            t: autoList.find((a) => a.d === d)?.why || '',
+            detail: autoList.find((a) => a.d === d)?.detail,
           })),
         kept: kept.filter((a) => dayDiff(a.d, sel) < 28),
         recList: days.filter((d) => rec[d] && dayDiff(d, sel) < 28),
@@ -373,10 +386,3 @@ export function goalForecast(
   if (days > 730) return { kind: 'tooLong', goal, paceKgWeek: wk };
   return { kind: 'date', goal, date: shiftDate(sel, days), days, paceKgWeek: wk, left: need, rough: r.alpha < 1 };
 }
-
-export const fmtSignedKg = (v: number, digits = 2) =>
-  (v > 0 ? '+' : '−') + Math.abs(v).toFixed(digits).replace('.', ',');
-
-export const fmtKg = (v: number, digits = 1) => v.toFixed(digits).replace('.', ',');
-
-export { dm };

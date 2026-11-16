@@ -1,16 +1,21 @@
 import React from 'react';
 import { View } from 'react-native';
-import { dm, type ISODate } from '../core/dates';
-import { goalForecast, fmtSignedKg, PARAMS } from '../core/adaptive';
+import type { ISODate } from '../core/dates';
+import { goalForecast, PARAMS } from '../core/adaptive';
 import { useStore } from '../data/store';
 import { useDerived } from '../data/derived';
 import { Btn, Card, Divider, Gap, Note, Row, T } from '../ui/kit';
 import { useTheme } from '../ui/theme';
-import { calibLine, factLine, goalText, RELIABILITY_LABEL, reliabilityDetails } from '../ui/format';
+import { calibLine, detailText, factLine, goalText, reasonText, reliabilityDetails } from '../ui/format';
+import { useI18n } from '../i18n';
 import { Chart } from '../ui/Chart';
 
 export function FactScreen({ sel }: { sel: ISODate }) {
   const t = useTheme();
+  const L = useI18n();
+  const { tx, f } = L;
+  const F = tx.fact;
+  const dm = f.dm;
   const { data, setKeep, setDay } = useStore();
   const { profile, days, keep } = data;
   const d = useDerived(profile, days, keep, sel);
@@ -20,48 +25,48 @@ export function FactScreen({ sel }: { sel: ISODate }) {
 
   if (!r)
     return (
-      <Card title="Расход по факту" accent={t.amber}>
-        <T muted>Нужны вес и калории хотя бы за один день. Быстрее всего — импорт истории веса и выгрузки FatSecret в профиле.</T>
+      <Card title={F.title} accent={t.amber}>
+        <T muted>{F.empty}</T>
       </Card>
     );
-  const c = calibLine(r);
+  const c = calibLine(L, r);
   const relColor = r.reliability === 'high' ? t.green : r.reliability === 'low' ? t.amber : t.text;
   const pts = r.series.filter((p) => p.E != null);
 
   return (
     <View>
-      <T size={22} bold>Расход по факту</T>
-      <T muted size={13}>Уточняется по вашему весу каждый день · на {dm(sel)}</T>
+      <T size={22} bold>{F.title}</T>
+      <T muted size={13}>{F.subtitle(dm(sel))}</T>
       <Gap h={12} />
       <Card accent={t.amber}>
         <T bold mono size={32} color={t.amber}>{c.main}</T>
         <T muted size={13}>{c.sub}</T>
         <Gap h={6} />
-        <T size={13}>{factLine(r)}</T>
+        <T size={13}>{factLine(L, r)}</T>
         <T size={13}>
-          Надёжность: <T bold color={relColor}>{RELIABILITY_LABEL[r.reliability]}</T> · {reliabilityDetails(r)}
+          {F.reliability}<T bold color={relColor}>{tx.common.reliability[r.reliability]}</T> · {reliabilityDetails(L, r)}
         </T>
         {premiumLocked ? (
           <>
             <Gap h={6} />
-            <T muted size={12}>«Расход по факту» входит в премиум (гипотеза плана). В пилоте доступен всем.</T>
+            <T muted size={12}>{F.premium}</T>
           </>
         ) : null}
       </Card>
 
       {pts.length >= 7 ? (
-        <Card title={`Расход, ккал/день · до ${PARAMS.WIN} дней`} accent={t.amber}>
+        <Card title={F.chartTitle(PARAMS.WIN)} accent={t.amber}>
           <Chart
             height={150}
-            exportName={`rashod-po-faktu-${sel}`}
+            exportName={`${F.chartFile}-${sel}`}
             spec={{
-              title: 'Расход по факту и по формуле',
+              title: F.chartExport,
               from: pts[0].d,
               to: pts[pts.length - 1].d,
               yStep: 100,
               series: [
-                { label: 'по факту', color: t.amber, width: 2.4, points: pts.map((p) => ({ d: p.d, v: p.E! })) },
-                { label: 'по формуле', color: t.muted, dash: true, width: 1.5, points: r.series.filter((p) => p.formula != null).map((p) => ({ d: p.d, v: p.formula! })) },
+                { label: F.seriesFact, color: t.amber, width: 2.4, points: pts.map((p) => ({ d: p.d, v: p.E! })) },
+                { label: F.seriesFormula, color: t.muted, dash: true, width: 1.5, points: r.series.filter((p) => p.formula != null).map((p) => ({ d: p.d, v: p.formula! })) },
               ],
               marks: r.series.filter((p) => p.excl).map((p) => p.d),
             }}
@@ -69,39 +74,39 @@ export function FactScreen({ sel }: { sel: ISODate }) {
         </Card>
       ) : null}
 
-      <Card title="Вне расчёта за 28 дней" accent={t.red}>
+      <Card title={F.excluded} accent={t.red}>
         {r.exclList.length ? (
           r.exclList.map((x) => (
             <Row key={x.d} gap={6} style={{ marginBottom: 4 }}>
               <T size={13}>
-                {dm(x.d)} — {x.why} <T muted size={12}>{x.auto ? `(авто: ${x.t})` : '(ваша отметка)'}</T>
+                {dm(x.d)} — {reasonText(L, x.why)} <T muted size={12}>{x.auto ? F.auto(detailText(L, x.detail)) : F.yours}</T>
               </T>
               {x.auto ? (
-                <Btn kind="link" small title="вернуть в расчёт" onPress={() => setKeep(x.d, true)} />
+                <Btn kind="link" small title={F.returnToCalc} onPress={() => setKeep(x.d, true)} />
               ) : (
-                <Btn kind="link" small title="снять отметку" onPress={() => setDay(x.d, { anomaly: undefined })} />
+                <Btn kind="link" small title={F.unmark} onPress={() => setDay(x.d, { anomaly: undefined })} />
               )}
             </Row>
           ))
         ) : (
-          <T muted size={13}>нет</T>
+          <T muted size={13}>{F.none}</T>
         )}
         {r.recList.length ? (
           <>
             <Gap h={6} />
-            <T muted size={12}>Вес после необычных дней (2–3 дня) не идёт в тренд: {r.recList.map(dm).join(', ')}</T>
+            <T muted size={12}>{F.recovery(r.recList.map(dm).join(', '))}</T>
           </>
         ) : null}
         {r.kept.length ? (
           <>
             <Divider />
-            <T bold size={13}>Возвращены в расчёт вручную</T>
+            <T bold size={13}>{F.kept}</T>
             {r.kept.map((x) => (
               <Row key={x.d} gap={6}>
                 <T size={13}>
-                  {dm(x.d)} — {x.why}
+                  {dm(x.d)} — {detailText(L, x.detail)}
                 </T>
-                <Btn kind="link" small title="исключить снова" onPress={() => setKeep(x.d, false)} />
+                <Btn kind="link" small title={F.excludeAgain} onPress={() => setKeep(x.d, false)} />
               </Row>
             ))}
           </>
@@ -109,20 +114,18 @@ export function FactScreen({ sel }: { sel: ISODate }) {
         {r.autoList.length ? (
           <>
             <Gap h={6} />
-            <Note>Автонаходки — это подсказка. Если день был обычным, верните его в расчёт.</Note>
+            <Note>{F.autoNote}</Note>
           </>
         ) : null}
       </Card>
 
-      <Card title="Прогноз цели" accent={t.blue}>
-        <T size={14}>{goalText(goal)}</T>
-        {r.trendW ? <T muted size={12}>Вес по тренду сейчас {r.trendW.toFixed(1).replace('.', ',')} кг{r.slope != null ? ` · темп ${fmtSignedKg(r.slope * 7)} кг/нед` : ''}</T> : null}
+      <Card title={F.goalTitle} accent={t.blue}>
+        <T size={14}>{goalText(L, goal)}</T>
+        {r.trendW ? <T muted size={12}>{F.trendNow(f.num(r.trendW, 1), r.slope != null ? f.signed(r.slope * 7) : '')}</T> : null}
       </Card>
 
-      <Card title="Как это считается" accent={t.muted}>
-        <T muted size={13}>
-          Старт — с формулы (БМР + шаги + тренировки + переваривание). Каждый день приложение считает тренд веса по обычным дням за 56 дней (свежие дни весят больше, влияние дня уполовинивается за 14 дней) и сравнивает со средними калориями. Оценка сдвигается к факту на долю, которая растёт с данными (полное доверие — 14 взвешиваний и 20 дней с калориями за 28 дней), и не больше чем на ±50 ккал за день. Поездки, застолья, болезнь, неполный дневник{profile.sex === 'female' ? ', цикл' : ''} и 2–3 дня после них в тренд не идут. Если исключено больше 20% дней, доверие снижается вдвое.
-        </T>
+      <Card title={F.howTitle} accent={t.muted}>
+        <T muted size={13}>{F.how(profile.sex === 'female')}</T>
       </Card>
     </View>
   );
