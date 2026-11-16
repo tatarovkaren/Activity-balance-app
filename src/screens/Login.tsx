@@ -36,8 +36,7 @@ export function LoginScreen() {
 
   return (
     <View style={{ maxWidth: 420, width: '100%', alignSelf: 'center', paddingTop: 40 }}>
-      <T size={34} bold style={{ textAlign: 'center' }}>Баланс</T>
-      <T muted size={12} style={{ textAlign: 'center' }}>рабочее название</T>
+      <T size={34} bold style={{ textAlign: 'center' }}>Activity Balance</T>
       <Gap h={4} />
       <T size={15} style={{ textAlign: 'center' }}>Узнайте свой настоящий расход энергии</T>
       <Gap h={28} />

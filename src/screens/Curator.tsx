@@ -84,7 +84,7 @@ export function CuratorScreen() {
 
   const sidebar = (
     <View style={{ width: wide ? 200 : '100%', paddingRight: wide ? 16 : 0, marginBottom: 12 }}>
-      <T bold size={16}>Баланс · куратор</T>
+      <T bold size={16}>Activity Balance · куратор</T>
       <Gap />
       {['Клиенты', 'Отчёты дня', 'Чат (скоро)', 'Шаблоны планов (скоро)'].map((x, i) => (
         <T key={x} size={14} color={i === 0 ? t.amber : t.muted} style={{ paddingVertical: 4 }}>{x}</T>

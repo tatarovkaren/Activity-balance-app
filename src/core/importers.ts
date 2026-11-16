@@ -284,7 +284,7 @@ export function parseBackup(text: string, owner: string): { ok: true; backup: Ba
     return { ok: false, error: 'Файл не читается как резервная копия.' };
   }
   if (!j || j.app !== BACKUP_APP || !j.data || typeof j.data.days !== 'object')
-    return { ok: false, error: 'Это не резервная копия «Баланса».' };
+    return { ok: false, error: 'Это не резервная копия Activity Balance.' };
   if (owner && j.owner && j.owner !== owner)
     return { ok: false, error: 'Это файл другого аккаунта — импорт отменён.' };
   return { ok: true, backup: j as Backup };
