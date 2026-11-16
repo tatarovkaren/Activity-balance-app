@@ -3,7 +3,7 @@
 // получает список продуктов с размерами и само считает граммы, ккал и диапазон (estimate.ts).
 
 import { shiftDate, type ISODate } from '../dates';
-import type { Plan } from '../types';
+import type { Lang, Plan } from '../types';
 import { FOODS } from './foods';
 import type { ComponentInput, HandProfile, PhotoQuality } from './estimate';
 
@@ -18,7 +18,8 @@ export interface PhotoEstimateRequest {
   hand: HandProfile;
   /** Подсказка пользователя: «гречка с курицей», «ресторан». */
   note?: string;
-  locale: 'ru' | 'en';
+  /** Язык интерфейса: на нём сервер возвращает свободный текст (retake). */
+  locale: Lang;
 }
 
 export interface PhotoEstimateResponse {
@@ -26,16 +27,29 @@ export interface PhotoEstimateResponse {
   quality: PhotoQuality;
   /** Ресторанная или жареная еда — приложение добавит скрытое масло. */
   oilyGuess: boolean;
-  /** Если ракурс плохой — что переснять. */
+  /**
+   * Если ракурс плохой — что переснять. Известные коды переводит приложение (RETAKE_CODES),
+   * любой другой текст сервер присылает уже на языке locale.
+   */
   retake?: string[];
-  /** Пояснение масштаба: «ладонь 10×10,5 см». */
-  scaleNote?: string;
+}
+
+/** Коды подсказок «переснять», которые приложение переводит само. */
+export const RETAKE_CODES = ['addSide'] as const;
+
+/** Ошибка сервиса оценки: статус HTTP или неожиданный ответ. Текст — в словарях (errors.*). */
+export class PhotoServiceError extends Error {
+  constructor(
+    public code: 'photoServiceStatus' | 'photoServiceBadResponse',
+    public status?: number,
+  ) {
+    super(code);
+  }
 }
 
 export interface FoodPhotoProvider {
+  /** Название для интерфейса берётся из словаря по id (photo.providers.*), без имени модели. */
   id: string;
-  /** Название для интерфейса, без имени модели — пользователю не важно, кто считает. */
-  label: string;
   /** true — оценивает по снимкам автоматически; false — пользователь вводит порции сам. */
   automatic: boolean;
   estimate(req: PhotoEstimateRequest): Promise<PhotoEstimateResponse>;
@@ -44,7 +58,6 @@ export interface FoodPhotoProvider {
 /** Без ИИ: пустой черновик, пользователь описывает порции в «ладонях/кулаках» или граммах. */
 export const manualProvider: FoodPhotoProvider = {
   id: 'manual',
-  label: 'Ручной ввод порций',
   automatic: false,
   async estimate(req) {
     return {
@@ -61,12 +74,13 @@ export const manualProvider: FoodPhotoProvider = {
  */
 export const demoProvider: FoodPhotoProvider = {
   id: 'demo',
-  label: 'Демо-оценка (без ИИ)',
   automatic: true,
   async estimate(req) {
     await new Promise((r) => setTimeout(r, 700));
     const note = (req.note || '').toLowerCase();
-    const pick = FOODS.filter((f) => note && f.name.toLowerCase().split(' ').some((w) => w.length > 3 && note.includes(w.slice(0, 5))));
+    // слова из русского названия и из id (английские: buckwheat, chicken_cutlet…)
+    const words = (f: (typeof FOODS)[number]) => [...f.name.toLowerCase().split(' '), ...f.id.split('_')];
+    const pick = FOODS.filter((f) => note && words(f).some((w) => w.length > 3 && note.includes(w.slice(0, 5))));
     const components: ComponentInput[] = pick.length
       ? pick.slice(0, 3).map((f, i) => ({ foodId: f.id, amount: { kind: 'hand', unit: i === 0 ? 'fist' : 'palm', count: 1 }, confidence: 0.5 }))
       : [
@@ -78,8 +92,7 @@ export const demoProvider: FoodPhotoProvider = {
       components,
       quality: req.photos.side ? 'good' : 'topOnly',
       oilyGuess: true,
-      retake: req.photos.side ? undefined : ['Добавьте снимок сбоку под 30–45° — по нему видна высота порции.'],
-      scaleNote: `ладонь ${req.hand.palmWidth}×${req.hand.palmLength} см`,
+      retake: req.photos.side ? undefined : ['addSide'],
     };
   },
 };
@@ -92,7 +105,6 @@ export const demoProvider: FoodPhotoProvider = {
 export function httpProvider(endpoint: string, getToken?: () => Promise<string | undefined>): FoodPhotoProvider {
   return {
     id: 'http',
-    label: 'Оценка по фото (бета)',
     automatic: true,
     async estimate(req) {
       const token = getToken ? await getToken() : undefined;
@@ -101,9 +113,9 @@ export function httpProvider(endpoint: string, getToken?: () => Promise<string |
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(req),
       });
-      if (!res.ok) throw new Error(`Сервис оценки ответил ${res.status}`);
+      if (!res.ok) throw new PhotoServiceError('photoServiceStatus', res.status);
       const j = (await res.json()) as PhotoEstimateResponse;
-      if (!j || !Array.isArray(j.components)) throw new Error('Сервис оценки вернул неожиданный ответ');
+      if (!j || !Array.isArray(j.components)) throw new PhotoServiceError('photoServiceBadResponse');
       return j;
     },
   };

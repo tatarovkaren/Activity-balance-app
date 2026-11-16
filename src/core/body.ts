@@ -44,11 +44,8 @@ export function bodyFatNorm(sex: Sex, age: number): [number, number] {
   return t[t.length - 1][1];
 }
 
-export const FREQ_LABEL: Record<MeasureFreq, string> = {
-  week: 'раз в неделю',
-  '2weeks': 'раз в 2 недели',
-  month: 'раз в месяц',
-};
+/** Варианты частоты замеров. Подписи — в словарях src/i18n. */
+export const MEASURE_FREQS: MeasureFreq[] = ['week', '2weeks', 'month'];
 
 export function hasMeasurement(e: { neck?: number; waist?: number; hips?: number } | undefined): boolean {
   return !!(e && (e.neck || e.waist || e.hips));

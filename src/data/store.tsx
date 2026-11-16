@@ -8,7 +8,7 @@ import { todayISO, type ISODate } from '../core/dates';
 import { compactEntry, mergeDays, mergeEntry } from '../core/merge';
 import { DEFAULT_PROFILE, type DayEntry, type DayMap, type KeepMap, type Profile } from '../core/types';
 import type { HandProfile } from '../core/photo/estimate';
-import { demoDays, demoProfile } from '../core/demo';
+import { demoDays, demoProfile, type DemoLabels } from '../core/demo';
 import { load, save, clearAll } from './storage';
 import { currentUser, supabase, supabaseRepo, signOut, type CloudRepo } from './cloud';
 
@@ -58,11 +58,17 @@ export interface AppData {
 
 const EMPTY: AppData = { profile: DEFAULT_PROFILE, days: {}, keep: {}, refs: [], photoUsage: [], consent: {} };
 
-export type SyncStatus =
-  | { kind: 'off'; text: string }
-  | { kind: 'busy'; text: string }
-  | { kind: 'ok'; text: string }
-  | { kind: 'offline'; text: string };
+/**
+ * Состояние синхронизации: код + время (ЧЧ:ММ). Текст подставляет интерфейс из словаря sync.*,
+ * чтобы статус переводился вместе с языком.
+ */
+export type SyncCode = 'local' | 'demo' | 'noServer' | 'saving' | 'connecting' | 'saved' | 'synced' | 'offlineSaved' | 'offlinePull';
+export interface SyncStatus {
+  kind: 'off' | 'busy' | 'ok' | 'offline';
+  code: SyncCode;
+  /** Время последнего успешного обмена, ЧЧ:ММ. */
+  at?: string;
+}
 
 interface StoreApi {
   ready: boolean;
@@ -81,7 +87,7 @@ interface StoreApi {
   setCurator: (c: CuratorAccess | undefined) => void;
   setConsent: (c: Consent) => void;
   startLocal: (role: Role) => void;
-  startDemo: (role: Role) => void;
+  startDemo: (role: Role, labels?: DemoLabels) => void;
   startCloud: () => Promise<void>;
   setRole: (r: Role) => void;
   logout: () => Promise<void>;
@@ -99,7 +105,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [session, setSession] = useState<Session>({ mode: 'none', userId: '', role: 'client' });
   const [data, setData] = useState<AppData>(EMPTY);
-  const [sync, setSync] = useState<SyncStatus>({ kind: 'off', text: 'Данные хранятся на этом устройстве' });
+  const [sync, setSync] = useState<SyncStatus>({ kind: 'off', code: 'local' });
   const repo = useRef<CloudRepo | null>(null);
   const pendingDays = useRef<Set<ISODate>>(new Set());
   const pendingProfile = useRef(false);
@@ -147,7 +153,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const r = repo.current;
     if (!r) return;
     if (!pendingDays.current.size && !pendingProfile.current) return;
-    setSync({ kind: 'busy', text: '☁ Сохраняю…' });
+    setSync({ kind: 'busy', code: 'saving' });
     const dates = [...pendingDays.current];
     const changes: Record<ISODate, DayEntry | null> = {};
     for (const d of dates) {
@@ -160,9 +166,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       dates.forEach((d) => pendingDays.current.delete(d));
       pendingProfile.current = false;
       persistPending();
-      setSync({ kind: 'ok', text: '☁ Сохранено в облаке · ' + hhmm() });
+      setSync({ kind: 'ok', code: 'saved', at: hhmm() });
     } catch {
-      setSync({ kind: 'offline', text: '☁ Нет связи — сохранено на устройстве, отправлю позже' });
+      setSync({ kind: 'offline', code: 'offlineSaved' });
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(pushNow, 30000);
     }
@@ -178,7 +184,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const pull = useCallback(async () => {
     const r = repo.current;
     if (!r) return;
-    setSync({ kind: 'busy', text: '☁ Подключаюсь к облаку…' });
+    setSync({ kind: 'busy', code: 'connecting' });
     try {
       const snap = await r.pull();
       setData((cur) => {
@@ -203,10 +209,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         if (!snap.profile) pendingProfile.current = true;
         return { ...cur, days, profile, keep };
       });
-      setSync({ kind: 'ok', text: '☁ Синхронизировано · ' + hhmm() });
+      setSync({ kind: 'ok', code: 'synced', at: hhmm() });
       schedulePush();
     } catch {
-      setSync({ kind: 'offline', text: '☁ Нет связи — данные на устройстве, синхронизирую позже' });
+      setSync({ kind: 'offline', code: 'offlinePull' });
     }
   }, [schedulePush]);
 
@@ -217,10 +223,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       pull();
     } else {
       repo.current = null;
-      setSync({
-        kind: 'off',
-        text: session.mode === 'demo' ? 'Демо-режим: вымышленные данные в этом браузере' : 'Сервер не подключён — данные хранятся на этом устройстве',
-      });
+      setSync({ kind: 'off', code: session.mode === 'demo' ? 'demo' : 'noServer' });
     }
   }, [ready, session.mode, session.userId, pull]);
 
@@ -303,9 +306,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     startLocal: (role) => {
       setSession({ mode: 'local', userId: 'local', role });
     },
-    startDemo: (role) => {
+    startDemo: (role, labels) => {
       const today = todayISO();
-      setData({ ...EMPTY, profile: demoProfile(), days: demoDays(today), consent: { health: today } });
+      // язык и тема, выбранные на экране входа, сохраняются
+      setData((cur) => ({
+        ...EMPTY,
+        profile: { ...demoProfile(labels), lang: cur.profile.lang, theme: cur.profile.theme },
+        days: demoDays(today, labels),
+        consent: { health: today },
+      }));
       setSession({ mode: 'demo', userId: 'demo', role });
     },
     startCloud: async () => {
@@ -321,7 +330,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (session.mode === 'demo') await clearAll();
       pendingDays.current.clear();
       pendingProfile.current = false;
-      if (session.mode === 'demo') setData(EMPTY);
+      if (session.mode === 'demo')
+        setData((cur) => ({ ...EMPTY, profile: { ...DEFAULT_PROFILE, lang: cur.profile.lang, theme: cur.profile.theme } }));
       setSession({ mode: 'none', userId: '', role: 'client' });
     },
     importBackup: (inc) => {

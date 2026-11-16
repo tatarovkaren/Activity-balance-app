@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, type TextStyle, type ViewStyle } from 'react-native';
 import { MONO, useTheme } from './theme';
+import { useI18n } from '../i18n';
 
 export function Card({
   title,
@@ -100,17 +101,9 @@ export function Fields({ children, min = 72, gap = 8 }: { children: React.ReactN
 
 export const Gap = ({ h = 8 }: { h?: number }) => <View style={{ height: h }} />;
 
-/** Строка в число: принимает запятую. Пусто → undefined (нет данных). */
-export function parseNum(s: string): number | undefined {
-  const v = parseFloat(s.replace(/\s/g, '').replace(',', '.'));
-  return Number.isFinite(v) ? v : undefined;
-}
+export { parseNum } from './kit.parse';
+import { parseNum } from './kit.parse';
 
-export function fmtNum(v: number | undefined, digits?: number): string {
-  if (v == null) return '';
-  const str = digits != null ? v.toFixed(digits) : String(v);
-  return str.replace('.', ',');
-}
 
 export function NumField({
   label,
@@ -136,12 +129,19 @@ export function NumField({
   suffix?: string;
 }) {
   const t = useTheme();
-  const [text, setText] = useState(fmtNum(value));
+  const { f } = useI18n();
+  // десятичный разделитель — по языку (72,5 / 72.5); ввод принимает и запятую, и точку
+  const [text, setText] = useState(f.input(value));
   useEffect(() => {
     // внешнее изменение (смена даты, импорт) — обновить текст, если число другое
-    if (parseNum(text) !== value) setText(fmtNum(value));
+    if (parseNum(text, f.decimal) !== value) setText(f.input(value));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
+  useEffect(() => {
+    // смена языка — показать число с новым разделителем
+    setText(f.input(value));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [f]);
   const fs = big ? (text.length > 6 ? 22 : 27) : 16;
   return (
     <View style={{ width: width as any, alignSelf: width ? undefined : 'stretch', opacity: disabled ? 0.4 : 1 }}>
@@ -158,7 +158,7 @@ export function NumField({
           onChangeText={(x) => {
             const clean = x.replace(/[^\d.,\-\s]/g, '');
             setText(clean);
-            const v = parseNum(clean);
+            const v = parseNum(clean, f.decimal);
             onChange(v == null ? undefined : digits != null ? Math.round(v * 10 ** digits) / 10 ** digits : v);
           }}
           style={[

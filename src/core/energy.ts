@@ -11,13 +11,15 @@ export const PACE_MAX = 200;
 
 export type WorkoutKind = 'none' | 'strength' | 'cardioNoSteps' | 'cardioLegs';
 
-const STRENGTH_RE = /сил|зал|желез|strength|отжим|присед|подтяг|выпад|планк|пресс|собствен|турник|брус|гантел|штанг|гири|гиря/;
-const NO_STEP_RE = /вело|bike|плав|бассейн|swim|гребл|rowing|байдар/;
+// Тип тренировки — свободный текст на любом языке интерфейса (русские и английские слова).
+const STRENGTH_RE =
+  /сил|зал|желез|отжим|присед|подтяг|выпад|планк|пресс|собствен|турник|брус|гантел|штанг|гири|гиря|strength|gym|weight|lift|push-?up|squat|pull-?up|chin-?up|lunge|plank|\babs\b|calisthenic|dumbbell|barbell|kettlebell|resistance/;
+const NO_STEP_RE = /вело|плав|бассейн|гребл|байдар|bike|cycl|swim|pool|\brow|kayak|canoe/;
 
 export function classifyWorkout(type: string | undefined, minutes: number | undefined): WorkoutKind {
   if (!(minutes && minutes > 0)) return 'none';
   const t = String(type || '').toLowerCase();
-  if (/^\s*нет\s*$/.test(t)) return 'none';
+  if (/^\s*(нет|none|no)\s*$/.test(t)) return 'none';
   if (STRENGTH_RE.test(t)) return 'strength';
   if (NO_STEP_RE.test(t)) return 'cardioNoSteps';
   return 'cardioLegs';

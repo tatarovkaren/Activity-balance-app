@@ -9,12 +9,14 @@ import { useDerived } from '../data/derived';
 import { Card, Gap, Row, Seg, T, TextField, Fields } from '../ui/kit';
 import { useTheme } from '../ui/theme';
 import { Chart } from '../ui/Chart';
-import { kg } from '../ui/format';
+import { useI18n } from '../i18n';
 
 type Scale = 'week' | 'month' | '3m' | 'all' | 'custom';
 
 export function ChartsScreen({ sel }: { sel: ISODate }) {
   const t = useTheme();
+  const { tx, f } = useI18n();
+  const C = tx.charts;
   const { data } = useStore();
   const { profile, days, keep } = data;
   const [scale, setScale] = useState<Scale>('month');
@@ -66,105 +68,99 @@ export function ChartsScreen({ sel }: { sel: ISODate }) {
 
   return (
     <View>
-      <T size={22} bold>Графики</T>
-      <T muted size={13}>Результативность за период · выгрузка каждого графика в PNG или PDF</T>
+      <T size={22} bold>{C.title}</T>
+      <T muted size={13}>{C.subtitle}</T>
       <Gap h={10} />
       <Seg<Scale>
         value={scale}
         onChange={setScale}
-        options={[
-          { v: 'week', label: 'Неделя' },
-          { v: 'month', label: 'Месяц' },
-          { v: '3m', label: '3 мес' },
-          { v: 'all', label: 'Всё' },
-          { v: 'custom', label: 'Свои даты' },
-        ]}
+        options={(['week', 'month', '3m', 'all', 'custom'] as Scale[]).map((v) => ({ v, label: C.scale[v] }))}
       />
       {scale === 'custom' ? (
         <Fields>
-          <TextField value={cFrom} onChange={setCFrom} placeholder="с ДД.ММ.ГГГГ" />
-          <TextField value={cTo} onChange={setCTo} placeholder="по ДД.ММ.ГГГГ" />
+          <TextField value={cFrom} onChange={setCFrom} placeholder={C.from(f.dateInputPlaceholder)} />
+          <TextField value={cTo} onChange={setCTo} placeholder={C.to(f.dateInputPlaceholder)} />
         </Fields>
       ) : null}
-      {freeCut ? <T muted size={12} style={{ marginTop: 6 }}>Бесплатный тариф: графики за 30 дней, вся история — в премиуме (в пилоте открыто).</T> : null}
+      {freeCut ? <T muted size={12} style={{ marginTop: 6 }}>{C.freeCut}</T> : null}
       <Gap h={12} />
 
-      <Card title="Вес и тренд, кг" accent={t.blue}>
+      <Card title={C.weightTitle} accent={t.blue}>
         {series.weights.length ? (
           <>
             <Chart
-              exportName={`ves-${from}-${to}`}
+              exportName={`${C.files.weight}-${from}-${to}`}
               spec={{
-                title: 'Вес и тренд, кг',
+                title: C.weightTitle,
                 from,
                 to,
                 series: [
-                  { label: 'вес', color: t.blue, dots: true, width: 1.6, points: series.weights },
-                  { label: 'тренд без необычных дней', color: t.amber, dash: true, gapDays: 1e6, points: series.trend },
+                  { label: C.weight, color: t.blue, dots: true, width: 1.6, points: series.weights },
+                  { label: C.trend, color: t.amber, dash: true, gapDays: 1e6, points: series.trend },
                 ],
                 marks: series.marks,
               }}
             />
-            {series.slope != null ? <T muted size={12}>Темп по тренду за период: {kg(series.slope * 7, 2)} кг/нед</T> : null}
+            {series.slope != null ? <T muted size={12}>{C.pace(f.signed(series.slope * 7, 2))}</T> : null}
           </>
         ) : (
-          <T muted>Нет взвешиваний за период.</T>
+          <T muted>{C.noWeights}</T>
         )}
       </Card>
 
-      <Card title="Съедено и потрачено, ккал/день" accent={t.amber}>
+      <Card title={C.kcalTitle} accent={t.amber}>
         {series.intake.length ? (
           <Chart
-            exportName={`kkal-${from}-${to}`}
+            exportName={`${C.files.kcal}-${from}-${to}`}
             spec={{
-              title: 'Съедено и потрачено, ккал/день',
+              title: C.kcalTitle,
               from,
               to,
               yStep: 100,
               series: [
-                { label: 'съедено', color: t.amber, bars: true, points: series.intake },
-                { label: 'расход по формуле', color: t.muted, dash: true, points: series.total },
-                { label: 'по факту', color: t.green, points: series.factE },
+                { label: C.eaten, color: t.amber, bars: true, points: series.intake },
+                { label: C.formula, color: t.muted, dash: true, points: series.total },
+                { label: C.fact, color: t.green, points: series.factE },
               ],
             }}
           />
         ) : (
-          <T muted>Нет дней с калориями за период.</T>
+          <T muted>{C.noKcal}</T>
         )}
       </Card>
 
-      <Card title="Ожидаемо по дефициту и фактически, кг" accent={t.green}>
+      <Card title={C.deficitTitle} accent={t.green}>
         {series.expected.length ? (
           <>
             <Chart
-              exportName={`deficit-${from}-${to}`}
+              exportName={`${C.files.deficit}-${from}-${to}`}
               spec={{
-                title: 'Накопленный дефицит против фактического изменения веса, кг',
+                title: C.deficitExport,
                 from,
                 to,
                 zeroLine: true,
                 series: [
-                  { label: 'ожидаемо по дефициту', color: t.amber, dash: true, points: series.expected },
-                  { label: 'фактически по весу', color: t.green, dots: true, width: 1.6, points: series.actual },
+                  { label: C.expected, color: t.amber, dash: true, points: series.expected },
+                  { label: C.actual, color: t.green, dots: true, width: 1.6, points: series.actual },
                 ],
               }}
             />
-            <T muted size={12}>Если фактическая линия заметно выше ожидаемой — формула завышает расход или дневник неполный.</T>
+            <T muted size={12}>{C.deficitNote}</T>
           </>
         ) : (
-          <T muted>Нужны дни с калориями и весом.</T>
+          <T muted>{C.deficitEmpty}</T>
         )}
       </Card>
 
-      <Card title="% жира (ВМС США)" accent={t.teal}>
+      <Card title={C.fatTitle} accent={t.teal}>
         {series.fat.length ? (
           <Chart
             height={140}
-            exportName={`zhir-${from}-${to}`}
-            spec={{ title: '% жира (ВМС США)', from, to, series: [{ label: '% жира', color: t.teal, dots: true, points: series.fat }] }}
+            exportName={`${C.files.fat}-${from}-${to}`}
+            spec={{ title: C.fatTitle, from, to, series: [{ label: C.fat, color: t.teal, dots: true, points: series.fat }] }}
           />
         ) : (
-          <T muted>Нет замеров за период.</T>
+          <T muted>{C.noFat}</T>
         )}
       </Card>
     </View>

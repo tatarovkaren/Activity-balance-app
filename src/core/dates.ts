@@ -58,14 +58,4 @@ export function dateRange(from: ISODate, to: ISODate): ISODate[] {
   return out;
 }
 
-// ---- форматирование для интерфейса (русская локаль) ----
-export const dm = (d: ISODate) => d.slice(8, 10) + '.' + d.slice(5, 7);
-export const dmy = (d: ISODate) => dm(d) + '.' + d.slice(0, 4);
-
-const WEEKDAYS = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
-const MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
-export const weekday = (d: ISODate) => WEEKDAYS[parseISO(d).getDay()];
-export const longDate = (d: ISODate) => {
-  const x = parseISO(d);
-  return x.getDate() + ' ' + MONTHS_GEN[x.getMonth()];
-};
+// Форматирование дат для интерфейса (по языку) — в src/i18n/format.ts.

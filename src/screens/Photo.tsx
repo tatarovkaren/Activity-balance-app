@@ -4,14 +4,13 @@
 import React, { useMemo, useState } from 'react';
 import { Image, Pressable, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { dm, todayISO, type ISODate } from '../core/dates';
-import { FOOD_BY_ID, findFood } from '../core/photo/foods';
+import { todayISO, type ISODate } from '../core/dates';
+import { FOOD_BY_ID, FOODS } from '../core/photo/foods';
 import {
   buildDraft,
   biasFactor,
   estimateErrorPct,
   handFromCard,
-  HAND_UNIT_LABEL,
   REFERENCE_HAND,
   type ComponentInput,
   type HandProfile,
@@ -22,7 +21,7 @@ import { demoProvider, httpProvider, manualProvider, photoQuota, type FoodPhotoP
 import { useStore } from '../data/store';
 import { Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, TextField, Fields } from '../ui/kit';
 import { useTheme } from '../ui/theme';
-import { int, kg } from '../ui/format';
+import { errorText, foodName, useI18n, type I18n } from '../i18n';
 
 const ENDPOINT = process.env.EXPO_PUBLIC_PHOTO_ENDPOINT;
 
@@ -34,8 +33,20 @@ export function providers(): FoodPhotoProvider[] {
 
 type Step = 'capture' | 'draft' | 'done';
 
+/** Поиск по справочнику на языке интерфейса (и по русскому названию — для смешанного ввода). */
+function findFoodL(L: I18n, query: string) {
+  const q = query.trim().toLowerCase();
+  if (!q) return FOODS;
+  return FOODS.filter((x) => foodName(L, x.id).toLowerCase().includes(q) || x.name.toLowerCase().includes(q));
+}
+
 export function PhotoScreen({ sel }: { sel: ISODate }) {
   const t = useTheme();
+  const L = useI18n();
+  const { tx, f } = L;
+  const Ph = tx.photo;
+  const { int, dm } = f;
+  const kg = f.num;
   const { data, setDay, logPhoto, addRef, setConsent } = useStore();
   const { profile, hand, consent } = data;
   const [editingHand, setEditingHand] = useState(false);
@@ -63,12 +74,10 @@ export function PhotoScreen({ sel }: { sel: ISODate }) {
     return (
       <View>
         <Title />
-        <Card title="Перед первым снимком" accent={t.amber}>
-          <T size={14}>
-            Фото еды рядом с рукой — персональные данные. Снимки используются только для оценки порции и удаляются после того, как вы подтвердите запись, если вы не сохранили их сами. Оценка — черновик с честным диапазоном, в дневник попадает только то, что вы подтвердили.
-          </T>
+        <Card title={Ph.consentTitle} accent={t.amber}>
+          <T size={14}>{Ph.consentText}</T>
           <Gap />
-          <Btn kind="solid" title="Согласен(на) на обработку фото" onPress={() => setConsent({ photoAI: today })} testID="photoConsent" />
+          <Btn kind="solid" title={Ph.consentBtn} onPress={() => setConsent({ photoAI: today })} testID="photoConsent" />
         </Card>
       </View>
     );
@@ -86,20 +95,20 @@ export function PhotoScreen({ sel }: { sel: ISODate }) {
       const uri = a.base64 ? `data:${a.mimeType || 'image/jpeg'};base64,${a.base64}` : a.uri;
       which === 'top' ? setTop(uri) : setSide(uri);
     } catch {
-      setErr('Камера недоступна — выберите снимок из галереи.');
+      setErr(Ph.cameraError);
     }
   };
 
   const estimate = async () => {
     if (!top) return;
     if (provider.automatic && quota.left <= 0) {
-      setErr(`Лимит оценок исчерпан: ${quota.limit} ${quota.per === 'week' ? 'в неделю' : 'в день'}. Можно ввести порции вручную.`);
+      setErr(Ph.limit(quota.limit, quota.per === 'week'));
       return;
     }
     setBusy(true);
     setErr('');
     try {
-      const res = await provider.estimate({ photos: { top, side }, hand: h, note, locale: 'ru' });
+      const res = await provider.estimate({ photos: { top, side }, hand: h, note, locale: L.lang });
       if (provider.automatic) logPhoto(today);
       setItems(res.components.length ? res.components : [{ foodId: 'buckwheat', amount: { kind: 'hand', unit: 'fist', count: 1 } }]);
       setQuality(res.quality);
@@ -107,7 +116,7 @@ export function PhotoScreen({ sel }: { sel: ISODate }) {
       setRetake(res.retake || []);
       setStep('draft');
     } catch (e) {
-      setErr((e as Error).message || 'Не получилось оценить — попробуйте ещё раз или введите порции вручную.');
+      setErr(errorText(L, e) || Ph.failed);
     } finally {
       setBusy(false);
     }
@@ -150,43 +159,39 @@ export function PhotoScreen({ sel }: { sel: ISODate }) {
       <Title />
       {step === 'capture' ? (
         <>
-          <Card title="Два снимка" accent={t.amber}>
-            <T muted size={13}>Рука на одном уровне с тарелкой. Первый снимок — сверху, второй — сбоку под 30–45°. Начинку (пирог, ролл) — в разрезе.</T>
+          <Card title={Ph.twoShots} accent={t.amber}>
+            <T muted size={13}>{Ph.twoShotsHint}</T>
             <Gap />
             <Row gap={10} style={{ alignItems: 'flex-start' }}>
-              <Slot label="Сверху" uri={top} onCamera={() => pick('top', true)} onGallery={() => pick('top', false)} onClear={() => setTop(undefined)} />
-              <Slot label="Сбоку 30–45°" uri={side} onCamera={() => pick('side', true)} onGallery={() => pick('side', false)} onClear={() => setSide(undefined)} />
+              <Slot label={Ph.top} uri={top} onCamera={() => pick('top', true)} onGallery={() => pick('top', false)} onClear={() => setTop(undefined)} />
+              <Slot label={Ph.side} uri={side} onCamera={() => pick('side', true)} onGallery={() => pick('side', false)} onClear={() => setSide(undefined)} />
             </Row>
             <Gap />
-            <TextField value={note} onChange={setNote} placeholder="Подсказка: «гречка с котлетой, ресторан»" />
+            <TextField value={note} onChange={setNote} placeholder={Ph.notePlaceholder} />
             <Gap />
-            <T muted size={12}>Как считать</T>
-            <Seg value={providerId} onChange={setProviderId} options={providers().map((p) => ({ v: p.id, label: p.label }))} testID="provider" />
+            <T muted size={12}>{Ph.howToCount}</T>
+            <Seg value={providerId} onChange={setProviderId} options={providers().map((p) => ({ v: p.id, label: Ph.providers[p.id] || p.id }))} testID="provider" />
             <Gap h={6} />
             <T muted size={12}>
-              {provider.automatic
-                ? `Автоматических оценок: осталось ${quota.left} из ${quota.limit} ${quota.per === 'week' ? 'за 7 дней' : 'сегодня'} (${profile.plan === 'free' ? 'бесплатный' : 'премиум'} тариф).`
-                : 'Без ИИ: вы описываете порции в ладонях и кулаках — приложение переводит их в граммы по размерам вашей руки.'}
-              {provider.id === 'demo' ? ' Демо не смотрит на снимок, а показывает, как выглядит черновик.' : ''}
+              {provider.automatic ? Ph.quota(quota.left, quota.limit, quota.per === 'week', profile.plan === 'free') : Ph.manualHint}
+              {provider.id === 'demo' ? Ph.demoHint : ''}
             </T>
             {err ? <Note color={t.red}>{err}</Note> : null}
             <Gap />
-            <Btn kind="solid" title={busy ? 'Считаю…' : provider.automatic ? 'Оценить по фото' : 'Перейти к порциям'} onPress={estimate} disabled={!top || busy} testID="estimate" />
-            {!top ? <T muted size={12}>Нужен хотя бы снимок сверху.</T> : null}
+            <Btn kind="solid" title={busy ? Ph.busy : provider.automatic ? Ph.estimate : Ph.toPortions} onPress={estimate} disabled={!top || busy} testID="estimate" />
+            {!top ? <T muted size={12}>{Ph.needTop}</T> : null}
           </Card>
-          <Card title="Масштаб" accent={t.teal} right={<Btn small title="Изменить" onPress={() => setEditingHand(true)} />}>
-            <T size={13}>
-              Ладонь {kg(h.palmWidth)}×{kg(h.palmLength)} см · кулак {kg(h.fistWidth)}×{kg(h.fistHeight)} см · большой палец {kg(h.thumbLength)} см
-            </T>
-            <T muted size={12}>{h.source === 'card' ? 'проверено по банковской карте' : 'введено вручную'}</T>
+          <Card title={Ph.scaleTitle} accent={t.teal} right={<Btn small title={tx.common.change} onPress={() => setEditingHand(true)} />}>
+            <T size={13}>{Ph.handLine(kg(h.palmWidth), kg(h.palmLength), kg(h.fistWidth), kg(h.fistHeight), kg(h.thumbLength))}</T>
+            <T muted size={12}>{h.source === 'card' ? Ph.byCard : Ph.manualEntered}</T>
           </Card>
         </>
       ) : null}
 
       {step === 'draft' ? (
-        <Card title="Черновик · проверьте" accent={t.amber}>
+        <Card title={Ph.draftTitle} accent={t.amber}>
           {retake.map((x) => (
-            <Note key={x}>📷 {x}</Note>
+            <Note key={x}>📷 {Ph.retake[x] || x}</Note>
           ))}
           {items.map((it, i) => (
             <ComponentEditor
@@ -198,57 +203,58 @@ export function PhotoScreen({ sel }: { sel: ISODate }) {
               computed={draft.components[i]}
             />
           ))}
-          <Btn small title="+ Добавить продукт" onPress={() => setItems([...items, { foodId: 'veg_fresh', amount: { kind: 'hand', unit: 'fist', count: 1 } }])} />
+          <Btn small title={Ph.addFood} onPress={() => setItems([...items, { foodId: 'veg_fresh', amount: { kind: 'hand', unit: 'fist', count: 1 } }])} />
           <Divider />
           <Row>
-            <T size={13}>Скрытое масло (жарка, ресторан) +50–100 ккал</T>
-            <Seg value={oil ? 'y' : 'n'} onChange={(v) => setOil(v === 'y')} options={[{ v: 'n', label: 'нет' }, { v: 'y', label: 'да' }]} />
+            <T size={13}>{Ph.hiddenOil}</T>
+            <Seg value={oil ? 'y' : 'n'} onChange={(v) => setOil(v === 'y')} options={[{ v: 'n', label: tx.common.no }, { v: 'y', label: tx.common.yes }]} />
           </Row>
           <Gap h={6} />
           <View style={{ gap: 6 }}>
-            <T size={13}>Качество снимков</T>
-            <Seg<PhotoQuality> value={quality} onChange={setQuality} options={[{ v: 'good', label: 'хорошее ±15%' }, { v: 'topOnly', label: 'только сверху ±20%' }, { v: 'poor', label: 'плохое ±30%' }]} />
+            <T size={13}>{Ph.quality}</T>
+            <Seg<PhotoQuality> value={quality} onChange={setQuality} options={[{ v: 'good', label: Ph.qGood }, { v: 'topOnly', label: Ph.qTop }, { v: 'poor', label: Ph.qPoor }]} />
           </View>
           <Divider />
-          {draft.hiddenOil ? <T size={13}>Масло (скрытое) ≈ +{draft.hiddenOil.kcal} ккал</T> : null}
+          {draft.hiddenOil ? <T size={13}>{Ph.oilLine(draft.hiddenOil.kcal)}</T> : null}
           <T size={18} bold>
-            Итого ≈ <T bold mono size={18} color={t.amber}>{int(draft.kcal)} ккал</T>
+            {Ph.total}
+            <T bold mono size={18} color={t.amber}>
+              {int(draft.kcal)} {tx.common.kcal}
+            </T>
           </T>
-          <T muted size={13}>
-            диапазон {int(draft.kcalMin)}–{int(draft.kcalMax)} (±{draft.rangePct}%) · Б {kg(draft.p)} · Ж {kg(draft.f)} · У {kg(draft.c)} · ≈{int(draft.grams)} г
-          </T>
-          {bias ? <T muted size={12}>По вашим эталонам оценки {bias < 1 ? 'завышают' : 'занижают'} вес в среднем на {Math.round(Math.abs(1 / bias - 1) * 100)}% — поправка появится во второй очереди.</T> : null}
+          <T muted size={13}>{Ph.range(int(draft.kcalMin), int(draft.kcalMax), draft.rangePct, kg(draft.p), kg(draft.f), kg(draft.c), int(draft.grams))}</T>
+          {bias ? <T muted size={12}>{Ph.bias(bias < 1, Math.round(Math.abs(1 / bias - 1) * 100))}</T> : null}
           <Divider />
-          <T muted size={12}>Взвесили порцию? Введите реальный вес — сохраним как личный эталон и покажем ошибку оценки.</T>
+          <T muted size={12}>{Ph.weighed}</T>
           <Fields>
-            <NumField label="Реальный вес, г" value={realGrams} onChange={setRealGrams} />
-            <TextField label="Название эталона" value={saveRefName} onChange={setSaveRefName} placeholder="Гречка с котлетой" />
+            <NumField label={Ph.realGrams} value={realGrams} onChange={setRealGrams} />
+            <TextField label={Ph.refName} value={saveRefName} onChange={setSaveRefName} placeholder={Ph.refPlaceholder} />
           </Fields>
-          {realGrams ? <T muted size={12}>Ошибка оценки веса: {kg(estimateErrorPct(draft.grams, realGrams) || 0, 0)}%</T> : null}
+          {realGrams ? <T muted size={12}>{Ph.error(kg(estimateErrorPct(draft.grams, realGrams) || 0, 0))}</T> : null}
           <Gap />
           <Row>
-            <Btn kind="solid" title={`Добавить в дневник за ${dm(sel)}`} onPress={confirm} disabled={!draft.components.length} testID="confirmPhoto" style={{ flexGrow: 1 }} />
-            <Btn title="Отмена" onPress={reset} />
+            <Btn kind="solid" title={Ph.addToDiary(dm(sel))} onPress={confirm} disabled={!draft.components.length} testID="confirmPhoto" style={{ flexGrow: 1 }} />
+            <Btn title={tx.common.cancel} onPress={reset} />
           </Row>
-          <T muted size={12}>Калории прибавятся к уже записанным за день. Снимки после подтверждения удаляются.</T>
+          <T muted size={12}>{Ph.addNote}</T>
         </Card>
       ) : null}
 
       {step === 'done' ? (
         <Card accent={t.green}>
-          <T>Добавлено в дневник за {dm(sel)}: {int(draft.kcal)} ккал. Снимки удалены.</T>
+          <T>{Ph.added(dm(sel), int(draft.kcal))}</T>
           <Gap />
-          <Btn kind="solid" title="Ещё блюдо" onPress={reset} />
+          <Btn kind="solid" title={Ph.more} onPress={reset} />
         </Card>
       ) : null}
 
       {data.refs.length ? (
-        <Card title="Личные эталоны" accent={t.violet}>
+        <Card title={Ph.refsTitle} accent={t.violet}>
           {data.refs.slice(0, 10).map((r) => {
             const e = r.estGrams ? estimateErrorPct(r.estGrams, r.grams) : null;
             return (
               <T key={r.id} size={13}>
-                {dm(r.date)} · {r.name}: {r.grams} г, {r.kcal} ккал{e != null ? ` · оценка ${e > 0 ? '+' : ''}${Math.round(e)}%` : ''}
+                {Ph.refLine(dm(r.date), r.name, r.grams, r.kcal, e != null ? `${e > 0 ? '+' : ''}${Math.round(e)}%` : '')}
               </T>
             );
           })}
@@ -259,16 +265,20 @@ export function PhotoScreen({ sel }: { sel: ISODate }) {
 }
 
 function Title() {
+  const { tx } = useI18n();
   return (
     <View style={{ marginBottom: 12 }}>
-      <T size={22} bold>Фото блюда <T size={12} muted>бета</T></T>
-      <T muted size={13}>2 снимка: сверху и сбоку, рука рядом для масштаба</T>
+      <T size={22} bold>
+        {tx.photo.title} <T size={12} muted>{tx.photo.beta}</T>
+      </T>
+      <T muted size={13}>{tx.photo.subtitle}</T>
     </View>
   );
 }
 
 function Slot({ label, uri, onCamera, onGallery, onClear }: { label: string; uri?: string; onCamera: () => void; onGallery: () => void; onClear: () => void }) {
   const t = useTheme();
+  const { tx } = useI18n();
   return (
     <View style={{ flexGrow: 1, flexBasis: 140, gap: 6 }}>
       <T muted size={12}>{label}</T>
@@ -276,9 +286,9 @@ function Slot({ label, uri, onCamera, onGallery, onClear }: { label: string; uri
         {uri ? <Image source={{ uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" /> : <T muted size={28}>📷</T>}
       </View>
       <Row gap={6}>
-        <Btn small title="Камера" onPress={onCamera} />
-        <Btn small title="Галерея" onPress={onGallery} />
-        {uri ? <Btn small kind="link" title="убрать" onPress={onClear} color={t.muted} /> : null}
+        <Btn small title={tx.photo.camera} onPress={onCamera} />
+        <Btn small title={tx.photo.gallery} onPress={onGallery} />
+        {uri ? <Btn small kind="link" title={tx.common.remove} onPress={onClear} color={t.muted} /> : null}
       </Row>
     </View>
   );
@@ -294,9 +304,11 @@ function ComponentEditor({
   hand: HandProfile;
   onChange: (v: ComponentInput) => void;
   onRemove: () => void;
-  computed?: { grams: number; kcal: number; diaryNote?: string };
+  computed?: { grams: number; kcal: number; diaryGrams?: number; diaryKind?: 'dry' | 'raw' };
 }) {
   const t = useTheme();
+  const L = useI18n();
+  const Ph = L.tx.photo;
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const food = value.foodId ? FOOD_BY_ID[value.foodId] : undefined;
@@ -306,16 +318,16 @@ function ComponentEditor({
     <View style={{ borderBottomWidth: 1, borderColor: t.line, paddingVertical: 8, gap: 6 }}>
       <Row style={{ justifyContent: 'space-between' }}>
         <Pressable onPress={() => setOpen(!open)} style={{ flexShrink: 1 }}>
-          <T bold size={14}>{food?.name || value.name || 'Продукт'} ▾</T>
+          <T bold size={14}>{(food ? foodName(L, food.id) : value.name) || Ph.product} ▾</T>
         </Pressable>
-        <T mono size={13} color={t.amber}>{computed ? `≈${computed.grams} г · ${computed.kcal} ккал` : '—'}</T>
+        <T mono size={13} color={t.amber}>{computed ? `≈${computed.grams} ${L.tx.common.g} · ${computed.kcal} ${L.tx.common.kcal}` : '—'}</T>
       </Row>
-      {computed?.diaryNote ? <T muted size={12}>в дневник: {computed.diaryNote}</T> : null}
+      {computed?.diaryKind && computed.diaryGrams ? <T muted size={12}>{Ph.diary(computed.diaryGrams, computed.diaryKind)}</T> : null}
       {open ? (
         <View style={{ gap: 4 }}>
-          <TextField value={search} onChange={setSearch} placeholder="Найти продукт" />
+          <TextField value={search} onChange={setSearch} placeholder={Ph.findFood} />
           <Row gap={6}>
-            {findFood(search)
+            {findFoodL(L, search)
               .slice(0, 12)
               .map((f) => (
                 <Pressable
@@ -325,7 +337,7 @@ function ComponentEditor({
                     setOpen(false);
                   }}
                 >
-                  <T size={12} color={f.id === value.foodId ? t.amber : t.muted}>{f.name}</T>
+                  <T size={12} color={f.id === value.foodId ? t.amber : t.muted}>{foodName(L, f.id)}</T>
                 </Pressable>
               ))}
           </Row>
@@ -334,7 +346,7 @@ function ComponentEditor({
       <Row gap={6} style={{ alignItems: 'flex-end' }}>
         <NumField
           width={90}
-          label={unit === 'grams' ? 'граммы' : 'сколько'}
+          label={unit === 'grams' ? Ph.grams : Ph.howMany}
           value={a.kind === 'hand' ? a.count : a.kind === 'grams' ? a.grams : undefined}
           digits={unit === 'grams' ? 0 : 2}
           onChange={(v) =>
@@ -350,18 +362,12 @@ function ComponentEditor({
                 amount: u === 'grams' ? { kind: 'grams', grams: computed?.grams || 100 } : { kind: 'hand', unit: u as HandUnit, count: a.kind === 'hand' ? a.count : 1 },
               })
             }
-            options={[
-              { v: 'fist', label: 'кулак' },
-              { v: 'palm', label: 'ладонь' },
-              { v: 'cupped', label: 'горсть' },
-              { v: 'thumb', label: 'палец' },
-              { v: 'grams', label: 'г' },
-            ]}
+            options={(['fist', 'palm', 'cupped', 'thumb', 'grams'] as const).map((v) => ({ v, label: Ph.units[v] }))}
           />
         </View>
-        <Btn small kind="link" title="убрать" color={t.red} onPress={onRemove} />
+        <Btn small kind="link" title={L.tx.common.remove} color={t.red} onPress={onRemove} />
       </Row>
-      {unit !== 'grams' ? <T muted size={11}>{HAND_UNIT_LABEL[unit as HandUnit]}</T> : null}
+      {unit !== 'grams' ? <T muted size={11}>{Ph.unitHint[unit as HandUnit]}</T> : null}
     </View>
   );
 }
@@ -369,6 +375,9 @@ function ComponentEditor({
 /** Онбординг-замер руки: основной способ — вручную в см; проверка — снимок ладони с банковской картой. */
 export function HandSetup({ initial, onDone }: { initial?: HandProfile; onDone: () => void }) {
   const t = useTheme();
+  const { tx, f } = useI18n();
+  const H = tx.hand;
+  const kg = f.num;
   const { setHand } = useStore();
   const [h, setH] = useState<Partial<HandProfile>>(initial || {});
   const [photo, setPhoto] = useState<{ uri: string } | null>(null);
@@ -377,29 +386,28 @@ export function HandSetup({ initial, onDone }: { initial?: HandProfile; onDone: 
   const cardPx = taps.length >= 2 ? Math.abs(taps[1] - taps[0]) : 0;
   const palmPx = taps.length >= 4 ? Math.abs(taps[3] - taps[2]) : 0;
   const measured = taps.length >= 4 ? handFromCard(cardPx, palmPx) : null;
-  const TAP_HINTS = ['левый край карты', 'правый край карты', 'левый край ладони', 'правый край ладони'];
 
   return (
     <View>
       <Title />
-      <Card title="Замер руки" accent={t.teal}>
-        <T muted size={13}>Рука — линейка для фото. Измерьте один раз сантиметром или линейкой. Пример в подсказках — размеры средней мужской руки.</T>
+      <Card title={H.title} accent={t.teal}>
+        <T muted size={13}>{H.intro}</T>
         <Gap />
         <Fields>
-          <NumField label="Ширина ладони, см" value={h.palmWidth} onChange={(v) => setH({ ...h, palmWidth: v })} placeholder={String(REFERENCE_HAND.palmWidth)} digits={1} testID="palmWidth" />
-          <NumField label="Длина ладони, см" value={h.palmLength} onChange={(v) => setH({ ...h, palmLength: v })} placeholder="10,5" digits={1} testID="palmLength" />
+          <NumField label={H.palmWidth} value={h.palmWidth} onChange={(v) => setH({ ...h, palmWidth: v })} placeholder={f.input(REFERENCE_HAND.palmWidth)} digits={1} testID="palmWidth" />
+          <NumField label={H.palmLength} value={h.palmLength} onChange={(v) => setH({ ...h, palmLength: v })} placeholder={f.input(REFERENCE_HAND.palmLength)} digits={1} testID="palmLength" />
         </Fields>
         <Gap h={6} />
         <Fields>
-          <NumField label="Кулак ширина, см" value={h.fistWidth} onChange={(v) => setH({ ...h, fistWidth: v })} placeholder="9" digits={1} testID="fistWidth" />
-          <NumField label="Кулак высота, см" value={h.fistHeight} onChange={(v) => setH({ ...h, fistHeight: v })} placeholder="10" digits={1} testID="fistHeight" />
-          <NumField label="Большой палец, см" value={h.thumbLength} onChange={(v) => setH({ ...h, thumbLength: v })} placeholder="6,5" digits={1} testID="thumbLength" />
+          <NumField label={H.fistWidth} value={h.fistWidth} onChange={(v) => setH({ ...h, fistWidth: v })} placeholder={f.input(REFERENCE_HAND.fistWidth)} digits={1} testID="fistWidth" />
+          <NumField label={H.fistHeight} value={h.fistHeight} onChange={(v) => setH({ ...h, fistHeight: v })} placeholder={f.input(REFERENCE_HAND.fistHeight)} digits={1} testID="fistHeight" />
+          <NumField label={H.thumb} value={h.thumbLength} onChange={(v) => setH({ ...h, thumbLength: v })} placeholder={f.input(REFERENCE_HAND.thumbLength)} digits={1} testID="thumbLength" />
         </Fields>
         <Gap />
         <Row>
           <Btn
             kind="solid"
-            title="Сохранить"
+            title={H.save}
             disabled={!ok}
             testID="saveHand"
             onPress={() => {
@@ -407,16 +415,16 @@ export function HandSetup({ initial, onDone }: { initial?: HandProfile; onDone: 
               onDone();
             }}
           />
-          <Btn title="Взять средние размеры" onPress={() => setH({ ...REFERENCE_HAND })} />
+          <Btn title={H.average} onPress={() => setH({ ...REFERENCE_HAND })} />
         </Row>
       </Card>
 
-      <Card title="Проверка по банковской карте" accent={t.muted}>
-        <T muted size={13}>Положите ладонь рядом с картой (85,6 × 54 мм) и сфотографируйте сверху. Затем отметьте касанием 4 точки по горизонтали.</T>
+      <Card title={H.cardTitle} accent={t.muted}>
+        <T muted size={13}>{H.cardIntro}</T>
         <Gap h={6} />
         <Btn
           small
-          title={photo ? 'Другой снимок' : 'Выбрать снимок'}
+          title={photo ? H.other : H.pick}
           onPress={async () => {
             const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
             if (!r.canceled && r.assets?.length) {
@@ -428,19 +436,19 @@ export function HandSetup({ initial, onDone }: { initial?: HandProfile; onDone: 
         {photo ? (
           <>
             <Gap h={6} />
-            <T size={13} color={t.amber}>{taps.length < 4 ? `Коснитесь: ${TAP_HINTS[taps.length]}` : 'Готово'}</T>
+            <T size={13} color={t.amber}>{taps.length < 4 ? H.tap(H.taps[taps.length]) : H.ready}</T>
             <Pressable onPress={(ev) => taps.length < 4 && setTaps([...taps, ev.nativeEvent.locationX])}>
               <Image source={photo} style={{ width: '100%', height: 240, borderRadius: 10 }} resizeMode="contain" />
             </Pressable>
             {measured ? (
               <T size={13}>
-                Ширина ладони по фото ≈ {kg(measured)} см
-                {h.palmWidth ? ` · введено ${kg(h.palmWidth)} см (${Math.abs(measured - h.palmWidth) <= 0.7 ? 'совпадает' : 'проверьте замер'})` : ''}
+                {H.measured(kg(measured))}
+                {h.palmWidth ? H.entered(kg(h.palmWidth), Math.abs(measured - h.palmWidth) <= 0.7) : ''}
               </T>
             ) : null}
             <Row>
-              {measured ? <Btn small title="Подставить ширину" onPress={() => setH({ ...h, palmWidth: measured })} /> : null}
-              {taps.length ? <Btn small kind="link" title="сбросить точки" onPress={() => setTaps([])} /> : null}
+              {measured ? <Btn small title={H.useWidth} onPress={() => setH({ ...h, palmWidth: measured })} /> : null}
+              {taps.length ? <Btn small kind="link" title={H.resetTaps} onPress={() => setTaps([])} /> : null}
             </Row>
           </>
         ) : null}
