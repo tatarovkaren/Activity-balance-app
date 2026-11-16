@@ -23,6 +23,7 @@
       "output": "single",
       "name": "Баланс — баланс энергии",
       "shortName": "Баланс",
+      "description": "Activity Balance — ваш персональный дашборд баланса энергии: тренировки, повседневная активность, питание и вес в одном визуале.",
       "lang": "ru",
       "themeColor": "#080B10",
       "backgroundColor": "#080B10",

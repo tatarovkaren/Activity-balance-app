@@ -1,5 +1,9 @@
 # Баланс — первая версия (MVP)
 
+> Activity Balance — ваш персональный дашборд баланса энергии: тренировки, повседневная активность, питание и вес в одном визуале.
+>
+> _Activity Balance is your personal energy balance dashboard: workouts, daily activity, nutrition and weight in a single view._
+
 Дневник питания, активности и веса с честным «расходом по факту». Веб-приложение с установкой на главный экран (PWA) и кабинет куратора. Код на Expo (React Native): тот же код позже собирается в приложения для iPhone и Android (этап мобильных приложений с Health Connect и Apple Health).
 
 ## Что есть
