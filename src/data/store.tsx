@@ -8,9 +8,10 @@ import { todayISO, type ISODate } from '../core/dates';
 import { compactEntry, mergeDays, mergeEntry } from '../core/merge';
 import { DEFAULT_PROFILE, type DayEntry, type DayMap, type KeepMap, type Profile } from '../core/types';
 import type { HandProfile } from '../core/photo/estimate';
+import { withGoal, type GoalProposal, type GoalSetting } from '../core/targets';
 import { demoDays, demoProfile, type DemoLabels } from '../core/demo';
 import { load, save, clearAll } from './storage';
-import { currentUser, recordConsents, supabase, supabaseRepo, signOut, type CloudRepo } from './cloud';
+import { currentUser, myGoalProposals, recordConsents, respondGoalProposal, supabase, supabaseRepo, signOut, type CloudRepo } from './cloud';
 import { LEGAL_VERSION } from '../legal';
 
 export type Mode = 'none' | 'local' | 'demo' | 'cloud';
@@ -61,6 +62,8 @@ export interface AppData {
   photoUsage: ISODate[];
   curator?: CuratorAccess;
   consent: Consent;
+  /** Предложения куратора по режиму цели, ждущие подтверждения. */
+  goalProposals?: GoalProposal[];
 }
 
 const EMPTY: AppData = { profile: DEFAULT_PROFILE, days: {}, keep: {}, refs: [], photoUsage: [], consent: {} };
@@ -93,6 +96,11 @@ interface StoreApi {
   logPhoto: (d: ISODate) => void;
   setCurator: (c: CuratorAccess | undefined) => void;
   setConsent: (c: Consent) => void;
+  /** Новый режим цели с сегодняшнего дня (правка в тот же день заменяет режим дня). */
+  setGoal: (g: Omit<GoalSetting, 'start'>) => void;
+  /** «Пересчитать сейчас»: планка считается заново по данным на сегодня. */
+  recalcGoal: () => void;
+  answerProposal: (id: string, accept: boolean) => Promise<void>;
   startLocal: (role: Role) => void;
   startDemo: (role: Role, labels?: DemoLabels) => void;
   startCloud: () => Promise<void>;
@@ -234,6 +242,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       });
       setSync({ kind: 'ok', code: 'synced', at: hhmm() });
       schedulePush();
+      // предложения куратора по цели (таблица из миграции 0003; нет таблицы — просто пропускаем)
+      myGoalProposals()
+        .then((goalProposals) => setData((cur) => ({ ...cur, goalProposals })))
+        .catch(() => {});
     } catch {
       setSync({ kind: 'offline', code: 'offlinePull' });
     }
@@ -326,6 +338,31 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     logPhoto: (d) => setData((cur) => ({ ...cur, photoUsage: [...cur.photoUsage.filter((x) => x >= '2000'), d].slice(-200) })),
     setCurator: (c) => setData((cur) => ({ ...cur, curator: c })),
     setConsent: (c) => setData((cur) => ({ ...cur, consent: { ...cur.consent, ...c } })),
+    setGoal: (g) => {
+      const start = todayISO();
+      setData((cur) => ({ ...cur, profile: { ...cur.profile, goals: withGoal(cur.profile.goals, { ...g, start }) } }));
+      touchProfile();
+    },
+    recalcGoal: () => {
+      const d = todayISO();
+      setData((cur) => ({
+        ...cur,
+        profile: { ...cur.profile, goalRecalc: [...(cur.profile.goalRecalc || []).filter((x) => x !== d), d].slice(-60) },
+      }));
+      touchProfile();
+    },
+    answerProposal: async (id, accept) => {
+      const p = dataRef.current.goalProposals?.find((x) => x.id === id);
+      if (!p) return;
+      if (session.mode === 'cloud') await respondGoalProposal(id, accept);
+      const start = todayISO();
+      setData((cur) => ({
+        ...cur,
+        goalProposals: (cur.goalProposals || []).filter((x) => x.id !== id),
+        profile: accept ? { ...cur.profile, goals: withGoal(cur.profile.goals, { ...p.setting, start, by: 'curator' }) } : cur.profile,
+      }));
+      if (accept) touchProfile();
+    },
     startLocal: (role) => {
       setSession({ mode: 'local', userId: 'local', role });
     },
@@ -334,7 +371,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       // язык и тема, выбранные на экране входа, сохраняются
       setData((cur) => ({
         ...EMPTY,
-        profile: { ...demoProfile(labels), lang: cur.profile.lang, theme: cur.profile.theme },
+        profile: { ...demoProfile(labels, today), lang: cur.profile.lang, theme: cur.profile.theme },
         days: demoDays(today, labels),
         consent: { health: today, terms: today, privacy: today, version: LEGAL_VERSION },
       }));

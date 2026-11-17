@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
 import { dayDiff, shiftDate, todayISO, ageAt, type ISODate } from '../core/dates';
 import { bodyFatNorm, measureHint, navyBodyFat } from '../core/body';
@@ -13,6 +13,9 @@ import { calibLine, detailText, importSummaryText } from '../ui/format';
 import { errorText, useI18n } from '../i18n';
 import { pickTextFile, downloadBlob, svgToPng } from '../ui/files';
 import { reportSvg } from '../ui/reportsvg';
+import { dayPlan, fatTone, kcalTone, proteinTone, type Tone } from '../core/targets';
+import { planLine, planNotes, toneColor } from '../ui/targets';
+import { ProposalCards } from './Goal';
 
 export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d: ISODate) => void; openFact: () => void }) {
   const t = useTheme();
@@ -25,6 +28,8 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
   const { profile, days, keep } = data;
   const e = days[sel] || {};
   const d = useDerived(profile, days, keep, sel);
+  const plan = useMemo(() => dayPlan(profile, days, keep, sel), [profile, days, keep, sel]);
+  const tg = plan.kind === 'ok' ? plan.targets : null;
   const [importMsg, setImportMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [reportMsg, setReportMsg] = useState('');
@@ -84,7 +89,7 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
   };
 
   const makeReport = async (send: boolean) => {
-    const rep = reportSvg(L, { date: sel, name: profile.name || D.report.clientFallback, profile, e, energy: en, adaptive: r, prevWeight: prevW });
+    const rep = reportSvg(L, { date: sel, name: profile.name || D.report.clientFallback, profile, e, energy: en, adaptive: r, prevWeight: prevW, plan });
     if (Platform.OS === 'web' && !send) {
       const b = await svgToPng(rep.svg, rep.w, rep.h);
       if (b) downloadBlob(`${tx.report.file}-${sel}.png`, b);
@@ -112,6 +117,8 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
           <Btn small title="›" onPress={() => setSel(shiftDate(sel, 1))} disabled={sel >= today} testID="nextDay" />
         </Row>
       </Row>
+
+      <ProposalCards />
 
       <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
         {/* Вес */}
@@ -144,16 +151,26 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
         right={<Btn small title={D.food.importFs} onPress={importCsv} testID="importCsv" />}
       >
         <NumField big label={D.food.kcal} value={kcalShown} onChange={(v) => set({ kcal: v == null ? undefined : Math.round(v), kcalManual: v != null })} placeholder="0" testID="kcal" />
+        {tg ? <FactTarget fact={kcalShown} target={tg.kcal} tone={kcalTone(kcalShown, tg.kcal)} testID="kcalTarget" /> : null}
         <Gap h={6} />
         <Fields>
-          <NumField label={D.food.p} value={e.protein} onChange={(v) => set({ protein: v })} digits={1} testID="protein" />
-          <NumField label={D.food.f} value={e.fat} onChange={(v) => set({ fat: v })} digits={1} testID="fat" />
-          <NumField label={D.food.c} value={e.carbs} onChange={(v) => set({ carbs: v })} digits={1} testID="carbs" />
+          <View>
+            <NumField label={D.food.p} value={e.protein} onChange={(v) => set({ protein: v })} digits={1} testID="protein" />
+            {tg ? <FactTarget fact={e.protein} target={tg.protein} tone={proteinTone(e.protein, tg.protein)} unit testID="proteinTarget" /> : null}
+          </View>
+          <View>
+            <NumField label={D.food.f} value={e.fat} onChange={(v) => set({ fat: v })} digits={1} testID="fat" />
+            {tg ? <FactTarget fact={e.fat} target={tg.fat} tone={fatTone(e.fat, tg.weight)} unit testID="fatTarget" /> : null}
+          </View>
+          <View>
+            <NumField label={D.food.c} value={e.carbs} onChange={(v) => set({ carbs: v })} digits={1} testID="carbs" />
+            {tg ? <FactTarget fact={e.carbs} target={tg.carbs} tone="none" unit testID="carbsTarget" /> : null}
+          </View>
         </Fields>
         <Gap h={6} />
         <T muted size={12}>
           {e.kcalManual ? D.food.manual : autoKcal != null ? D.food.auto : ''}
-          {profile.proteinPerKg && d.weight ? D.food.proteinNorm(int(profile.proteinPerKg * d.weight), kg(profile.proteinPerKg)) : D.food.fsHint}
+          {tg ? tx.target.targetLabel + (fatTone(e.fat, tg.weight) === 'bad' ? ' · ' + tx.target.fatLow : '') : D.food.fsHint}
         </T>
         {importMsg ? <Note color={importMsg.ok ? t.green : t.red}>{importMsg.text}</Note> : null}
       </Card>
@@ -239,6 +256,9 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
         ) : (
           <T muted size={13}>{D.balance.weekEmpty}</T>
         )}
+        <Divider />
+        <T size={13} bold={!!tg} color={tg ? t.text : t.muted}>{planLine(L, plan)}</T>
+        {tg ? planNotes(L, tg).map((n, i) => <T key={i} size={12} color={n.warn ? t.amber : t.muted}>{n.text}</T>) : null}
         <Divider />
         <Pressable onPress={openFact} testID="openFact">
           {r ? (
@@ -340,5 +360,17 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
         <Btn kind="link" small title={D.clear.link} color={t.muted} onPress={() => setConfirmClear(true)} />
       )}
     </View>
+  );
+}
+
+/** «факт / цель» под полем КБЖУ с цветом по правилам ТЗ. */
+function FactTarget({ fact, target, tone, unit }: { fact: number | undefined; target: number; tone: Tone; unit?: boolean; testID?: string }) {
+  const t = useTheme();
+  const { tx, f } = useI18n();
+  return (
+    <T size={12} mono color={tone === 'none' ? t.muted : toneColor(t, tone)}>
+      {tx.target.factTarget(fact != null ? f.int(fact) : '—', f.int(target))}
+      {unit ? ' ' + tx.common.g : ''}
+    </T>
   );
 }
