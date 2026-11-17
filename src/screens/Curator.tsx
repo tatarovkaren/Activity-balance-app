@@ -9,8 +9,10 @@ import { demoClients } from '../core/demo';
 import { makeDayModel } from '../core/adaptive';
 import type { DayMap, Profile } from '../core/types';
 import { useStore } from '../data/store';
-import { addCuratorComment, curatorClients } from '../data/cloud';
-import { Btn, Card, Gap, Note, Row, T, TextField, Fields } from '../ui/kit';
+import { addCuratorComment, curatorClients, proposeGoal } from '../data/cloud';
+import { dayPlan, GOAL_MODES, validateSetting, type DayPlan, type GoalMode } from '../core/targets';
+import { historyLine, planLine, settingErrorText } from '../ui/targets';
+import { Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, TextField, Fields } from '../ui/kit';
 import { useTheme } from '../ui/theme';
 import { goalShort, reasonText } from '../ui/format';
 import { errorText, useI18n, type I18n } from '../i18n';
@@ -25,6 +27,7 @@ interface ClientRow {
   status: { text: string; tone: 'ok' | 'warn' | 'muted' };
   weight?: number;
   goal: string;
+  plan: DayPlan;
 }
 
 function statusOf(L: I18n, days: DayMap, today: ISODate): ClientRow['status'] {
@@ -77,7 +80,7 @@ export function CuratorScreen() {
         let weight: number | undefined;
         for (let i = 0; i < 14 && !weight; i++) weight = c.days[shiftDate(today, -i)]?.weight;
         const g = goalForecast(r, today, c.profile.goalWeightKg, weight);
-        return { ...c, r, weight, status: statusOf(L, c.days, today), goal: goalShort(L, g) };
+        return { ...c, r, weight, status: statusOf(L, c.days, today), goal: goalShort(L, g), plan: dayPlan(c.profile, c.days, {}, today) };
       }),
     [raw, today, L],
   );
@@ -124,7 +127,7 @@ export function CuratorScreen() {
         <Gap />
         <Card style={{ padding: 0 }}>
           <ScrollView horizontal contentContainerStyle={{ flexGrow: 1 }}>
-            <View style={{ minWidth: 760, width: '100%' }}>
+            <View style={{ minWidth: 860, width: '100%' }}>
               <View style={{ flexDirection: 'row', paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderColor: t.line }}>
                 {cols.map((c, i) => (
                   <T key={c} muted size={11} style={{ flex: i === 0 ? 1.2 : 1, letterSpacing: 0.8 }}>{c.toUpperCase()}</T>
@@ -147,6 +150,9 @@ export function CuratorScreen() {
                       {c.r && c.r.alpha === 0 ? <T muted size={11}>{C.formula}</T> : null}
                     </T>
                     <T size={13} style={{ flex: 1 }} color={rel === 'high' ? t.green : rel === 'low' ? t.amber : t.text}>{rel ? tx.common.reliability[rel] : '—'}</T>
+                    <T mono size={13} style={{ flex: 1 }} muted={c.plan.kind !== 'ok'}>
+                      {c.plan.kind === 'ok' ? f.int(c.plan.targets.kcal) + ' · ' + tx.target.modeLower[c.plan.targets.mode] : '—'}
+                    </T>
                     <T size={13} style={{ flex: 1 }} muted={c.goal === '—'}>{c.goal}</T>
                   </View>
                 );
@@ -195,6 +201,13 @@ function ClientDay({ c, today, comments, onComment, comment, setComment }: { c: 
           <Chart height={120} spec={{ from: weights[0].d, to: weights[weights.length - 1].d, legend: false, series: [{ label: C.weight, color: t.blue, dots: true, points: weights }] }} />
         </>
       ) : null}
+      <Divider />
+      <T size={13} bold={c.plan.kind === 'ok'}>{c.plan.kind === 'none' ? C.goalNone : planLine(L, c.plan)}</T>
+      {c.profile.goals?.length ? (
+        <T muted size={12}>{C.goalHistory([...c.profile.goals].reverse().slice(0, 6).map((g) => historyLine(L, g)).join('; '))}</T>
+      ) : null}
+      <ProposeGoal c={c} />
+      <Divider />
       {comments.map((x, i) => (
         <T key={i} size={13} color={t.violet}>{C.you(x)}</T>
       ))}
@@ -204,5 +217,60 @@ function ClientDay({ c, today, comments, onComment, comment, setComment }: { c: 
         <Btn small title={C.send} disabled={!comment.trim()} onPress={() => { onComment(comment.trim()); setComment(''); }} />
       </Fields>
     </Card>
+  );
+}
+
+/** Куратор предлагает режим цели; у клиента он применится только после подтверждения. */
+function ProposeGoal({ c }: { c: ClientRow }) {
+  const t = useTheme();
+  const L = useI18n();
+  const { tx } = L;
+  const C = tx.curator;
+  const G = tx.target;
+  const { session } = useStore();
+  const cur = c.plan.kind === 'none' ? undefined : c.plan.setting;
+  const [mode, setMode] = useState<GoalMode | undefined>(undefined);
+  const [pace, setPace] = useState<number | undefined>(undefined);
+  const [protein, setProtein] = useState<number | undefined>(undefined);
+  const [note, setNote] = useState('');
+  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  useEffect(() => {
+    setMode(undefined);
+    setPace(undefined);
+    setProtein(undefined);
+    setNote('');
+    setMsg(null);
+  }, [c.id]);
+  const m = mode || cur?.mode;
+  const send = async () => {
+    if (!m) return;
+    const setting = { mode: m, pacePct: m === 'maintain' ? undefined : pace, proteinPerLean: protein };
+    const e = validateSetting(setting);
+    if (e) return setMsg({ text: settingErrorText(L, e), ok: false });
+    if (session.mode !== 'cloud') return setMsg({ text: C.proposeDemo, ok: true });
+    try {
+      await proposeGoal(c.id, setting, note.trim() || undefined);
+      setMsg({ text: C.proposeSent, ok: true });
+    } catch (err) {
+      setMsg({ text: errorText(L, err), ok: false });
+    }
+  };
+  return (
+    <>
+      <Gap h={6} />
+      <T muted size={12}>{C.proposeTitle}</T>
+      <Seg<GoalMode> value={m} onChange={setMode} options={GOAL_MODES.map((x) => ({ v: x, label: G.mode[x] }))} />
+      <Gap h={6} />
+      <Fields>
+        {m && m !== 'maintain' ? <NumField label={G.paceTitle} value={pace} digits={2} onChange={setPace} placeholder={cur?.pacePct != null ? L.f.input(cur.pacePct) : ''} /> : null}
+        <NumField label={G.protein} value={protein} digits={1} onChange={setProtein} />
+      </Fields>
+      <Gap h={6} />
+      <Fields>
+        <TextField value={note} onChange={setNote} placeholder={C.proposeNote} />
+        <Btn small title={C.proposeSend} disabled={!m} onPress={send} />
+      </Fields>
+      {msg ? <Note color={msg.ok ? t.green : t.red}>{msg.text}</Note> : null}
+    </>
   );
 }

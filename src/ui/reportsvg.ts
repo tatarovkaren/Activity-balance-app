@@ -7,6 +7,8 @@ import type { EnergyResult } from '../core/energy';
 import type { DayEntry, Profile } from '../core/types';
 import { navyBodyFat } from '../core/body';
 import type { I18n } from '../i18n';
+import type { DayPlan } from '../core/targets';
+import { pctText } from './targets';
 import { LIGHT as t } from './theme';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
@@ -21,12 +23,15 @@ export function reportSvg(
     energy: EnergyResult | null;
     adaptive: AdaptiveResult | null;
     prevWeight?: number;
+    /** Режим цели: строка плана и «факт / цель» в питании. */
+    plan?: DayPlan;
   },
 ): { svg: string; w: number; h: number } {
   const { tx, f } = L;
   const R = tx.report;
   const { e, energy, adaptive } = p;
-  const W = 560;
+  const tg = p.plan?.kind === 'ok' ? p.plan.targets : null;
+  const W = tg ? 680 : 560;
   const rows: [string, string, string][] = [];
   const dW = e.weight && p.prevWeight ? e.weight - p.prevWeight : null;
   rows.push([
@@ -36,7 +41,16 @@ export function reportSvg(
   ]);
   rows.push([R.steps, e.steps ? R.stepsGoal(f.int(e.steps), f.int(p.profile.stepGoal)) : '—', t.green]);
   const kc = energy?.intake;
-  rows.push([R.food, kc ? R.foodLine(f.int(kc), f.num(e.protein || 0, 0), f.num(e.fat || 0, 0), f.num(e.carbs || 0, 0)) : '—', t.amber]);
+  const n0 = (v: number | undefined) => f.num(v || 0, 0);
+  rows.push([
+    R.food,
+    tg
+      ? R.foodTarget(kc ? f.int(kc) : '—', f.int(tg.kcal), n0(e.protein), f.int(tg.protein), n0(e.fat), f.int(tg.fat), n0(e.carbs), f.int(tg.carbs))
+      : kc
+        ? R.foodLine(f.int(kc), n0(e.protein), n0(e.fat), n0(e.carbs))
+        : '—',
+    t.amber,
+  ]);
   rows.push([
     R.workout,
     e.workoutMin
@@ -49,6 +63,10 @@ export function reportSvg(
     rows.push([R.spent, R.spentLine(f.int(energy.total), kc ? (def >= 0 ? R.deficit(f.int(def)) : R.surplus(f.int(-def))) : ''), t.amber]);
   }
   if (adaptive?.E != null) rows.push([R.fact, R.factLine(f.int(adaptive.E), tx.common.reliability[adaptive.reliability]), t.amber]);
+  if (tg && p.plan?.kind === 'ok') {
+    const pace = tg.mode === 'maintain' ? '' : tx.target.pacePart(pctText(L, tg.pct), f.signed(tg.kgPerWeek, 2));
+    rows.push([R.plan, R.planLine(tx.target.modeLower[tg.mode], pace, f.dm(p.plan.anchor)), t.amber]);
+  }
   const bf = navyBodyFat(p.profile.sex, e, p.profile.heightCm);
   const n = (v: number | undefined) => (v != null ? f.input(v) : '—');
   if (e.waist || e.neck)

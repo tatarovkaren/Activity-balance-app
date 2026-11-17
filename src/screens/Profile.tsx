@@ -20,6 +20,7 @@ import { downloadText, pickTextFile } from '../ui/files';
 import { importSummaryText } from '../ui/format';
 import { errorText, useI18n } from '../i18n';
 import { LangSwitch } from './Login';
+import { GoalCard, ProposalCards } from './Goal';
 import { ConsentCheck, openLegal } from './Legal';
 import { LEGAL_DOCS } from '../legal';
 
@@ -101,10 +102,6 @@ export function ProfileScreen({ openHand }: { openHand: () => void }) {
           <NumField label={P.goal} value={p.goalWeightKg} onChange={(v) => set({ goalWeightKg: v })} digits={1} testID="goal" />
           <NumField label={P.stepGoal} value={p.stepGoal} onChange={(v) => v && set({ stepGoal: Math.round(v) })} />
         </Fields>
-        <Gap h={6} />
-        <Fields>
-          <NumField label={P.protein} value={p.proteinPerKg} onChange={(v) => set({ proteinPerKg: v })} digits={1} placeholder={P.proteinPh} />
-        </Fields>
         <Gap h={8} />
         <T muted size={12}>{P.measureFreq}</T>
         <Seg<MeasureFreq> value={p.measureFreq} onChange={(v) => set({ measureFreq: v })} options={MEASURE_FREQS.map((k) => ({ v: k, label: tx.common.freq[k] }))} />
@@ -115,6 +112,9 @@ export function ProfileScreen({ openHand }: { openHand: () => void }) {
         <T muted size={12}>{P.diary}</T>
         <Seg value={p.diaryWeights} onChange={(v) => set({ diaryWeights: v })} options={[{ v: 'raw', label: P.diaryRaw }, { v: 'cooked', label: P.diaryCooked }]} />
       </Card>
+
+      <ProposalCards />
+      <GoalCard />
 
       <Card title={tx.lang.title} accent={t.violet}>
         <LangSwitch testID="lang" />

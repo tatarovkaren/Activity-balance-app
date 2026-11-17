@@ -1,4 +1,5 @@
 import type { ISODate } from './dates';
+import type { GoalSetting } from './targets';
 
 export type Sex = 'male' | 'female';
 export type ThemePref = 'system' | 'light' | 'dark';
@@ -27,8 +28,12 @@ export interface Profile {
   lang: LangPref;
   /** Миффлин — Сан Жеор по умолчанию; «по сухой массе» (Кетч — МакАрдл) — если есть замер % жира. */
   bmrFormula: 'mifflin' | 'lean';
-  /** Норма белка, г на кг общего веса (задаёт куратор). */
+  /** Старая норма белка, г на кг общего веса. Заменена коэффициентом в режиме цели (goals); не показывается. */
   proteinPerKg?: number;
+  /** История режимов «дефицит / поддержание / профицит» с датой начала (ТЗ v36, раздел 8). */
+  goals?: GoalSetting[];
+  /** Даты ручного «пересчитать сейчас» (последние 60). */
+  goalRecalc?: ISODate[];
   /** Как пользователь ведёт дневник: крупы сухими/мясо сырым или в готовом виде. */
   diaryWeights: 'raw' | 'cooked';
   plan: Plan;

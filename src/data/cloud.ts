@@ -7,6 +7,7 @@ import { Platform } from 'react-native';
 import type { ISODate } from '../core/dates';
 import { AppError } from '../core/errors';
 import type { DayEntry, DayMap, KeepMap, Profile } from '../core/types';
+import type { GoalProposal, GoalSetting } from '../core/targets';
 
 const URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -139,6 +140,41 @@ export async function addCuratorComment(clientId: string, date: ISODate, text: s
   const sb = supabase();
   if (!sb) throw new AppError('serverNotConnected');
   const { error } = await sb.from('day_comments').insert({ client_id: clientId, date, text });
+  if (error) throw error;
+}
+
+// ---- Предложения куратора по режиму цели (миграция 0003) ----
+
+/** Куратор предлагает клиенту новый режим цели; применяется только после подтверждения клиента. */
+export async function proposeGoal(clientId: string, setting: Omit<GoalSetting, 'start' | 'by'>, note?: string) {
+  const sb = supabase();
+  if (!sb) throw new AppError('serverNotConnected');
+  const { error } = await sb.from('goal_proposals').insert({ client_id: clientId, setting, note: note || null });
+  if (error) throw error;
+}
+
+/** Ждущие ответа предложения для текущего пользователя (с именем куратора). */
+export async function myGoalProposals(): Promise<GoalProposal[]> {
+  const sb = supabase();
+  if (!sb) return [];
+  const { data, error } = await sb.rpc('my_goal_proposals');
+  if (error) throw error;
+  return ((data || []) as { id: number; curator_name: string; created_at: string; setting: GoalProposal['setting']; note: string | null }[]).map((r) => ({
+    id: String(r.id),
+    curatorName: r.curator_name,
+    createdAt: r.created_at.slice(0, 10),
+    setting: r.setting,
+    note: r.note || undefined,
+  }));
+}
+
+export async function respondGoalProposal(id: string, accept: boolean) {
+  const sb = supabase();
+  if (!sb) throw new AppError('serverNotConnected');
+  const { error } = await sb
+    .from('goal_proposals')
+    .update({ status: accept ? 'accepted' : 'declined', responded_at: new Date().toISOString() })
+    .eq('id', Number(id));
   if (error) throw error;
 }
 

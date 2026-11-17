@@ -9,6 +9,8 @@ import { useTheme } from '../ui/theme';
 import { calibLine, detailText, factLine, goalText, reasonText, reliabilityDetails } from '../ui/format';
 import { useI18n } from '../i18n';
 import { Chart } from '../ui/Chart';
+import { dayPlan, factLags, planForecast } from '../core/targets';
+import { factForecastText, planForecastText } from '../ui/targets';
 
 export function FactScreen({ sel }: { sel: ISODate }) {
   const t = useTheme();
@@ -21,6 +23,11 @@ export function FactScreen({ sel }: { sel: ISODate }) {
   const d = useDerived(profile, days, keep, sel);
   const r = d.adaptive;
   const goal = goalForecast(r, sel, profile.goalWeightKg, days[sel]?.weight || d.weight);
+  const plan = dayPlan(profile, days, keep, sel);
+  const pf =
+    plan.kind === 'ok'
+      ? planForecast(plan.targets, profile.goalWeightKg, r?.trendW || days[sel]?.weight || d.weight || plan.targets.weight, sel)
+      : null;
   const premiumLocked = profile.plan === 'free';
 
   if (!r)
@@ -119,8 +126,10 @@ export function FactScreen({ sel }: { sel: ISODate }) {
         ) : null}
       </Card>
 
-      <Card title={F.goalTitle} accent={t.blue}>
-        <T size={14}>{goalText(L, goal)}</T>
+      <Card title={pf ? tx.target.forecastTitle : F.goalTitle} accent={t.blue}>
+        {pf ? <T size={14}>{planForecastText(L, pf)}</T> : null}
+        <T size={14}>{pf ? factForecastText(L, goal) : goalText(L, goal)}</T>
+        {pf && factLags(pf, goal) ? <Note>{tx.target.lag}</Note> : null}
         {r.trendW ? <T muted size={12}>{F.trendNow(f.num(r.trendW, 1), r.slope != null ? f.signed(r.slope * 7) : '')}</T> : null}
       </Card>
 

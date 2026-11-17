@@ -4,6 +4,7 @@
 import { shiftDate, type ISODate } from './dates';
 import type { DayEntry, DayMap, Profile, Sex } from './types';
 import { DEFAULT_PROFILE } from './types';
+import type { GoalSetting } from './targets';
 
 function rng(seed: number) {
   let s = seed >>> 0;
@@ -94,7 +95,7 @@ export function generateDemo(spec: DemoSpec, today: ISODate): DayMap {
   return out;
 }
 
-export function demoProfile(labels?: DemoLabels): Profile {
+export function demoProfile(labels?: DemoLabels, today?: ISODate): Profile {
   return {
     ...DEFAULT_PROFILE,
     name: labels?.me || 'Демо',
@@ -103,6 +104,8 @@ export function demoProfile(labels?: DemoLabels): Profile {
     heightCm: 176,
     goalWeightKg: 74,
     stepGoal: 12000,
+    // режим цели с двух недель назад: дефицит 0,5 %/нед (ТЗ v36, раздел 8)
+    goals: today ? [{ start: shiftDate(today, -14), mode: 'deficit', pacePct: 0.5, by: 'user' }] : undefined,
   };
 }
 
@@ -124,19 +127,20 @@ export function demoClients(today: ISODate, labels?: DemoLabels): DemoClient[] {
     birth: string,
     goal: number,
     spec: Omit<DemoSpec, 'sex'>,
+    goals?: GoalSetting[],
   ): DemoClient => ({
     id,
     name,
-    profile: { ...DEFAULT_PROFILE, name, sex, heightCm: h, birthDate: birth, goalWeightKg: goal, stepGoal: 10000 },
+    profile: { ...DEFAULT_PROFILE, name, sex, heightCm: h, birthDate: birth, goalWeightKg: goal, stepGoal: 10000, goals },
     days: generateDemo({ ...spec, sex, labels }, today),
   });
   return [
-    mk('c1', names[0], 'female', 165, '1991-05-02', 60, { seed: 11, startWeight: 66.5, trueTdee: 2050, intake: 1600, days: 63 }),
-    mk('c2', names[1], 'male', 182, '1985-09-20', 85, { seed: 22, startWeight: 94, trueTdee: 2900, intake: 2300, days: 70 }),
-    mk('c3', names[2], 'female', 170, '1988-01-11', 65, { seed: 33, startWeight: 73.5, trueTdee: 2150, intake: 1900, days: 50, noWeighTail: 3 }),
-    mk('c4', names[3], 'male', 178, '1979-12-03', 80, { seed: 44, startWeight: 86, trueTdee: 2600, intake: 2150, days: 60 }),
+    mk('c1', names[0], 'female', 165, '1991-05-02', 60, { seed: 11, startWeight: 66.5, trueTdee: 2050, intake: 1600, days: 63 }, [{ start: shiftDate(today, -40), mode: 'deficit', pacePct: 0.75, by: 'user' }, { start: shiftDate(today, -12), mode: 'deficit', pacePct: 0.5, by: 'curator' }]),
+    mk('c2', names[1], 'male', 182, '1985-09-20', 85, { seed: 22, startWeight: 94, trueTdee: 2900, intake: 2300, days: 70 }, [{ start: shiftDate(today, -50), mode: 'deficit', pacePct: 0.75, by: 'user' }]),
+    mk('c3', names[2], 'female', 170, '1988-01-11', 65, { seed: 33, startWeight: 73.5, trueTdee: 2150, intake: 1900, days: 50, noWeighTail: 3 }, [{ start: shiftDate(today, -30), mode: 'deficit', pacePct: 0.5, by: 'user' }]),
+    mk('c4', names[3], 'male', 178, '1979-12-03', 80, { seed: 44, startWeight: 86, trueTdee: 2600, intake: 2150, days: 60 }, [{ start: shiftDate(today, -45), mode: 'deficit', pacePct: 0.5, by: 'user' }]),
     mk('c5', names[4], 'female', 160, '1995-07-30', 55, { seed: 55, startWeight: 60, trueTdee: 1950, intake: 1600, days: 45, tripAt: 42 }),
-    mk('c6', names[5], 'male', 185, '1990-04-17', 84, { seed: 66, startWeight: 77, trueTdee: 2750, intake: 3050, days: 56, noReportToday: true }),
+    mk('c6', names[5], 'male', 185, '1990-04-17', 84, { seed: 66, startWeight: 77, trueTdee: 2750, intake: 3050, days: 56, noReportToday: true }, [{ start: shiftDate(today, -40), mode: 'surplus', pacePct: 0.25, by: 'user' }]),
     mk('c7', names[6], 'female', 168, '1983-10-09', 62, { seed: 77, startWeight: 69, trueTdee: 2000, intake: 1650, days: 5 }),
   ];
 }
