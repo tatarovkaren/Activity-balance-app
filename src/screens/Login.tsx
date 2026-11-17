@@ -7,6 +7,8 @@ import { Btn, Gap, Note, Row, Seg, T, TextField, Fields } from '../ui/kit';
 import { useTheme } from '../ui/theme';
 import { errorText, LANG_CODES, LANGS, useI18n } from '../i18n';
 import type { LangPref } from '../core/types';
+import { LEGAL_DOCS, LEGAL_VERSION, REQUIRED_DOCS, type LegalDoc } from '../legal';
+import { ConsentCheck } from './Legal';
 
 const PROVIDERS: { id: OAuthProvider; bg: string; fg: string }[] = [
   { id: 'google', bg: '#FFFFFF', fg: '#111820' },
@@ -34,7 +36,15 @@ export function LoginScreen() {
   const L = useI18n();
   const { tx } = L;
   const { startLocal, startDemo, startCloud, setConsent, data } = useStore();
-  const [agree, setAgree] = useState(!!data.consent.health);
+  // галочки уже принятой версии документов остаются отмеченными; новая версия — отметить заново
+  const c = data.consent.version === LEGAL_VERSION ? data.consent : {};
+  const [checks, setChecks] = useState<Record<LegalDoc, boolean>>({
+    terms: !!c.terms,
+    privacy: !!c.privacy,
+    consent: !!c.health,
+    marketing: !!c.marketing,
+  });
+  const agree = REQUIRED_DOCS.every((d) => checks[d]);
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [sent, setSent] = useState(false);
@@ -44,7 +54,15 @@ export function LoginScreen() {
   const guard = (fn: () => void | Promise<void>) => async () => {
     setErr('');
     if (!agree) return setErr(tx.login.consentRequired);
-    setConsent({ health: todayISO() });
+    const today = todayISO();
+    const keep = (d: string | undefined) => (c === data.consent && d ? d : today);
+    setConsent({
+      terms: keep(c.terms),
+      privacy: keep(c.privacy),
+      health: keep(c.health),
+      marketing: checks.marketing ? keep(c.marketing) : undefined,
+      version: LEGAL_VERSION,
+    });
     try {
       await fn();
     } catch (e) {
@@ -94,12 +112,16 @@ export function LoginScreen() {
         </T>
       )}
       <Gap h={16} />
-      <Pressable onPress={() => setAgree(!agree)} style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }} testID="consent">
-        <View style={{ width: 20, height: 20, borderRadius: 5, borderWidth: 1.5, borderColor: agree ? t.amber : t.muted, backgroundColor: agree ? t.amber : 'transparent', marginTop: 1 }} />
-        <T size={12} muted style={{ flex: 1 }}>
-          {tx.login.consent}
-        </T>
-      </Pressable>
+      {LEGAL_DOCS.map((d) => (
+        <ConsentCheck
+          key={d}
+          doc={d}
+          on={checks[d]}
+          onToggle={() => setChecks((s) => ({ ...s, [d]: !s[d] }))}
+          {...tx.login.accept[d]}
+          testID={'consent-' + d}
+        />
+      ))}
       {err ? <Note color={t.red}>{err}</Note> : null}
       <Gap h={16} />
       <Btn kind="solid" title={tx.login.startLocal} onPress={guard(() => startLocal('client'))} testID="startLocal" />

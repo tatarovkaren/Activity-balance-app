@@ -10,7 +10,8 @@ import { DEFAULT_PROFILE, type DayEntry, type DayMap, type KeepMap, type Profile
 import type { HandProfile } from '../core/photo/estimate';
 import { demoDays, demoProfile, type DemoLabels } from '../core/demo';
 import { load, save, clearAll } from './storage';
-import { currentUser, supabase, supabaseRepo, signOut, type CloudRepo } from './cloud';
+import { currentUser, recordConsents, supabase, supabaseRepo, signOut, type CloudRepo } from './cloud';
+import { LEGAL_VERSION } from '../legal';
 
 export type Mode = 'none' | 'local' | 'demo' | 'cloud';
 export type Role = 'client' | 'curator';
@@ -40,9 +41,15 @@ export interface FoodRef {
   estGrams?: number;
 }
 
+/** Даты (ГГГГ-ММ-ДД), когда пользователь отметил галочку; нет поля — не отмечено. */
 export interface Consent {
-  health?: string; // дата согласия на обработку данных о здоровье (152-ФЗ / GDPR)
+  health?: string; // согласие на обработку ПДн, включая данные о здоровье (152-ФЗ ст. 9–10 / GDPR ст. 9)
   photoAI?: string; // отдельное согласие на обработку фото
+  terms?: string; // принял пользовательское соглашение
+  privacy?: string; // ознакомлен с политикой конфиденциальности
+  marketing?: string; // необязательное согласие на рассылки (38-ФЗ ст. 18)
+  /** Версия комплекта документов, которую принял пользователь (LEGAL_VERSION). */
+  version?: string;
 }
 
 export interface AppData {
@@ -137,6 +144,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (ready) save('session', session);
   }, [session, ready]);
+
+  // ---- журнал согласий на сервере (галочки входа, рассылки, фото) ----
+  const consentSent = useRef('');
+  useEffect(() => {
+    if (!ready || session.mode !== 'cloud') return;
+    const c = data.consent;
+    const key = session.userId + JSON.stringify(c);
+    if (consentSent.current === key) return;
+    consentSent.current = key;
+    recordConsents(
+      { terms: c.terms, privacy: c.privacy, health: c.health, marketing: c.marketing, photo_ai: c.photoAI },
+      c.version || LEGAL_VERSION,
+    ).catch(() => {
+      consentSent.current = ''; // повторим при следующем изменении
+    });
+  }, [ready, session.mode, session.userId, data.consent]);
 
   // ---- сохранение локально ----
   useEffect(() => {
@@ -313,7 +336,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         ...EMPTY,
         profile: { ...demoProfile(labels), lang: cur.profile.lang, theme: cur.profile.theme },
         days: demoDays(today, labels),
-        consent: { health: today },
+        consent: { health: today, terms: today, privacy: today, version: LEGAL_VERSION },
       }));
       setSession({ mode: 'demo', userId: 'demo', role });
     },

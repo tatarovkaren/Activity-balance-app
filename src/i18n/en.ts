@@ -113,12 +113,27 @@ export const en: Dict = {
     code: 'Code from the email',
     signIn: 'Sign in',
     noServer: 'Sign-in and sync across devices will work once the server is connected. Yandex ID and VK ID go through a separate gateway for Russia.',
-    consent:
-      'I consent to the processing of my health data (weight, nutrition, heart rate, measurements) to calculate my energy balance. Data of users from Russia is stored in Russia, from the EU — in the EU.',
-    consentRequired: 'Please tick the consent to health data processing.',
+    accept: {
+      terms: { pre: 'I accept the ', link: 'Terms of Service', post: '' },
+      privacy: { pre: 'I have read the ', link: 'Privacy Policy', post: '' },
+      consent: { pre: 'I consent to the ', link: 'processing of my personal data', post: ', including health data (weight, measurements, nutrition, heart rate)' },
+      marketing: { pre: 'I agree to receive ', link: 'news and offers', post: ' (optional)' },
+    },
+    consentRequired: 'To continue, tick the three required boxes: terms, privacy policy and consent to data processing.',
     startLocal: 'Start without an account (data on this device)',
     demo: 'View demo',
     curatorDemo: 'I’m a coach → dashboard demo',
+  },
+
+  legal: {
+    back: 'Back',
+    draft: 'Draft: not yet reviewed by a lawyer, operator details not filled in.',
+    docs: {
+      terms: 'Terms of Service',
+      privacy: 'Privacy Policy',
+      consent: 'Consent to Personal Data Processing',
+      marketing: 'Marketing Consent',
+    },
   },
 
   day: {
@@ -463,7 +478,8 @@ export const en: Dict = {
     planNote: 'Payments come later (YooKassa / RuStore in Russia, app stores or Stripe/Paddle elsewhere). For now the switch is for the pilot.',
     account: 'Account and data',
     noServer: 'The server is not connected yet: Google sign-in and sync across devices will work after Supabase is set up (see README).',
-    consents: (health, photo) => `Health data consent: ${health}. Photos: ${photo}.`,
+    consents: (health, photo) => `Personal and health data consent: ${health}. Photos: ${photo}.`,
+    docs: 'Documents',
     notGiven: 'not given',
     disclaimer: 'Estimates from formulas and the weight trend are a guide, not medical advice.',
     toCurator: 'Open coach dashboard',

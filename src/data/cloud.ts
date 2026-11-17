@@ -141,3 +141,30 @@ export async function addCuratorComment(clientId: string, date: ISODate, text: s
   const { error } = await sb.from('day_comments').insert({ client_id: clientId, date, text });
   if (error) throw error;
 }
+
+/** Виды согласий в таблице consents (миграция 0002). */
+export type ConsentKind = 'terms' | 'privacy' | 'health' | 'marketing' | 'photo_ai';
+
+/**
+ * Журнал согласий на сервере: для каждого данного согласия — строка с датой и версией документов,
+ * снятое (рассылки) — отметка revoked_at. Повторный вызов с теми же данными ничего не добавляет.
+ */
+export async function recordConsents(given: Partial<Record<ConsentKind, string>>, version: string) {
+  const sb = supabase();
+  if (!sb) return;
+  const { data, error } = await sb.from('consents').select('id, kind, doc_version').is('revoked_at', null);
+  if (error) throw error;
+  const active = (data || []) as { id: number; kind: ConsentKind; doc_version: string | null }[];
+  const add = (Object.keys(given) as ConsentKind[])
+    .filter((k) => given[k] && !active.some((a) => a.kind === k && (a.doc_version === version || k === 'photo_ai')))
+    .map((k) => ({ kind: k, doc_version: version, given_at: given[k] }));
+  if (add.length) {
+    const r = await sb.from('consents').insert(add);
+    if (r.error) throw r.error;
+  }
+  const revoke = active.filter((a) => a.kind === 'marketing' && !given.marketing).map((a) => a.id);
+  if (revoke.length) {
+    const r = await sb.from('consents').update({ revoked_at: new Date().toISOString() }).in('id', revoke);
+    if (r.error) throw r.error;
+  }
+}
