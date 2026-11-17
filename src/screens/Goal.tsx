@@ -17,7 +17,7 @@ import {
   type GoalSetting,
 } from '../core/targets';
 import { useStore } from '../data/store';
-import { Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, TextField, Fields } from '../ui/kit';
+import { Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, DateField, Fields } from '../ui/kit';
 import { useTheme } from '../ui/theme';
 import { errorText, useI18n } from '../i18n';
 import { basisLine, historyLine, pctText, planLine, planNotes, settingErrorText } from '../ui/targets';
@@ -126,10 +126,9 @@ export function GoalCard() {
             <>
               <Gap h={6} />
               <Fields>
-                <TextField
+                <DateField
                   label={G.dateLabel}
                   value={dateText}
-                  placeholder={f.dateInputPlaceholder}
                   onChange={(v) => {
                     setDateText(v);
                     const iso = normDate(v);

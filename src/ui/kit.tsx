@@ -101,8 +101,8 @@ export function Fields({ children, min = 72, gap = 8 }: { children: React.ReactN
 
 export const Gap = ({ h = 8 }: { h?: number }) => <View style={{ height: h }} />;
 
-export { parseNum } from './kit.parse';
-import { parseNum } from './kit.parse';
+export { parseNum, maskDate } from './kit.parse';
+import { parseNum, maskDate } from './kit.parse';
 
 
 export function NumField({
@@ -180,6 +180,7 @@ export function TextField({
   multiline,
   testID,
   secure,
+  numeric,
 }: {
   label?: string;
   value: string | undefined;
@@ -188,6 +189,8 @@ export function TextField({
   multiline?: boolean;
   testID?: string;
   secure?: boolean;
+  /** Цифровая клавиатура на телефоне (дата). */
+  numeric?: boolean;
 }) {
   const t = useTheme();
   return (
@@ -201,6 +204,8 @@ export function TextField({
         placeholderTextColor={t.muted + '99'}
         multiline={multiline}
         secureTextEntry={secure}
+        inputMode={numeric ? 'numeric' : undefined}
+        keyboardType={numeric ? 'number-pad' : undefined}
         style={[
           s.input,
           s.inputWrap,
@@ -215,6 +220,34 @@ export function TextField({
         ]}
       />
     </View>
+  );
+}
+
+/** Поле даты: формат по языку (ДД.ММ.ГГГГ / YYYY-MM-DD), точки или дефисы ставятся сами. */
+export function DateField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  testID,
+}: {
+  label?: string;
+  value: string;
+  onChange: (v: string) => void;
+  /** Своя подсказка; по умолчанию — формат даты языка. */
+  placeholder?: string;
+  testID?: string;
+}) {
+  const { f } = useI18n();
+  return (
+    <TextField
+      label={label}
+      value={value}
+      numeric
+      placeholder={placeholder || f.dateInputPlaceholder}
+      onChange={(v) => onChange(maskDate(v, f.dateInputPlaceholder))}
+      testID={testID}
+    />
   );
 }
 

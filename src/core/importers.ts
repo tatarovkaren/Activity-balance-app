@@ -69,7 +69,10 @@ export type ImportError =
   | 'weightNoRows'
   | 'backupUnreadable'
   | 'backupNotOurs'
-  | 'backupOtherAccount';
+  | 'backupOtherAccount'
+  | 'pdfUnreadable'
+  | 'pdfNoText'
+  | 'pdfNativeOnly';
 
 const p2 = (n: number | string) => String(n).padStart(2, '0');
 
@@ -165,6 +168,160 @@ export function parseFatSecret(text: string): FatSecretParse {
       fat: r1(num(raw(fatIdx))),
       carbs: r1(num(raw(carbIdx))),
     });
+  }
+  return { ok: true, days, skipped };
+}
+
+// ---- FatSecret: PDF-отчёт ----
+
+/** Строка текста PDF: элементы с координатой x (pt) и шириной. */
+export interface PdfLine {
+  page: number;
+  items: { x: number; w: number; str: string }[];
+}
+
+type Col = 'kcal' | 'fat' | 'carbs' | 'protein';
+const COL_KEYS: Record<Col, [string[], string[]]> = {
+  kcal: [['кал', 'ккал', 'calor', 'energy', 'kcal'], ['калий', 'potass']],
+  fat: [['жир', 'fat'], ['н/жир', 'нас', 'sat', 'trans']],
+  carbs: [['углев', 'carb'], []],
+  protein: [['белк', 'белок', 'prot'], []],
+};
+const TOTAL_RE = /^(всего|итого|итог|total|daily total|day total)/i;
+const PERIOD_RE = /(период|period|summary|сводк)/i;
+const SKIP_RE = /(создан|сформир|напечат|generated|printed|created|www\.|fatsecret\.|стр\.|страница|page \d)/i;
+const NUM_RE = /^-?\d[\d\s\u00a0\u202f]*([.,]\d+)?$/;
+
+function pdfNum(s: string): number | undefined {
+  let x = s.replace(/[\s\u00a0\u202f]/g, '');
+  if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(x)) x = x.replace(/,/g, ''); // 1,499 (англ.)
+  const v = parseFloat(x.replace(',', '.'));
+  return Number.isFinite(v) ? v : undefined;
+}
+
+function dateCount(t: string): number {
+  const low = t.toLowerCase();
+  const numeric = (low.match(/\d{1,2}[./]\d{1,2}[./]\d{4}|\d{4}-\d{2}-\d{2}/g) || []).length;
+  const words = low.split(/[^a-zа-яё]+/).filter((w) => w in RU_MONTHS || (w.length > 2 && w in EN_MONTHS && w !== 'may')).length;
+  return numeric + words;
+}
+
+/** Числа строки с x-центром; «52,3 180 1 499» в одном элементе делится на части. */
+function lineNums(l: PdfLine): { x: number; v: number }[] {
+  const out: { x: number; v: number }[] = [];
+  for (const it of l.items) {
+    const s = it.str.replace(/(ккал|kcal|г|g)$/i, '').trim();
+    if (NUM_RE.test(s) && (!/\s/.test(s) || /^\d{1,3}([\s\u00a0\u202f]\d{3})+([.,]\d+)?$/.test(s))) {
+      const v = pdfNum(s);
+      if (v != null) out.push({ x: it.x + it.w / 2, v });
+      continue;
+    }
+    const parts = s.split(/\s+/);
+    if (parts.length > 1 && parts.every((p) => NUM_RE.test(p))) {
+      const step = it.w / parts.length;
+      parts.forEach((p, i) => {
+        const v = pdfNum(p);
+        if (v != null) out.push({ x: it.x + step * (i + 0.5), v });
+      });
+    }
+  }
+  return out;
+}
+
+function headerCols(l: PdfLine): Partial<Record<Col, number>> | null {
+  const cols: Partial<Record<Col, number>> = {};
+  for (const it of l.items) {
+    const h = it.str.toLowerCase();
+    for (const c of Object.keys(COL_KEYS) as Col[]) {
+      if (cols[c] != null) continue;
+      const [inc, exc] = COL_KEYS[c];
+      if (exc.some((x) => h.includes(x))) continue;
+      if (inc.some((x) => h.includes(x))) {
+        cols[c] = it.x + it.w / 2;
+        break;
+      }
+    }
+  }
+  return cols.kcal != null && (cols.fat != null || cols.carbs != null || cols.protein != null) ? cols : null;
+}
+
+/** Числа строки → столбцы заголовка по ближайшему x. */
+function assign(nums: { x: number; v: number }[], cols: Partial<Record<Col, number>>): Partial<Record<Col, number>> {
+  const out: Partial<Record<Col, number>> = {};
+  const xs = Object.values(cols) as number[];
+  const gap = xs.length > 1 ? Math.min(...xs.flatMap((a, i) => xs.slice(i + 1).map((b) => Math.abs(a - b)))) : 60;
+  for (const c of Object.keys(cols) as Col[]) {
+    let best: { d: number; v: number } | null = null;
+    for (const n of nums) {
+      const d = Math.abs(n.x - cols[c]!);
+      if (d <= Math.max(gap * 0.6, 12) && (!best || d < best.d)) best = { d, v: n.v };
+    }
+    if (best) out[c] = best.v;
+  }
+  return out;
+}
+
+/**
+ * Разбор PDF-отчёта FatSecret по строкам текста. Поддержаны два вида таблицы:
+ * строка дня с датой и итогами (как в CSV) и заголовок-дата → приёмы пищи → строка «Всего/Итого».
+ * Столбцы находятся по заголовку («Кал», «Жир», «Углев», «Белк» / Calories, Fat, Carbs, Protein)
+ * и сопоставляются числам по горизонтали, поэтому лишние столбцы (клетчатка, сахар) не мешают.
+ * Сводка за период и итоги приёмов пищи не берутся. Пустой день пропускается.
+ */
+export function parseFatSecretPdf(lines: PdfLine[]): FatSecretParse {
+  let cols: Partial<Record<Col, number>> | null = null;
+  let anyHeader = false;
+  let cur: ISODate | null = null;
+  let inPeriod = false;
+  const byDate = new Map<ISODate, Partial<Record<Col, number>>>();
+  const blockTotal = new Map<ISODate, Partial<Record<Col, number>>>();
+  for (const l of lines) {
+    const text = l.items.map((i) => i.str).join(' ').trim();
+    const h = headerCols(l);
+    if (h && lineNums(l).length < 2) {
+      cols = h;
+      anyHeader = true;
+      continue;
+    }
+    if (SKIP_RE.test(text)) continue; // колонтитулы: дата печати, номер страницы, сайт
+    if (PERIOD_RE.test(text) && !TOTAL_RE.test(text)) {
+      inPeriod = true;
+      continue;
+    }
+    if (dateCount(text) >= 2) {
+      inPeriod = true; // «01.11.2026 – 16.11.2026» — диапазон отчёта, не день
+      continue;
+    }
+    const d = normDate(text);
+    const nums = lineNums(l);
+    if (isISODate(d)) {
+      // строка «дата + итоги дня» (как в CSV)
+      const v = cols ? assign(nums.filter((n) => n.v < 30000), cols) : {};
+      if (cols && v.kcal != null && Object.keys(v).length >= 2) {
+        if (!byDate.has(d)) byDate.set(d, v);
+        cur = null;
+      } else cur = d; // заголовок дня
+      inPeriod = false;
+      continue;
+    }
+    if (cur && cols && !inPeriod && TOTAL_RE.test(text)) {
+      const v = assign(nums, cols);
+      if (v.kcal != null) blockTotal.set(cur, v); // последний итог в блоке дня — итог дня
+    }
+  }
+  for (const [d, v] of blockTotal) if (!byDate.has(d)) byDate.set(d, v);
+  if (!anyHeader) return { ok: false, error: 'fatsecretNoHeader' };
+  if (!byDate.size) return { ok: false, error: 'fatsecretNoDays' };
+  const days: FoodDay[] = [];
+  let skipped = 0;
+  const r1 = (v: number | undefined) => (v == null ? undefined : Math.round(v * 10) / 10);
+  for (const d of [...byDate.keys()].sort()) {
+    const v = byDate.get(d)!;
+    if (!(v.kcal && v.kcal > 0 && v.kcal < 15000)) {
+      skipped++;
+      continue;
+    }
+    days.push({ date: d, kcal: Math.round(v.kcal), protein: r1(v.protein), fat: r1(v.fat), carbs: r1(v.carbs) });
   }
   return { ok: true, days, skipped };
 }

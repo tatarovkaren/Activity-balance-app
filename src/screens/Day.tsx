@@ -3,7 +3,7 @@ import { Platform, Pressable, View } from 'react-native';
 import { dayDiff, shiftDate, todayISO, ageAt, type ISODate } from '../core/dates';
 import { bodyFatNorm, measureHint, navyBodyFat } from '../core/body';
 import { classifyWorkout, KCAL_PER_KG, macroKcal } from '../core/energy';
-import { applyFoodDays, parseFatSecret } from '../core/importers';
+import { applyFoodDays } from '../core/importers';
 import { ANOMALY_REASONS, type AnomalyReason } from '../core/types';
 import { useStore } from '../data/store';
 import { useDerived } from '../data/derived';
@@ -11,7 +11,8 @@ import { Bar, Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, TextField, F
 import { useTheme } from '../ui/theme';
 import { calibLine, detailText, importSummaryText } from '../ui/format';
 import { errorText, useI18n } from '../i18n';
-import { pickTextFile, downloadBlob, svgToPng } from '../ui/files';
+import { downloadBlob, svgToPng } from '../ui/files';
+import { importFatSecretFile } from '../ui/fatsecret';
 import { reportSvg } from '../ui/reportsvg';
 import { dayPlan, fatTone, kcalTone, proteinTone, type Tone } from '../core/targets';
 import { planLine, planNotes, toneColor } from '../ui/targets';
@@ -78,9 +79,8 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
   ];
 
   const importCsv = async () => {
-    const f = await pickTextFile(['text/csv', 'text/comma-separated-values', 'application/vnd.ms-excel', '*/*']);
-    if (!f) return;
-    const p = parseFatSecret(f.text);
+    const p = await importFatSecretFile();
+    if (!p) return;
     if (!p.ok) return setImportMsg({ text: errorText(L, p.error), ok: false });
     const s = applyFoodDays(days, p.days, p.skipped);
     replaceDays(s.days);

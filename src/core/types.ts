@@ -37,6 +37,8 @@ export interface Profile {
   /** Как пользователь ведёт дневник: крупы сухими/мясо сырым или в готовом виде. */
   diaryWeights: 'raw' | 'cooked';
   plan: Plan;
+  /** Анкета первого входа пройдена (пол, дата рождения, рост, вес). Нет — показываем анкету. */
+  onboarded?: boolean;
 }
 
 export const DEFAULT_PROFILE: Profile = {
