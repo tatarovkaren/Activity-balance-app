@@ -20,6 +20,8 @@ import { downloadText, pickTextFile } from '../ui/files';
 import { importSummaryText } from '../ui/format';
 import { errorText, useI18n } from '../i18n';
 import { LangSwitch } from './Login';
+import { ConsentCheck, openLegal } from './Legal';
+import { LEGAL_DOCS } from '../legal';
 
 export function ProfileScreen({ openHand }: { openHand: () => void }) {
   const t = useTheme();
@@ -28,7 +30,7 @@ export function ProfileScreen({ openHand }: { openHand: () => void }) {
   const P = tx.profile;
   const kg = f.num;
   const st = useStore();
-  const { data, session, setProfile, replaceDays, importBackup, setCurator, logout, setRole } = st;
+  const { data, session, setProfile, replaceDays, importBackup, setCurator, logout, setRole, setConsent } = st;
   const p = data.profile;
   const [birth, setBirth] = useState(f.dateInput(p.birthDate));
   // смена языка — показать дату рождения в формате нового языка
@@ -209,6 +211,20 @@ export function ProfileScreen({ openHand }: { openHand: () => void }) {
           {P.consents(data.consent.health ? f.dmy(data.consent.health) : P.notGiven, data.consent.photoAI ? f.dmy(data.consent.photoAI) : P.notGiven)}
         </T>
         <T muted size={12}>{P.disclaimer}</T>
+        <Gap h={6} />
+        <ConsentCheck
+          doc="marketing"
+          on={!!data.consent.marketing}
+          onToggle={() => setConsent({ marketing: data.consent.marketing ? undefined : todayISO() })}
+          {...tx.login.accept.marketing}
+          testID="profileMarketing"
+        />
+        <T muted size={12}>{P.docs}:</T>
+        <Row style={{ flexWrap: 'wrap' }}>
+          {LEGAL_DOCS.map((d) => (
+            <Btn key={d} small kind="link" title={tx.legal.docs[d]} onPress={() => openLegal(d)} testID={'profileDoc-' + d} />
+          ))}
+        </Row>
         <Divider />
         <Row>
           <Btn small title={P.toCurator} onPress={() => setRole('curator')} testID="toCurator" />

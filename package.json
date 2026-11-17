@@ -27,7 +27,8 @@
     "web": "expo start --web",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "build:web": "expo export -p web"
+    "build:web": "expo export -p web",
+    "legal": "node scripts/build-legal.mjs"
   },
   "private": true
 }

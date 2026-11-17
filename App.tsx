@@ -13,6 +13,7 @@ import { ChartsScreen } from './src/screens/Charts';
 import { HandSetup, PhotoScreen } from './src/screens/Photo';
 import { ProfileScreen } from './src/screens/Profile';
 import { CuratorScreen } from './src/screens/Curator';
+import { LegalView, useLegalRoute } from './src/screens/Legal';
 
 type Tab = 'day' | 'fact' | 'charts' | 'photo' | 'profile' | 'hand';
 
@@ -31,6 +32,7 @@ function Shell() {
   const { width } = useWindowDimensions();
   const [tab, setTab] = useState<Tab>('day');
   const [sel, setSel] = useState<ISODate>(todayISO());
+  const [legal, closeLegal] = useLegalRoute();
 
   // при первом открытии в новый день дата становится сегодняшней
   useEffect(() => {
@@ -55,7 +57,9 @@ function Shell() {
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <StatusBar style={t.dark ? 'light' : 'dark'} />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 96, width: '100%', maxWidth: maxW, alignSelf: 'center' }} keyboardShouldPersistTaps="handled">
-        {session.mode === 'none' ? (
+        {legal ? (
+          <LegalView doc={legal} onClose={closeLegal} />
+        ) : session.mode === 'none' ? (
           <LoginScreen />
         ) : curator ? (
           <CuratorScreen />
