@@ -8,6 +8,7 @@ import type { ISODate } from '../core/dates';
 import { AppError } from '../core/errors';
 import type { DayEntry, DayMap, KeepMap, PhotoMeal, Profile } from '../core/types';
 import type { GoalProposal, GoalSetting } from '../core/targets';
+import { latinSurname, type CuratorPlan, type Referral, type ReferralOffer } from '../core/promo';
 
 const URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -134,6 +135,76 @@ export async function linkCurator(code: string): Promise<string> {
   const { data, error } = await sb.rpc('link_curator_by_code', { invite_code: code.trim().toUpperCase() });
   if (error) throw error;
   return data as string;
+}
+
+// ---- Промокоды кураторов (миграция 0004) ----
+
+export interface CloudCuratorAccount {
+  display_name: string;
+  surname: string;
+  invite_code: string;
+  plan: CuratorPlan;
+}
+
+/** Кабинет куратора текущего пользователя или null, если код ещё не создан. */
+export async function myCuratorAccount(): Promise<CloudCuratorAccount | null> {
+  const sb = supabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc('my_curator_account');
+  if (error) throw error;
+  const rows = (data || []) as CloudCuratorAccount[];
+  return rows[0] || null;
+}
+
+/** Создать код куратора: фамилия латиницей + сквозной номер из последовательности на сервере. */
+export async function createCuratorCode(displayName: string, surname: string): Promise<string> {
+  const sb = supabase();
+  if (!sb) throw new AppError('serverNotConnected');
+  const { data, error } = await sb.rpc('create_curator_code', { display_name: displayName, surname_latin: latinSurname(surname) });
+  if (error) throw error;
+  return data as string;
+}
+
+/** Кто пришёл по коду: на ведении, завершили, отвязаны; оплатили ли Премиум со скидкой. */
+export async function curatorReferrals(): Promise<Referral[]> {
+  const sb = supabase();
+  if (!sb) return [];
+  const { data, error } = await sb.rpc('curator_referrals');
+  if (error) throw error;
+  return ((data || []) as { client_id: string; name: string; linked_at: string; status: string; ended_at: string | null; paid_at: string | null }[]).map((r) => ({
+    id: r.client_id,
+    name: r.name,
+    linkedAt: r.linked_at.slice(0, 10),
+    status: r.status === 'active' ? 'active' : r.status === 'ended' ? 'ended' : 'removed',
+    endedAt: r.ended_at?.slice(0, 10),
+    paidAt: r.paid_at?.slice(0, 10),
+  }));
+}
+
+/** Куратор завершает ведение (клиенту — предложение со скидкой) или отвязывает клиента. */
+export async function endCuratorLink(clientId: string, how: 'ended' | 'removed') {
+  const sb = supabase();
+  if (!sb) throw new AppError('serverNotConnected');
+  const { error } = await sb.rpc('curator_end_link', { client: clientId, how });
+  if (error) throw error;
+}
+
+/** Клиент сам отключает куратора: ведение закончено, сервер создаёт предложение со скидкой. */
+export async function clientEndLink() {
+  const sb = supabase();
+  if (!sb) throw new AppError('serverNotConnected');
+  const { error } = await sb.rpc('client_end_link');
+  if (error) throw error;
+}
+
+/** Открытое предложение Премиума со скидкой после ведения. */
+export async function myReferralOffer(): Promise<ReferralOffer | null> {
+  const sb = supabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc('my_referral_offer');
+  if (error) throw error;
+  const r = ((data || []) as { curator_name: string; invite_code: string; discount_pct: number; months: number; valid_until: string }[])[0];
+  return r ? { curatorName: r.curator_name, code: r.invite_code, discountPct: r.discount_pct, months: r.months, until: r.valid_until.slice(0, 10) } : null;
 }
 
 export async function addCuratorComment(clientId: string, date: ISODate, text: string) {

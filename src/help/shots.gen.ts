@@ -16,7 +16,7 @@ export const HELP_SHOTS: Record<string, Record<string, HelpShot>> = {
     profile: { src: require('../../assets/help/ru/profile.png'), w: 780, h: 1430 },
     goal: { src: require('../../assets/help/ru/goal.png'), w: 780, h: 1080 },
     import: { src: require('../../assets/help/ru/import.png'), w: 780, h: 702 },
-    curator: { src: require('../../assets/help/ru/curator.png'), w: 780, h: 302 },
+    curator: { src: require('../../assets/help/ru/curator.png'), w: 780, h: 408 },
     settings: { src: require('../../assets/help/ru/settings.png'), w: 780, h: 442 },
   },
   en: {
@@ -31,7 +31,7 @@ export const HELP_SHOTS: Record<string, Record<string, HelpShot>> = {
     profile: { src: require('../../assets/help/en/profile.png'), w: 780, h: 1286 },
     goal: { src: require('../../assets/help/en/goal.png'), w: 780, h: 1080 },
     import: { src: require('../../assets/help/en/import.png'), w: 780, h: 586 },
-    curator: { src: require('../../assets/help/en/curator.png'), w: 780, h: 302 },
+    curator: { src: require('../../assets/help/en/curator.png'), w: 780, h: 408 },
     settings: { src: require('../../assets/help/en/settings.png'), w: 780, h: 476 },
   },
 };

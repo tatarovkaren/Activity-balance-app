@@ -12,7 +12,7 @@ import {
 } from '../core/importers';
 import { UI_MODES, type MeasureFreq, type Profile, type Sex, type ThemePref, type UiMode } from '../core/types';
 import { useStore } from '../data/store';
-import { cloudConfigured, linkCurator } from '../data/cloud';
+import { cloudConfigured } from '../data/cloud';
 import { Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, TextField, DateField, Fields } from '../ui/kit';
 import { useTheme } from '../ui/theme';
 import { downloadText, pickTextFile } from '../ui/files';
@@ -24,6 +24,7 @@ import { GoalCard, ProposalCards } from './Goal';
 import { ConsentCheck, openLegal } from './Legal';
 import { LEGAL_DOCS } from '../legal';
 import { HelpCard } from './Help';
+import { CodeEntry, OfferCard } from './Promo';
 
 export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; openHelp: () => void }) {
   const t = useTheme();
@@ -32,14 +33,13 @@ export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; op
   const P = tx.profile;
   const kg = f.num;
   const st = useStore();
-  const { data, session, setProfile, replaceDays, importBackup, setCurator, logout, setRole, setConsent } = st;
+  const { data, session, setProfile, replaceDays, importBackup, setCurator, unlinkCurator, logout, setRole, setConsent } = st;
   const p = data.profile;
   const [birth, setBirth] = useState(f.dateInput(p.birthDate));
   // смена языка — показать дату рождения в формате нового языка
   useEffect(() => setBirth(f.dateInput(p.birthDate)), [f]); // eslint-disable-line react-hooks/exhaustive-deps
   const age = ageAt(p.birthDate, todayISO());
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
-  const [code, setCode] = useState('');
   const set = (patch: Partial<Profile>) => setProfile(patch);
 
   const importWeights = async () => {
@@ -80,6 +80,7 @@ export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; op
       <Gap h={12} />
 
       <HelpCard onOpen={openHelp} />
+      <OfferCard />
 
       <Card title={P.uiMode.title} accent={t.violet}>
         <Seg<UiMode> value={p.uiMode} onChange={(v) => set({ uiMode: v })} options={UI_MODES.map((m) => ({ v: m, label: P.uiMode[m] }))} testID="uiMode" />
@@ -172,6 +173,7 @@ export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; op
         {data.curator ? (
           <>
             <T size={14}>{P.curatorLinked(data.curator.name, f.dmy(data.curator.linkedAt))}</T>
+            <T muted size={12} mono>{data.curator.code}</T>
             <Gap h={6} />
             <T muted size={12}>{P.curatorSees}</T>
             {(['food', 'workouts', 'measurements', 'comments', 'photos'] as const).map((k) => (
@@ -185,38 +187,24 @@ export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; op
               </Row>
             ))}
             <Gap h={6} />
-            <Btn small title={P.unlink} color={t.red} onPress={() => setCurator(undefined)} />
+            <T muted size={12}>{tx.promo.unlinkNote}</T>
+            <Gap h={4} />
+            <Btn small title={P.unlink} color={t.red} onPress={unlinkCurator} testID="curatorUnlink" />
           </>
         ) : (
-          <>
-            <T muted size={13}>{P.codeIntro}</T>
-            <Gap h={6} />
-            <Fields>
-              <TextField value={code} onChange={setCode} placeholder={P.codePh} testID="curatorCode" />
-              <Btn
-                small
-                title={P.link}
-                disabled={code.trim().length < 4}
-                onPress={async () => {
-                  let name = P.curatorDefault;
-                  if (session.mode === 'cloud') {
-                    try {
-                      name = await linkCurator(code);
-                    } catch (e) {
-                      return setMsg({ text: errorText(L, e), ok: false });
-                    }
-                  } else name = P.curatorDemo;
-                  setCurator({ name, code: code.trim().toUpperCase(), linkedAt: todayISO(), share: { food: true, workouts: true, measurements: true, comments: true, photos: false } });
-                }}
-              />
-            </Fields>
-          </>
+          <CodeEntry />
         )}
       </Card>
 
       <Card title={P.plan} accent={t.amber}>
-        <Seg value={p.plan} onChange={(v) => set({ plan: v })} options={[{ v: 'free', label: P.free }, { v: 'premium', label: P.premium }]} />
-        <T muted size={12}>{P.planNote}</T>
+        {data.curator && data.curator.premium !== false ? (
+          <T size={13} color={t.green}>{tx.promo.premiumByCurator(data.curator.name)}</T>
+        ) : (
+          <>
+            <Seg value={p.plan} onChange={(v) => set({ plan: v })} options={[{ v: 'free', label: P.free }, { v: 'premium', label: P.premium }]} />
+            <T muted size={12}>{P.planNote}</T>
+          </>
+        )}
       </Card>
 
       <Card title={P.account} accent={t.muted}>

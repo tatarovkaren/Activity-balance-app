@@ -18,7 +18,7 @@ export function ChartsScreen({ sel }: { sel: ISODate }) {
   const t = useTheme();
   const { tx, f } = useI18n();
   const C = tx.charts;
-  const { data } = useStore();
+  const { data, plan } = useStore();
   const { profile, days, keep } = data;
   const [scale, setScale] = useState<Scale>('month');
   const [cFrom, setCFrom] = useState('');
@@ -37,7 +37,7 @@ export function ChartsScreen({ sel }: { sel: ISODate }) {
     if (isISODate(tt)) to = tt;
   }
   if (from > to) from = to;
-  const freeCut = profile.plan === 'free' && dayDiff(from, to) > 29;
+  const freeCut = plan === 'free' && dayDiff(from, to) > 29;
 
   const series = useMemo(() => {
     const range = dateRange(from, to);

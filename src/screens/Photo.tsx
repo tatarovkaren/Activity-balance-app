@@ -58,7 +58,7 @@ export function PhotoScreen({ sel, meal: mealProp, onBack }: { sel: ISODate; mea
   const Ph = tx.photo;
   const { int, dm } = f;
   const kg = f.num;
-  const { data, addMeal, logPhoto, addRef, setConsent } = useStore();
+  const { data, plan, addMeal, logPhoto, addRef, setConsent } = useStore();
   const { profile, hand, consent } = data;
   const [editingHand, setEditingHand] = useState(false);
   const [providerId, setProviderId] = useState(HTTP ? 'http' : 'demo');
@@ -80,7 +80,7 @@ export function PhotoScreen({ sel, meal: mealProp, onBack }: { sel: ISODate; mea
   const [realGrams, setRealGrams] = useState<number | undefined>();
   const [saveRefName, setSaveRefName] = useState('');
   const today = todayISO();
-  const quota = photoQuota(profile.plan, data.photoUsage, today);
+  const quota = photoQuota(plan, data.photoUsage, today);
 
   const h = hand || REFERENCE_HAND;
   const draft = useMemo(() => buildDraft(items, { hand: h, quality, hiddenOil: oil, diaryWeights: profile.diaryWeights }), [items, h, quality, oil, profile.diaryWeights]);

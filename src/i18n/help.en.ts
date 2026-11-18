@@ -143,9 +143,11 @@ export const helpEn: typeof helpRu = {
       id: 'curator',
       title: 'Working with a coach',
       text: [
-        'Get an invite code from your coach and enter it in the "Coach" card.',
+        'Each coach has a personal code: their surname in Latin letters plus a number, e.g. **IVANOV0001**. Enter it in the sign-up questionnaire or later in the "Coach" card in Profile. If your coach sent an invite link, the code fills in by itself.',
+        'While your coach works with you, **Premium is free for you**: your coach pays for it with their plan.',
         'Choose what your coach sees: food, workouts, weight and measurements, comments, meal photos. You can change or revoke access at any time.',
         'Your coach sees your log and reports, can comment on a day and suggest a new target, which you then accept or decline.',
+        'When coaching ends, your log and all your history stay with you, and Profile shows an offer of Premium at a discount.',
       ],
     },
     {
@@ -209,6 +211,18 @@ export const helpEn: typeof helpRu = {
     {
       q: 'What does my coach see? How do I disconnect them?',
       a: 'Your coach sees only what you allow in the "Coach" card: food, workouts and steps, weight and measurements, comments, meal photos (off by default). "Disconnect coach" closes access immediately.',
+    },
+    {
+      q: 'My coach’s code does not work. What should I do?',
+      a: 'The code uses Latin letters, e.g. IVANOV0001; case, spaces and hyphens do not matter. If the app says your coach has no free seats, every seat on their plan is taken: ask your coach to free a seat or move to a bigger plan.',
+    },
+    {
+      q: 'What happens when coaching ends?',
+      a: 'You stay in the app with all your data, and your plan goes back to your own. Profile shows an offer: Premium at −30% for 3 months, valid for 30 days. Payments are not connected yet; nothing is charged during the pilot.',
+    },
+    {
+      q: 'I am a coach. Where is my code and how many clients can I have?',
+      a: 'At the bottom of the coach dashboard: enter your surname and the system issues a code with a system-wide number and an invite link. Seats: Trial 2, Start 10, Pro 50. The same place lists everyone who joined with your code: you can end coaching or remove a client, and the seat is freed. For every 3 Premium payments by former clients you get a month of your plan free.',
     },
     {
       q: 'Where is my data stored?',

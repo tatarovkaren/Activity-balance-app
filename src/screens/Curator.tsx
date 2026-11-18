@@ -8,8 +8,18 @@ import { adaptiveTDEE, goalForecast, type AdaptiveResult } from '../core/adaptiv
 import { demoClients } from '../core/demo';
 import { makeDayModel } from '../core/adaptive';
 import type { DayMap, Profile } from '../core/types';
-import { useStore } from '../data/store';
-import { addCuratorComment, curatorClients, proposeGoal } from '../data/cloud';
+import { SELF_ID, useStore } from '../data/store';
+import {
+  addCuratorComment,
+  createCuratorCode,
+  curatorClients,
+  curatorReferrals,
+  endCuratorLink,
+  myCuratorAccount,
+  proposeGoal,
+} from '../data/cloud';
+import type { CuratorAccount } from '../core/promo';
+import { PromoPanel, PromoSidebar, type PromoActions } from './Promo';
 import { dayPlan, GOAL_MODES, validateSetting, type DayPlan, type GoalMode } from '../core/targets';
 import { historyLine, planLine, settingErrorText } from '../ui/targets';
 import { Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, TextField, Fields } from '../ui/kit';
@@ -57,21 +67,61 @@ export function CuratorScreen() {
   const C = tx.curator;
   const { width } = useWindowDimensions();
   const wide = width >= 900;
-  const { session, setRole, logout } = useStore();
+  const { session, data, setRole, logout, createCuratorAccount, setCuratorPlan, endReferral } = useStore();
+  const cloud = session.mode === 'cloud';
   const today = todayISO();
   const [raw, setRaw] = useState<{ id: string; name: string; profile: Profile; days: DayMap }[]>([]);
   const [err, setErr] = useState('');
   const [selId, setSelId] = useState<string | null>(null);
   const [comment, setComment] = useState('');
   const [comments, setComments] = useState<Record<string, string[]>>({});
+  const [cloudAcc, setCloudAcc] = useState<CuratorAccount | undefined>(undefined);
+  const [reload, setReload] = useState(0);
+  const [promoErr, setPromoErr] = useState('');
+
+  // без сервера кабинет живёт на этом устройстве (в демо — демо-куратор), в облаке — на сервере
+  const acc = cloud ? cloudAcc : data.curatorAccount;
 
   useEffect(() => {
-    if (session.mode === 'cloud') {
-      curatorClients(shiftDate(today, -120))
-        .then((rows) => setRaw(rows.map((r) => ({ id: r.client_id, name: r.name, profile: r.profile, days: r.days }))))
-        .catch((e) => setErr(errorText(L, e)));
-    } else setRaw(demoClients(today, tx.demo));
-  }, [session.mode, today, L, tx.demo]);
+    if (!cloud) return;
+    curatorClients(shiftDate(today, -120))
+      .then((rows) => setRaw(rows.map((r) => ({ id: r.client_id, name: r.name, profile: r.profile, days: r.days }))))
+      .catch((e) => setErr(errorText(L, e)));
+    Promise.all([myCuratorAccount(), curatorReferrals().catch(() => [])])
+      .then(([a, refs]) =>
+        setCloudAcc(a ? { surname: a.surname, displayName: a.display_name, code: a.invite_code, plan: a.plan, createdAt: today, referrals: refs } : undefined),
+      )
+      .catch((e) => setPromoErr(errorText(L, e)));
+  }, [cloud, today, L, reload]);
+
+  // без сервера: в таблице — клиенты на ведении из списка «пришли по коду»
+  const self = !!(data.curator && acc && data.curator.code === acc.code);
+  const localRaw = useMemo(() => {
+    if (cloud) return null;
+    const active = new Set((acc?.referrals || []).filter((r) => r.status === 'active').map((r) => r.id));
+    const list = session.mode === 'demo' ? demoClients(today, tx.demo).filter((c) => active.has(c.id)) : [];
+    if (self && active.has(SELF_ID)) {
+      const name = acc!.referrals.find((r) => r.id === SELF_ID)?.name || tx.curatorPromo.selfName;
+      list.push({ id: SELF_ID, name, profile: data.profile, days: data.days });
+    }
+    return list;
+  }, [cloud, acc, session.mode, today, tx.demo, tx.curatorPromo.selfName, self, data.profile, data.days]);
+  useEffect(() => {
+    if (localRaw) setRaw(localRaw);
+  }, [localRaw]);
+
+  const promoActions: PromoActions = cloud
+    ? {
+        create: async (surname, name) => {
+          await createCuratorCode(name, surname);
+          setReload((n) => n + 1);
+        },
+        end: async (id, how) => {
+          await endCuratorLink(id, how).catch((e) => setPromoErr(errorText(L, e)));
+          setReload((n) => n + 1);
+        },
+      }
+    : { create: createCuratorAccount, setPlan: setCuratorPlan, end: endReferral };
 
   const rows: ClientRow[] = useMemo(
     () =>
@@ -97,11 +147,7 @@ export function CuratorScreen() {
         <T key={x} size={14} color={i === 0 ? t.amber : t.muted} style={{ paddingVertical: 4 }}>{x}</T>
       ))}
       <Gap />
-      <T muted size={12}>{C.plan(rows.length)}</T>
-      <T muted size={12}>
-        {C.invite}
-        <T mono bold size={12}>FIT-2048</T>
-      </T>
+      <PromoSidebar acc={acc} />
       <Gap />
       <Btn small title={C.myDiary} onPress={() => setRole('client')} />
       <Gap h={6} />
@@ -165,6 +211,10 @@ export function CuratorScreen() {
           if (session.mode === 'cloud') await addCuratorComment(sel.id, today, text).catch((e) => setErr(errorText(L, e)));
           setComments({ ...comments, [sel.id]: [...(comments[sel.id] || []), text] });
         }} comment={comment} setComment={setComment} /> : null}
+
+        <View testID="promoPanel">
+          <PromoPanel acc={acc} actions={promoActions} err={promoErr} />
+        </View>
       </View>
     </View>
   );
