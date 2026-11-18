@@ -7,6 +7,8 @@ export const helpEn: typeof helpRu = {
   cardNote: 'How to keep your log, what the numbers mean, and answers to common questions.',
   open: 'Open help',
   back: 'Back',
+  motto:
+    'Everything in this universe obeys the law of conservation of energy: eat more than you burn and you store it; burn more than you eat and you lose weight. Activity Balance is your assistant in managing your energy balance.',
   intro:
     'Activity Balance shows how much energy you really burn: it compares what you eat with how your weight changes and refines your burn every day. The more complete your log, the more accurate the numbers.',
 

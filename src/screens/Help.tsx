@@ -80,7 +80,11 @@ export function HelpScreen({ onClose }: { onClose: () => void }) {
       <Btn small title={'← ' + H.back} onPress={onClose} testID="helpBack" />
       <Gap h={8} />
       <T size={22} bold>{H.title}</T>
-      <Gap h={4} />
+      <Gap h={8} />
+      <View style={{ borderLeftWidth: 3, borderColor: t.amber, backgroundColor: t.card, borderRadius: 8, padding: 12 }} testID="helpMotto">
+        <Rich text={H.motto} size={15} />
+      </View>
+      <Gap h={8} />
       <Rich text={H.intro} color={t.muted} />
       <Gap h={12} />
 

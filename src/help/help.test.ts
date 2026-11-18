@@ -31,7 +31,7 @@ describe('Помощь и ЧаВо', () => {
   it('жирный текст размечен парами **', () => {
     for (const code of LANG_CODES) {
       const h = LANGS[code].dict.help;
-      const all = [h.intro, ...h.quick, ...h.guide.flatMap((g) => g.text), ...h.faq.map((x) => x.a), h.more];
+      const all = [h.motto, h.intro, ...h.quick, ...h.guide.flatMap((g) => g.text), ...h.faq.map((x) => x.a), h.more];
       for (const s of all) expect((s.match(/\*\*/g) || []).length % 2, s).toBe(0);
     }
   });
