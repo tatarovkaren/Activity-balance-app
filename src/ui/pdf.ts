@@ -7,7 +7,7 @@ import { Platform } from 'react-native';
 import type { PdfLine } from '../core/importers';
 
 export async function pdfLines(data: ArrayBuffer): Promise<PdfLine[]> {
-  if (Platform.OS !== 'web') throw new Error('pdfNativeOnly');
+  if (Platform.OS !== 'web') throw new Error('fatsecretPdf');
   let doc;
   try {
     const [lib, worker] = await Promise.all([

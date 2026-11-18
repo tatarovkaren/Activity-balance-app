@@ -16,7 +16,7 @@ export async function importFatSecretFile(): Promise<FatSecretParse | null> {
     lines = await pdfLines(f.pdf!);
   } catch (e) {
     const code = (e as Error).message;
-    return { ok: false, error: code === 'pdfNoText' || code === 'pdfNativeOnly' ? code : 'pdfUnreadable' };
+    return { ok: false, error: code === 'pdfNoText' || code === 'fatsecretPdf' ? code : 'pdfUnreadable' };
   }
   const r = parseFatSecretPdf(lines);
   // формат PDF не распознан — понятная подсказка вместо «нет строки Дата»

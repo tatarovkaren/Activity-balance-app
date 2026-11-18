@@ -62,7 +62,9 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
   const kcalShown = e.kcalManual ? e.kcal : autoKcal != null ? Math.round(autoKcal) : e.kcal;
 
   // ---- тренировка ----
-  const kind = classifyWorkout(e.workoutType, e.workoutMin);
+  const kind = classifyWorkout(e.workoutType, e.workoutMin, e.workoutKind);
+  // вид для переключателя: выбранный явно, а у старых записей — определённый по названию
+  const kindChoice = e.workoutKind ?? (kind === 'strength' ? 'strength' : kind === 'none' ? undefined : 'cardio');
   const stepsFieldOn = kind === 'cardioLegs';
   const en = d.today;
 
@@ -177,15 +179,14 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
 
       {/* Тренировка */}
       <Card title={D.workout.title} accent={t.red}>
-        <TextField value={e.workoutType} onChange={(v) => set({ workoutType: v })} placeholder={D.workout.typePlaceholder} testID="workoutType" />
+        <Seg<'cardio' | 'strength'>
+          value={kindChoice}
+          onChange={(v) => set({ workoutKind: v })}
+          options={[{ v: 'cardio', label: D.workout.cardio }, { v: 'strength', label: D.workout.strength }]}
+          testID="workoutKind"
+        />
         <Gap h={6} />
-        <Row gap={6}>
-          {D.workout.chips.map((c) => (
-            <Pressable key={c} onPress={() => set({ workoutType: c })}>
-              <T size={12} color={(e.workoutType || '').toLowerCase() === c.toLowerCase() ? t.red : t.muted}>{c}</T>
-            </Pressable>
-          ))}
-        </Row>
+        <TextField value={e.workoutType} onChange={(v) => set({ workoutType: v })} placeholder={D.workout.typePlaceholder} testID="workoutType" />
         <Gap h={8} />
         <Fields>
           <NumField label={D.workout.minutes} value={e.workoutMin} onChange={(v) => set({ workoutMin: v })} testID="workoutMin" />

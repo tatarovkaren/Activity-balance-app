@@ -16,9 +16,13 @@ const STRENGTH_RE =
   /сил|зал|желез|отжим|присед|подтяг|выпад|планк|пресс|собствен|турник|брус|гантел|штанг|гири|гиря|strength|gym|weight|lift|push-?up|squat|pull-?up|chin-?up|lunge|plank|\babs\b|calisthenic|dumbbell|barbell|kettlebell|resistance/;
 const NO_STEP_RE = /вело|плав|бассейн|гребл|байдар|bike|cycl|swim|pool|\brow|kayak|canoe/;
 
-export function classifyWorkout(type: string | undefined, minutes: number | undefined): WorkoutKind {
+export function classifyWorkout(type: string | undefined, minutes: number | undefined, choice?: 'cardio' | 'strength'): WorkoutKind {
   if (!(minutes && minutes > 0)) return 'none';
   const t = String(type || '').toLowerCase();
+  // вид выбран явно: «силовая» — по нагрузке; «кардио» — по пульсу, а шаги вычитаются,
+  // только если по названию это не вело/плавание/гребля
+  if (choice === 'strength') return 'strength';
+  if (choice === 'cardio') return NO_STEP_RE.test(t) ? 'cardioNoSteps' : 'cardioLegs';
   if (/^\s*(нет|none|no)\s*$/.test(t)) return 'none';
   if (STRENGTH_RE.test(t)) return 'strength';
   if (NO_STEP_RE.test(t)) return 'cardioNoSteps';
@@ -77,7 +81,7 @@ export class PaceIndex {
       .filter((d) => {
         const e = days[d];
         return (
-          classifyWorkout(e.workoutType, e.workoutMin) === 'cardioLegs' &&
+          classifyWorkout(e.workoutType, e.workoutMin, e.workoutKind) === 'cardioLegs' &&
           e.workoutSteps != null &&
           e.workoutSteps > 0
         );
@@ -148,7 +152,7 @@ export function energyModel(e: DayEntry, iso: ISODate, ctx: EnergyCtx): EnergyRe
 
   const min = e.workoutMin || 0;
   const hr = e.hrAvg || 0;
-  const kind = classifyWorkout(e.workoutType, min);
+  const kind = classifyWorkout(e.workoutType, min, e.workoutKind);
   const steps = e.steps || 0;
   const pace = ctx.pace || { pace: DEFAULT_PACE, personal: false };
 

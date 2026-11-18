@@ -10,6 +10,7 @@ import { useStore } from '../data/store';
 import { Btn, Card, DateField, Fields, Gap, Note, NumField, Seg, T, TextField } from '../ui/kit';
 import { useTheme } from '../ui/theme';
 import { useI18n } from '../i18n';
+import { GoalCard } from './Goal';
 
 export function OnboardingScreen() {
   const t = useTheme();
@@ -34,6 +35,8 @@ export function OnboardingScreen() {
   const initialWeight = data.days[today]?.weight ?? (demo ? lastWeight : undefined);
   const [weight, setWeight] = useState<number | undefined>(initialWeight);
   const [goal, setGoal] = useState<number | undefined>(p.goalWeightKg);
+  const [steps, setSteps] = useState<number | undefined>(p.stepGoal);
+  const [step, setStep] = useState<1 | 2>(1);
   const [err, setErr] = useState('');
 
   const iso = normDate(birth);
@@ -46,10 +49,27 @@ export function OnboardingScreen() {
     if (!(weight && weight >= 25 && weight <= 350)) miss.push(O.need.weight);
     if (miss.length) return setErr(O.missing(miss.join(', ')));
     if (age! < 10 || age! > 100) return setErr(O.badBirth);
-    setProfile({ sex, name: name.trim(), birthDate: iso, heightCm: Math.round(height!), goalWeightKg: goal, onboarded: true });
+    setProfile({ sex, name: name.trim(), birthDate: iso, heightCm: Math.round(height!), goalWeightKg: goal, stepGoal: Math.round(steps || p.stepGoal) });
     // вес из примера в демо не записываем в сегодняшний день — только если его поменяли
     if (weight !== initialWeight || (!demo && data.days[today]?.weight !== weight)) setDay(today, { weight });
+    setStep(2);
   };
+
+  // шаг 2 — стартовая цель: та же карточка, что в профиле (режим, темп или дата, белок)
+  if (step === 2)
+    return (
+      <View style={{ maxWidth: 480, width: '100%', alignSelf: 'center' }}>
+        <T size={24} bold>{O.goalTitle}</T>
+        <Gap h={4} />
+        <T muted size={14}>{O.goalIntro}</T>
+        <Gap h={12} />
+        <GoalCard />
+        <Gap h={8} />
+        <Btn kind="solid" title={O.start} onPress={() => setProfile({ onboarded: true })} testID="onbDone" />
+        <Gap h={6} />
+        <Btn title={O.back} onPress={() => setStep(1)} testID="onbBack" />
+      </View>
+    );
 
   return (
     <View style={{ maxWidth: 480, width: '100%', alignSelf: 'center' }}>
@@ -71,10 +91,14 @@ export function OnboardingScreen() {
           <NumField label={O.weight} value={weight} onChange={(v) => { setWeight(v); setErr(''); }} digits={2} testID="onbWeight" />
           <NumField label={O.goal} value={goal} onChange={setGoal} digits={1} testID="onbGoal" />
         </Fields>
+        <Gap h={6} />
+        <Fields>
+          <NumField label={P.stepGoal} value={steps} onChange={(v) => setSteps(v == null ? undefined : Math.round(v))} testID="onbSteps" />
+        </Fields>
       </Card>
       {err ? <Note color={t.red}>{err}</Note> : null}
       <Gap h={8} />
-      <Btn kind="solid" title={O.start} onPress={done} testID="onbDone" />
+      <Btn kind="solid" title={O.next} onPress={done} testID="onbNext" />
     </View>
   );
 }

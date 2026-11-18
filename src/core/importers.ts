@@ -65,14 +65,14 @@ export type ImportError =
   | 'fatsecretNoHeader'
   | 'fatsecretNoKcal'
   | 'fatsecretNoDays'
+  | 'fatsecretPdf'
   | 'fileEmpty'
   | 'weightNoRows'
   | 'backupUnreadable'
   | 'backupNotOurs'
   | 'backupOtherAccount'
   | 'pdfUnreadable'
-  | 'pdfNoText'
-  | 'pdfNativeOnly';
+  | 'pdfNoText';
 
 const p2 = (n: number | string) => String(n).padStart(2, '0');
 

@@ -87,3 +87,11 @@ export function importSummaryText(L: I18n, s: { added: number; updated: number; 
   const range = s.from && s.to ? (s.from === s.to ? L.f.dm(s.from) : `${L.f.dm(s.from)}–${L.f.dm(s.to)}`) : '';
   return L.tx.importSummary.done(n, range, s.added, s.updated, s.skipped);
 }
+
+/** Подпись тренировки для куратора и отчёта: «Кардио · бег», «Силовая», «бег» (старые записи). */
+export function workoutName(L: I18n, name: string | undefined, kind: 'cardio' | 'strength' | undefined): string {
+  const k = kind ? L.tx.day.workout[kind] : '';
+  const n = (name || '').trim();
+  if (k && n && n.toLowerCase() !== k.toLowerCase()) return `${k} · ${n}`;
+  return n || k || L.tx.report.workoutFallback;
+}
