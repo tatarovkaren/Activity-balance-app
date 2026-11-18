@@ -3,7 +3,7 @@ import { Platform, Pressable, View } from 'react-native';
 import { dayDiff, shiftDate, todayISO, ageAt, type ISODate } from '../core/dates';
 import { bodyFatNorm, measureHint, navyBodyFat } from '../core/body';
 import { classifyWorkout, KCAL_PER_KG, macroKcal } from '../core/energy';
-import { applyFoodDays, parseFatSecret } from '../core/importers';
+import { applyFoodDays } from '../core/importers';
 import { ANOMALY_REASONS, type AnomalyReason } from '../core/types';
 import { useStore } from '../data/store';
 import { useDerived } from '../data/derived';
@@ -11,7 +11,8 @@ import { Bar, Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, TextField, F
 import { useTheme } from '../ui/theme';
 import { calibLine, detailText, importSummaryText } from '../ui/format';
 import { errorText, useI18n } from '../i18n';
-import { pickTextFile, downloadBlob, svgToPng } from '../ui/files';
+import { downloadBlob, svgToPng } from '../ui/files';
+import { importFatSecretFile } from '../ui/fatsecret';
 import { reportSvg } from '../ui/reportsvg';
 import { dayPlan, fatTone, kcalTone, proteinTone, type Tone } from '../core/targets';
 import { planLine, planNotes, toneColor } from '../ui/targets';
@@ -61,7 +62,9 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
   const kcalShown = e.kcalManual ? e.kcal : autoKcal != null ? Math.round(autoKcal) : e.kcal;
 
   // ---- тренировка ----
-  const kind = classifyWorkout(e.workoutType, e.workoutMin);
+  const kind = classifyWorkout(e.workoutType, e.workoutMin, e.workoutKind);
+  // вид для переключателя: выбранный явно, а у старых записей — определённый по названию
+  const kindChoice = e.workoutKind ?? (kind === 'strength' ? 'strength' : kind === 'none' ? undefined : 'cardio');
   const stepsFieldOn = kind === 'cardioLegs';
   const en = d.today;
 
@@ -78,9 +81,8 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
   ];
 
   const importCsv = async () => {
-    const f = await pickTextFile(['text/csv', 'text/comma-separated-values', 'application/vnd.ms-excel', '*/*']);
-    if (!f) return;
-    const p = parseFatSecret(f.text);
+    const p = await importFatSecretFile();
+    if (!p) return;
     if (!p.ok) return setImportMsg({ text: errorText(L, p.error), ok: false });
     const s = applyFoodDays(days, p.days, p.skipped);
     replaceDays(s.days);
@@ -177,15 +179,14 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
 
       {/* Тренировка */}
       <Card title={D.workout.title} accent={t.red}>
-        <TextField value={e.workoutType} onChange={(v) => set({ workoutType: v })} placeholder={D.workout.typePlaceholder} testID="workoutType" />
+        <Seg<'cardio' | 'strength'>
+          value={kindChoice}
+          onChange={(v) => set({ workoutKind: v })}
+          options={[{ v: 'cardio', label: D.workout.cardio }, { v: 'strength', label: D.workout.strength }]}
+          testID="workoutKind"
+        />
         <Gap h={6} />
-        <Row gap={6}>
-          {D.workout.chips.map((c) => (
-            <Pressable key={c} onPress={() => set({ workoutType: c })}>
-              <T size={12} color={(e.workoutType || '').toLowerCase() === c.toLowerCase() ? t.red : t.muted}>{c}</T>
-            </Pressable>
-          ))}
-        </Row>
+        <TextField value={e.workoutType} onChange={(v) => set({ workoutType: v })} placeholder={D.workout.typePlaceholder} testID="workoutType" />
         <Gap h={8} />
         <Fields>
           <NumField label={D.workout.minutes} value={e.workoutMin} onChange={(v) => set({ workoutMin: v })} testID="workoutMin" />

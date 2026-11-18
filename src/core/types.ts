@@ -37,6 +37,8 @@ export interface Profile {
   /** Как пользователь ведёт дневник: крупы сухими/мясо сырым или в готовом виде. */
   diaryWeights: 'raw' | 'cooked';
   plan: Plan;
+  /** Анкета первого входа пройдена (пол, дата рождения, рост, вес). Нет — показываем анкету. */
+  onboarded?: boolean;
 }
 
 export const DEFAULT_PROFILE: Profile = {
@@ -68,7 +70,10 @@ export interface DayEntry {
   carbs?: number;
   /** true — ккал введены руками; иначе считаются как Б×4 + Ж×9 + У×4. */
   kcalManual?: boolean;
+  /** Название тренировки — свободный текст для куратора («ноги + спина», «интервалы»). */
   workoutType?: string;
+  /** Вид тренировки для расчёта: выбирается жёстко. Нет поля (старые записи) — определяется по названию. */
+  workoutKind?: 'cardio' | 'strength';
   workoutMin?: number;
   hrAvg?: number;
   hrMax?: number;

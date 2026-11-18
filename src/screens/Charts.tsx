@@ -6,7 +6,7 @@ import { navyBodyFat } from '../core/body';
 import { normDate } from '../core/importers';
 import { useStore } from '../data/store';
 import { useDerived } from '../data/derived';
-import { Card, Gap, Row, Seg, T, TextField, Fields } from '../ui/kit';
+import { Card, Gap, Row, Seg, T, DateField, Fields } from '../ui/kit';
 import { useTheme } from '../ui/theme';
 import { Chart } from '../ui/Chart';
 import { useI18n } from '../i18n';
@@ -78,8 +78,8 @@ export function ChartsScreen({ sel }: { sel: ISODate }) {
       />
       {scale === 'custom' ? (
         <Fields>
-          <TextField value={cFrom} onChange={setCFrom} placeholder={C.from(f.dateInputPlaceholder)} />
-          <TextField value={cTo} onChange={setCTo} placeholder={C.to(f.dateInputPlaceholder)} />
+          <DateField value={cFrom} onChange={setCFrom} placeholder={C.from(f.dateInputPlaceholder)} />
+          <DateField value={cTo} onChange={setCTo} placeholder={C.to(f.dateInputPlaceholder)} />
         </Fields>
       ) : null}
       {freeCut ? <T muted size={12} style={{ marginTop: 6 }}>{C.freeCut}</T> : null}

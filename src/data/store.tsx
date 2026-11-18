@@ -136,7 +136,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const pend = await load<{ days: ISODate[]; profile: boolean }>('sync_pending', { days: [], profile: false });
       pendingDays.current = new Set(pend.days);
       pendingProfile.current = pend.profile;
-      setData({ ...EMPTY, ...d, profile: { ...DEFAULT_PROFILE, ...d.profile } });
+      // у тех, кто вёл дневник до появления анкеты, она считается пройденной
+      const had = !!d.profile && Object.keys(d.days || {}).length > 0;
+      setData({ ...EMPTY, ...d, profile: { ...DEFAULT_PROFILE, ...(had ? { onboarded: true } : {}), ...d.profile } });
       // возврат после входа через Google/Apple (веб)
       let s = sess;
       if (supabase()) {
@@ -235,7 +237,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           // день, очищенный локально и ждущий отправки, не воскрешаем
           for (const d of pendingDays.current) if (!cur.days[d]) delete days[d];
         }
-        const profile = pendingProfile.current || !snap.profile ? cur.profile : { ...DEFAULT_PROFILE, ...snap.profile };
+        let profile = pendingProfile.current || !snap.profile ? cur.profile : { ...DEFAULT_PROFILE, ...snap.profile };
+        // аккаунт с историей в облаке — анкету уже не спрашиваем
+        if (profile.onboarded == null && Object.keys(snap.days).length) profile = { ...profile, onboarded: true };
         const keep = pendingProfile.current || !snap.keep ? cur.keep : snap.keep;
         if (!snap.profile) pendingProfile.current = true;
         return { ...cur, days, profile, keep };

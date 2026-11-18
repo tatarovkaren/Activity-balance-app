@@ -60,3 +60,18 @@ export function printSvg(title: string, svg: string) {
   );
   w.document.close();
 }
+
+/** Файл для импорта: текст (CSV) или содержимое PDF. */
+export async function pickImportFile(types: string[] = ['*/*']): Promise<{ name: string; text?: string; pdf?: ArrayBuffer } | null> {
+  const r = await DocumentPicker.getDocumentAsync({ type: types, copyToCacheDirectory: true, multiple: false });
+  if (r.canceled || !r.assets?.length) return null;
+  const a = r.assets[0];
+  const file = (a as unknown as { file?: File }).file;
+  const isPdf = /\.pdf$/i.test(a.name || '') || a.mimeType === 'application/pdf';
+  if (isPdf) {
+    const buf = file ? await file.arrayBuffer() : await (await fetch(a.uri)).arrayBuffer();
+    return { name: a.name, pdf: buf };
+  }
+  const text = file ? await file.text() : await (await fetch(a.uri)).text();
+  return { name: a.name, text };
+}

@@ -9,6 +9,7 @@ import { navyBodyFat } from '../core/body';
 import type { I18n } from '../i18n';
 import type { DayPlan } from '../core/targets';
 import { pctText } from './targets';
+import { workoutName } from './format';
 import { LIGHT as t } from './theme';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
@@ -54,7 +55,7 @@ export function reportSvg(
   rows.push([
     R.workout,
     e.workoutMin
-      ? R.workoutLine(e.workoutType || R.workoutFallback, e.workoutMin, e.hrAvg ? String(e.hrAvg) : '', e.workoutSteps ? f.int(e.workoutSteps) : '')
+      ? R.workoutLine(workoutName(L, e.workoutType, e.workoutKind), e.workoutMin, e.hrAvg ? String(e.hrAvg) : '', e.workoutSteps ? f.int(e.workoutSteps) : '')
       : R.none,
     t.red,
   ]);
