@@ -219,3 +219,10 @@ describe('фото без ИИ', () => {
     expect(photoQuota('premium', ['2026-11-16', '2026-11-16'], '2026-11-16')).toMatchObject({ used: 2, left: 3 });
   });
 });
+
+describe('режим интерфейса', () => {
+  it('новый клиент — базовый, демо — продвинутый', () => {
+    expect(DEFAULT_PROFILE.uiMode).toBe('basic');
+    expect(demoProfile().uiMode).toBe('advanced');
+  });
+});

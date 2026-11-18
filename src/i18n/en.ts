@@ -274,6 +274,8 @@ export const en: Dict = {
     goalTitle: 'Goal forecast',
     trendNow: (w, pace) => `Trend weight now ${w} kg${pace ? ` · pace ${pace} kg/wk` : ''}`,
     howTitle: 'How it works',
+    howBasic: 'The app compares how your weight changes with how much you eat and tunes the burn to you. Mark trips, feasts and illness as an “Unusual day” so they do not skew the result.',
+    moreInAdvanced: (n) => `Days left out of the calculation in 28 days: ${n}. Details and “put back” are in Advanced mode (Profile → App mode).`,
     how: (female) =>
       `It starts from a formula (BMR + steps + workouts + digestion). Every day the app fits a weight trend over normal days in the last 56 days (recent days weigh more; a day’s influence halves every 14 days) and compares it with average calories. The estimate moves towards the actual value by a share that grows with data (full trust at 14 weigh-ins and 20 days with calories in 28 days), and by no more than ±50 kcal per day. Trips, feasts, illness, incomplete logs${female ? ', cycle' : ''} and the 2–3 days after them are left out of the trend. If more than 20% of days are excluded, trust is halved.`,
   },
@@ -438,6 +440,13 @@ export const en: Dict = {
 
   profile: {
     title: 'Profile',
+    uiMode: {
+      title: 'App mode',
+      basic: 'Basic',
+      advanced: 'Advanced',
+      basicNote: 'Just the essentials: weight, steps, food, workouts and the day total. Same calculation, details hidden.',
+      advancedNote: 'Everything: burn breakdown, reliability, excluded days, fine goal settings and formulas.',
+    },
     cloud: (email) => `Account ${email} · data in the cloud`,
     demo: 'Demo mode',
     local: 'No account · data on this device',
@@ -560,6 +569,7 @@ export const en: Dict = {
     targetLabel: 'actual / target',
     fatLow: 'fat below 0.6 g/kg',
     history: 'Mode history',
+    paceFixed: (pace) => `Pace: ${pace}. Set in Advanced mode or by your coach.`,
     historyLine: (date, mode, pace, curator) => `from ${date}: ${mode}${pace}${curator ? ' · from coach' : ''}`,
     historyDate: (date) => ` by ${date}`,
     forecastTitle: 'Goal forecast: plan and actual',

@@ -10,7 +10,7 @@ import {
   parseBackup,
   parseWeightHistory,
 } from '../core/importers';
-import type { MeasureFreq, Profile, Sex, ThemePref } from '../core/types';
+import { UI_MODES, type MeasureFreq, type Profile, type Sex, type ThemePref, type UiMode } from '../core/types';
 import { useStore } from '../data/store';
 import { cloudConfigured, linkCurator } from '../data/cloud';
 import { Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, TextField, DateField, Fields } from '../ui/kit';
@@ -78,6 +78,12 @@ export function ProfileScreen({ openHand }: { openHand: () => void }) {
       <T muted size={13}>{session.mode === 'cloud' ? P.cloud(session.email || '') : session.mode === 'demo' ? P.demo : P.local}</T>
       <Gap h={12} />
 
+      <Card title={P.uiMode.title} accent={t.violet}>
+        <Seg<UiMode> value={p.uiMode} onChange={(v) => set({ uiMode: v })} options={UI_MODES.map((m) => ({ v: m, label: P.uiMode[m] }))} testID="uiMode" />
+        <Gap h={6} />
+        <T muted size={12}>{p.uiMode === 'basic' ? P.uiMode.basicNote : P.uiMode.advancedNote}</T>
+      </Card>
+
       <Card title={P.sexTitle} accent={t.amber}>
         <Seg<Sex> value={p.sex} onChange={(v) => set({ sex: v })} options={[{ v: 'male', label: P.male }, { v: 'female', label: P.female }]} testID="sex" />
         <Gap h={6} />
@@ -107,9 +113,13 @@ export function ProfileScreen({ openHand }: { openHand: () => void }) {
         <T muted size={12}>{P.measureFreq}</T>
         <Seg<MeasureFreq> value={p.measureFreq} onChange={(v) => set({ measureFreq: v })} options={MEASURE_FREQS.map((k) => ({ v: k, label: tx.common.freq[k] }))} />
         <Gap h={8} />
-        <T muted size={12}>{P.bmr}</T>
-        <Seg value={p.bmrFormula} onChange={(v) => set({ bmrFormula: v })} options={[{ v: 'mifflin', label: P.mifflin }, { v: 'lean', label: P.lean }]} />
-        <Gap h={8} />
+        {p.uiMode !== 'basic' ? (
+          <>
+            <T muted size={12}>{P.bmr}</T>
+            <Seg value={p.bmrFormula} onChange={(v) => set({ bmrFormula: v })} options={[{ v: 'mifflin', label: P.mifflin }, { v: 'lean', label: P.lean }]} />
+            <Gap h={8} />
+          </>
+        ) : null}
         <T muted size={12}>{P.diary}</T>
         <Seg value={p.diaryWeights} onChange={(v) => set({ diaryWeights: v })} options={[{ v: 'raw', label: P.diaryRaw }, { v: 'cooked', label: P.diaryCooked }]} />
       </Card>
