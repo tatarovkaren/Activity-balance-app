@@ -14,7 +14,7 @@ import { dayPlan, GOAL_MODES, validateSetting, type DayPlan, type GoalMode } fro
 import { historyLine, planLine, settingErrorText } from '../ui/targets';
 import { Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, TextField, Fields } from '../ui/kit';
 import { useTheme } from '../ui/theme';
-import { goalShort, reasonText } from '../ui/format';
+import { goalShort, reasonText, workoutName } from '../ui/format';
 import { errorText, useI18n, type I18n } from '../i18n';
 import { Chart } from '../ui/Chart';
 
@@ -188,7 +188,7 @@ function ClientDay({ c, today, comments, onComment, comment, setComment }: { c: 
       <T size={13}>
         {m?.intake ? C.eaten(f.int(m.intake), f.int(m.total)) : ''}
         {C.macros(n(e.protein), n(e.fat), n(e.carbs))} · {e.steps ? C.steps(f.int(e.steps)) : C.noSteps}
-        {e.workoutMin ? C.workout(e.workoutType || tx.report.workoutFallback, e.workoutMin) : ''}
+        {e.workoutMin ? C.workout(workoutName(L, e.workoutType, e.workoutKind), e.workoutMin) : ''}
         {e.wellbeing ? C.wellbeing(e.wellbeing) : ''}
       </T>
       {e.comment ? <T muted size={13}>{C.comment(e.comment)}</T> : null}
