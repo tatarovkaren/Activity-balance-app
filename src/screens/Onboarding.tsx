@@ -11,6 +11,7 @@ import { Btn, Card, DateField, Fields, Gap, Note, NumField, Seg, T, TextField } 
 import { useTheme } from '../ui/theme';
 import { useI18n } from '../i18n';
 import { GoalCard } from './Goal';
+import { CodeEntry } from './Promo';
 
 export function OnboardingScreen() {
   const t = useTheme();
@@ -64,6 +65,17 @@ export function OnboardingScreen() {
         <T muted size={14}>{O.goalIntro}</T>
         <Gap h={12} />
         <GoalCard />
+        <Card title={tx.promo.onboardTitle} accent={t.blue}>
+          {data.curator ? (
+            <T size={13} color={t.green}>{tx.promo.linked(data.curator.name)}</T>
+          ) : (
+            <>
+              <T muted size={12}>{tx.promo.onboardNote}</T>
+              <Gap h={6} />
+              <CodeEntry testID="onbCode" />
+            </>
+          )}
+        </Card>
         <Gap h={8} />
         <Btn kind="solid" title={O.start} onPress={() => setProfile({ onboarded: true })} testID="onbDone" />
         <Gap h={6} />

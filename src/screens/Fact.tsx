@@ -19,7 +19,7 @@ export function FactScreen({ sel }: { sel: ISODate }) {
   const { tx, f } = L;
   const F = tx.fact;
   const dm = f.dm;
-  const { data, setKeep, setDay } = useStore();
+  const { data, plan: tariff, setKeep, setDay } = useStore();
   const { profile, days, keep } = data;
   const d = useDerived(profile, days, keep, sel);
   const r = d.adaptive;
@@ -29,7 +29,7 @@ export function FactScreen({ sel }: { sel: ISODate }) {
     plan.kind === 'ok'
       ? planForecast(plan.targets, profile.goalWeightKg, r?.trendW || days[sel]?.weight || d.weight || plan.targets.weight, sel)
       : null;
-  const premiumLocked = profile.plan === 'free';
+  const premiumLocked = tariff === 'free';
   const adv = useAdvanced();
 
   if (!r)

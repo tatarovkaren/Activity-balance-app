@@ -47,7 +47,7 @@ export function PhotoScreen({ sel }: { sel: ISODate }) {
   const Ph = tx.photo;
   const { int, dm } = f;
   const kg = f.num;
-  const { data, setDay, logPhoto, addRef, setConsent } = useStore();
+  const { data, plan, setDay, logPhoto, addRef, setConsent } = useStore();
   const { profile, hand, consent } = data;
   const [editingHand, setEditingHand] = useState(false);
   const [providerId, setProviderId] = useState(ENDPOINT ? 'http' : 'manual');
@@ -65,7 +65,7 @@ export function PhotoScreen({ sel }: { sel: ISODate }) {
   const [realGrams, setRealGrams] = useState<number | undefined>();
   const [saveRefName, setSaveRefName] = useState('');
   const today = todayISO();
-  const quota = photoQuota(profile.plan, data.photoUsage, today);
+  const quota = photoQuota(plan, data.photoUsage, today);
 
   const h = hand || REFERENCE_HAND;
   const draft = useMemo(() => buildDraft(items, { hand: h, quality, hiddenOil: oil, diaryWeights: profile.diaryWeights }), [items, h, quality, oil, profile.diaryWeights]);
@@ -173,7 +173,7 @@ export function PhotoScreen({ sel }: { sel: ISODate }) {
             <Seg value={providerId} onChange={setProviderId} options={providers().map((p) => ({ v: p.id, label: Ph.providers[p.id] || p.id }))} testID="provider" />
             <Gap h={6} />
             <T muted size={12}>
-              {provider.automatic ? Ph.quota(quota.left, quota.limit, quota.per === 'week', profile.plan === 'free') : Ph.manualHint}
+              {provider.automatic ? Ph.quota(quota.left, quota.limit, quota.per === 'week', plan === 'free') : Ph.manualHint}
               {provider.id === 'demo' ? Ph.demoHint : ''}
             </T>
             {err ? <Note color={t.red}>{err}</Note> : null}

@@ -5,6 +5,7 @@ import { shiftDate, type ISODate } from './dates';
 import type { DayEntry, DayMap, Profile, Sex } from './types';
 import { DEFAULT_PROFILE } from './types';
 import type { GoalSetting } from './targets';
+import { makeCode, type CuratorAccount } from './promo';
 
 function rng(seed: number) {
   let s = seed >>> 0;
@@ -40,6 +41,11 @@ export interface DemoLabels {
   me?: string;
   /** 7 имён клиентов кабинета куратора. */
   clients?: string[];
+  /** Демо-куратор: имя для клиента и фамилия для кода. */
+  curatorName?: string;
+  curatorSurname?: string;
+  /** 3 бывших клиента (ведение закончилось) — для счётчика бонуса. */
+  exClients?: string[];
 }
 
 export function generateDemo(spec: DemoSpec, today: ISODate): DayMap {
@@ -155,4 +161,31 @@ export function demoDays(today: ISODate, labels?: DemoLabels): DayMap {
     { seed: 7, sex: 'male', startWeight: 81.5, trueTdee: 2480, intake: 1850, days: 70, tripAt: 40, gap: [52, 4], labels },
     today,
   );
+}
+
+/** Сквозной номер кода демо-куратора: не 0001, чтобы было видно, что номер общий по системе. */
+export const DEMO_CURATOR_SEQ = 42;
+
+/**
+ * Кабинет демо-куратора: тариф «Старт» (10 мест), 7 клиентов на ведении пришли по коду,
+ * трое бывших — двое оформили Премиум со скидкой (до бонуса не хватает одной оплаты).
+ */
+export function demoCuratorAccount(today: ISODate, labels?: DemoLabels): CuratorAccount {
+  const names = labels?.clients?.length === 7 ? labels.clients : ['Анна К.', 'Дмитрий С.', 'Ольга П.', 'Сергей В.', 'Мария Л.', 'Алексей Н.', 'Елена Р.'];
+  const ex = labels?.exClients?.length === 3 ? labels.exClients : ['Павел Т.', 'Наталья Г.', 'Игорь Б.'];
+  const started = [63, 70, 50, 60, 45, 56, 5];
+  const surname = labels?.curatorSurname || 'Смирнова';
+  return {
+    surname,
+    displayName: labels?.curatorName || 'Ирина Смирнова',
+    code: makeCode(surname, DEMO_CURATOR_SEQ),
+    plan: 'start',
+    createdAt: shiftDate(today, -120),
+    referrals: [
+      { id: 'x1', name: ex[0], linkedAt: shiftDate(today, -118), status: 'ended', endedAt: shiftDate(today, -30), paidAt: shiftDate(today, -27) },
+      { id: 'x2', name: ex[1], linkedAt: shiftDate(today, -110), status: 'ended', endedAt: shiftDate(today, -21), paidAt: shiftDate(today, -20) },
+      { id: 'x3', name: ex[2], linkedAt: shiftDate(today, -95), status: 'ended', endedAt: shiftDate(today, -9) },
+      ...names.map((name, i) => ({ id: 'c' + (i + 1), name, linkedAt: shiftDate(today, -(started[i] - 1)), status: 'active' as const })),
+    ],
+  };
 }

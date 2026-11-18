@@ -78,6 +78,9 @@ export function LoginScreen() {
       <T size={34} bold style={{ textAlign: 'center' }}>{tx.app.name}</T>
       <Gap h={4} />
       <T size={15} style={{ textAlign: 'center' }}>{tx.app.tagline}</T>
+      {data.invite ? (
+        <T size={13} color={t.green} style={{ textAlign: 'center', marginTop: 8 }}>{tx.promo.loginInvite(data.invite)}</T>
+      ) : null}
       <Gap h={28} />
       {PROVIDERS.map((p) => {
         const available = cloud && NATIVE_OAUTH.includes(p.id);

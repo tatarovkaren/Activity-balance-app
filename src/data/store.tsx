@@ -4,14 +4,41 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
-import { todayISO, type ISODate } from '../core/dates';
+import { addMonthsClamped, todayISO, type ISODate } from '../core/dates';
 import { compactEntry, mergeDays, mergeEntry } from '../core/merge';
-import { DEFAULT_PROFILE, type DayEntry, type DayMap, type KeepMap, type Profile } from '../core/types';
+import { DEFAULT_PROFILE, type DayEntry, type DayMap, type KeepMap, type Plan, type Profile } from '../core/types';
 import type { HandProfile } from '../core/photo/estimate';
 import { withGoal, type GoalProposal, type GoalSetting } from '../core/targets';
-import { demoDays, demoProfile, type DemoLabels } from '../core/demo';
+import { demoCuratorAccount, demoDays, demoProfile, type DemoLabels } from '../core/demo';
+import {
+  addReferral,
+  checkCode,
+  codeFromUrl,
+  makeCode,
+  makeOffer,
+  markPaid,
+  normalizeCode,
+  offerOpen,
+  setReferralStatus,
+  type CodeError,
+  type CuratorAccount,
+  type CuratorPlan,
+  type ReferralOffer,
+} from '../core/promo';
 import { load, save, clearAll } from './storage';
-import { currentUser, myGoalProposals, recordConsents, respondGoalProposal, supabase, supabaseRepo, signOut, type CloudRepo } from './cloud';
+import {
+  clientEndLink,
+  currentUser,
+  linkCurator,
+  myGoalProposals,
+  myReferralOffer,
+  recordConsents,
+  respondGoalProposal,
+  supabase,
+  supabaseRepo,
+  signOut,
+  type CloudRepo,
+} from './cloud';
 import { LEGAL_VERSION } from '../legal';
 
 export type Mode = 'none' | 'local' | 'demo' | 'cloud';
@@ -29,7 +56,15 @@ export interface CuratorAccess {
   code: string;
   linkedAt: ISODate;
   share: { food: boolean; workouts: boolean; measurements: boolean; comments: boolean; photos: boolean };
+  /** Премиум бесплатно, пока идёт ведение (платит куратор своим тарифом). Нет поля у старых связей — тоже да. */
+  premium?: boolean;
 }
+
+/** Доступ, который клиент даёт куратору по умолчанию (фото еды — только по отдельному согласию). */
+export const DEFAULT_SHARE: CuratorAccess['share'] = { food: true, workouts: true, measurements: true, comments: true, photos: false };
+
+/** id пользователя этого устройства в списке клиентов локального кабинета куратора. */
+export const SELF_ID = 'self';
 
 export interface FoodRef {
   id: string;
@@ -64,6 +99,14 @@ export interface AppData {
   consent: Consent;
   /** Предложения куратора по режиму цели, ждущие подтверждения. */
   goalProposals?: GoalProposal[];
+  /** Кабинет куратора на этом устройстве (без сервера и в демо): код, тариф, кто пришёл по коду. */
+  curatorAccount?: CuratorAccount;
+  /** Последний выданный сквозной номер кода на этом устройстве (на сервере — последовательность). */
+  promoSeq?: number;
+  /** Предложение Премиума со скидкой после окончания ведения. */
+  offer?: ReferralOffer;
+  /** Код из ссылки-приглашения — подставляется в анкету и профиль. */
+  invite?: string;
 }
 
 const EMPTY: AppData = { profile: DEFAULT_PROFILE, days: {}, keep: {}, refs: [], photoUsage: [], consent: {} };
@@ -85,6 +128,8 @@ interface StoreApi {
   session: Session;
   data: AppData;
   sync: SyncStatus;
+  /** Действующий тариф: на ведении у куратора — Премиум, иначе выбранный в профиле. */
+  plan: Plan;
   setDay: (date: ISODate, patch: Partial<DayEntry>) => void;
   clearDay: (date: ISODate) => void;
   replaceDays: (days: DayMap) => void;
@@ -95,6 +140,19 @@ interface StoreApi {
   removeRef: (id: string) => void;
   logPhoto: (d: ISODate) => void;
   setCurator: (c: CuratorAccess | undefined) => void;
+  /** Клиент вводит код куратора. Возвращает ошибку или null, если привязка прошла. */
+  linkByCode: (code: string, selfName: string) => Promise<CodeError | null>;
+  /** Клиент сам отключает куратора: ведение закончилось, появляется предложение со скидкой. */
+  unlinkCurator: () => void;
+  /** Оформить Премиум со скидкой (оплата пока не подключена — отметка для пилота). */
+  acceptOffer: () => void;
+  dismissOffer: () => void;
+  setInvite: (code: string | undefined) => void;
+  /** Куратор (без сервера): создать код по фамилии. */
+  createCuratorAccount: (surname: string, displayName: string) => void;
+  setCuratorPlan: (p: CuratorPlan) => void;
+  /** Куратор завершает ведение (ended) или отвязывает клиента (removed). */
+  endReferral: (id: string, how: 'ended' | 'removed') => void;
   setConsent: (c: Consent) => void;
   /** Новый режим цели с сегодняшнего дня (правка в тот же день заменяет режим дня). */
   setGoal: (g: Omit<GoalSetting, 'start'>) => void;
@@ -154,6 +212,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (ready) save('session', session);
   }, [session, ready]);
+
+  // ---- код из ссылки-приглашения (#/invite/КОД) ----
+  useEffect(() => {
+    if (!ready || Platform.OS !== 'web' || typeof window === 'undefined') return;
+    const take = () => {
+      const c = codeFromUrl(window.location.href);
+      if (!c) return;
+      setData((cur) => ({ ...cur, invite: c }));
+      history.replaceState(null, '', window.location.pathname + window.location.search.replace(/[?&]code=[^&]*/i, ''));
+    };
+    take();
+    window.addEventListener('hashchange', take);
+    return () => window.removeEventListener('hashchange', take);
+  }, [ready]);
 
   // ---- журнал согласий на сервере (галочки входа, рассылки, фото) ----
   const consentSent = useRef('');
@@ -250,6 +322,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       myGoalProposals()
         .then((goalProposals) => setData((cur) => ({ ...cur, goalProposals })))
         .catch(() => {});
+      // предложение со скидкой после ведения (миграция 0004; нет таблицы — пропускаем)
+      myReferralOffer()
+        .then((offer) => offer && setData((cur) => ({ ...cur, offer: cur.offer?.acceptedAt ? cur.offer : offer })))
+        .catch(() => {});
     } catch {
       setSync({ kind: 'offline', code: 'offlinePull' });
     }
@@ -295,11 +371,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     schedulePush();
   };
 
+  const endLocal = (cur: AppData, how: 'ended' | 'removed'): AppData => {
+    const today = todayISO();
+    const c = cur.curator;
+    if (!c) return cur;
+    const acc = cur.curatorAccount && cur.curatorAccount.code === c.code ? setReferralStatus(cur.curatorAccount, SELF_ID, how, today) : cur.curatorAccount;
+    // предложение — только тем, кто пришёл по коду и закончил ведение (не отвязан куратором)
+    const offer = how === 'ended' && c.premium !== false ? makeOffer(c.name, c.code, today) : cur.offer;
+    return { ...cur, curator: undefined, curatorAccount: acc, offer };
+  };
+
   const api: StoreApi = {
     ready,
     session,
     data,
     sync,
+    plan: data.curator && data.curator.premium !== false ? 'premium' : data.profile.plan,
     setDay: (date, patch) => {
       setData((cur) => {
         const merged = compactEntry({ ...(cur.days[date] || {}), ...patch, updatedAt: Date.now() });
@@ -341,6 +428,77 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     removeRef: (id) => setData((cur) => ({ ...cur, refs: cur.refs.filter((x) => x.id !== id) })),
     logPhoto: (d) => setData((cur) => ({ ...cur, photoUsage: [...cur.photoUsage.filter((x) => x >= '2000'), d].slice(-200) })),
     setCurator: (c) => setData((cur) => ({ ...cur, curator: c })),
+    linkByCode: async (input, selfName) => {
+      const code = normalizeCode(input);
+      const today = todayISO();
+      const access = (name: string): CuratorAccess => ({ name, code, linkedAt: today, share: { ...DEFAULT_SHARE }, premium: true });
+      if (session.mode === 'cloud') {
+        try {
+          const name = await linkCurator(code);
+          setData((cur) => ({ ...cur, curator: access(name), invite: undefined }));
+          return null;
+        } catch (e) {
+          const m = String((e as { message?: string })?.message || e);
+          if (/no_seats/.test(m)) return 'noSeats';
+          if (/not_found/.test(m)) return 'notFound';
+          if (/bad_format/.test(m)) return 'format';
+          throw e;
+        }
+      }
+      // без сервера код ищется в кабинете куратора на этом же устройстве (в демо — демо-куратор)
+      const acc = dataRef.current.curatorAccount;
+      const err = checkCode(code, acc, SELF_ID);
+      if (err) return err;
+      setData((cur) => ({
+        ...cur,
+        curator: access(acc!.displayName),
+        curatorAccount: addReferral(cur.curatorAccount!, { id: SELF_ID, name: selfName }, today),
+        invite: undefined,
+      }));
+      return null;
+    },
+    unlinkCurator: () => {
+      if (session.mode === 'cloud') clientEndLink().catch(() => {});
+      setData((cur) => endLocal(cur, 'ended'));
+    },
+    acceptOffer: () => {
+      const today = todayISO();
+      setData((cur) => {
+        if (!offerOpen(cur.offer, today)) return cur;
+        const o = cur.offer!;
+        const acc = cur.curatorAccount && cur.curatorAccount.code === o.code ? markPaid(cur.curatorAccount, SELF_ID, today) : cur.curatorAccount;
+        return {
+          ...cur,
+          offer: { ...o, acceptedAt: today, discountUntil: addMonthsClamped(today, o.months) },
+          curatorAccount: acc,
+          profile: { ...cur.profile, plan: 'premium' },
+        };
+      });
+      touchProfile();
+    },
+    dismissOffer: () => setData((cur) => ({ ...cur, offer: undefined })),
+    setInvite: (code) => setData((cur) => ({ ...cur, invite: code })),
+    createCuratorAccount: (surname, displayName) => {
+      setData((cur) => {
+        if (cur.curatorAccount) return cur;
+        const seq = (cur.promoSeq || 0) + 1;
+        return {
+          ...cur,
+          promoSeq: seq,
+          curatorAccount: { surname: surname.trim(), displayName: displayName.trim() || surname.trim(), code: makeCode(surname, seq), plan: 'start', createdAt: todayISO(), referrals: [] },
+        };
+      });
+    },
+    setCuratorPlan: (plan) => setData((cur) => (cur.curatorAccount ? { ...cur, curatorAccount: { ...cur.curatorAccount, plan } } : cur)),
+    endReferral: (id, how) => {
+      const today = todayISO();
+      setData((cur) => {
+        if (!cur.curatorAccount) return cur;
+        // клиент на этом же устройстве — он тоже узнаёт, что ведение закончилось
+        if (id === SELF_ID && cur.curator?.code === cur.curatorAccount.code) return endLocal(cur, how);
+        return { ...cur, curatorAccount: setReferralStatus(cur.curatorAccount, id, how, today) };
+      });
+    },
     setConsent: (c) => setData((cur) => ({ ...cur, consent: { ...cur.consent, ...c } })),
     setGoal: (g) => {
       const start = todayISO();
@@ -377,6 +535,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         ...EMPTY,
         profile: { ...demoProfile(labels, today), lang: cur.profile.lang, theme: cur.profile.theme },
         days: demoDays(today, labels),
+        curatorAccount: demoCuratorAccount(today, labels),
+        invite: cur.invite,
         consent: { health: today, terms: today, privacy: today, version: LEGAL_VERSION },
       }));
       setSession({ mode: 'demo', userId: 'demo', role });
