@@ -104,6 +104,8 @@ export function demoProfile(labels?: DemoLabels, today?: ISODate): Profile {
     heightCm: 176,
     goalWeightKg: 74,
     stepGoal: 12000,
+    // демо показывает все функции
+    uiMode: 'advanced',
     // режим цели с двух недель назад: дефицит 0,5 %/нед (ТЗ v36, раздел 8)
     goals: today ? [{ start: shiftDate(today, -14), mode: 'deficit', pacePct: 0.5, by: 'user' }] : undefined,
   };

@@ -11,6 +11,7 @@ import { useI18n } from '../i18n';
 import { Chart } from '../ui/Chart';
 import { dayPlan, factLags, planForecast } from '../core/targets';
 import { factForecastText, planForecastText } from '../ui/targets';
+import { useAdvanced } from '../ui/mode';
 
 export function FactScreen({ sel }: { sel: ISODate }) {
   const t = useTheme();
@@ -29,6 +30,7 @@ export function FactScreen({ sel }: { sel: ISODate }) {
       ? planForecast(plan.targets, profile.goalWeightKg, r?.trendW || days[sel]?.weight || d.weight || plan.targets.weight, sel)
       : null;
   const premiumLocked = profile.plan === 'free';
+  const adv = useAdvanced();
 
   if (!r)
     return (
@@ -48,11 +50,17 @@ export function FactScreen({ sel }: { sel: ISODate }) {
       <Card accent={t.amber}>
         <T bold mono size={32} color={t.amber}>{c.main}</T>
         <T muted size={13}>{c.sub}</T>
-        <Gap h={6} />
-        <T size={13}>{factLine(L, r)}</T>
-        <T size={13}>
-          {F.reliability}<T bold color={relColor}>{tx.common.reliability[r.reliability]}</T> · {reliabilityDetails(L, r)}
-        </T>
+        {adv ? (
+          <>
+            <Gap h={6} />
+            <T size={13}>{factLine(L, r)}</T>
+            <T size={13}>
+              {F.reliability}<T bold color={relColor}>{tx.common.reliability[r.reliability]}</T> · {reliabilityDetails(L, r)}
+            </T>
+          </>
+        ) : r.exclList.length ? (
+          <Note>{F.moreInAdvanced(r.exclList.length)}</Note>
+        ) : null}
         {premiumLocked ? (
           <>
             <Gap h={6} />
@@ -61,7 +69,7 @@ export function FactScreen({ sel }: { sel: ISODate }) {
         ) : null}
       </Card>
 
-      {pts.length >= 7 ? (
+      {adv && pts.length >= 7 ? (
         <Card title={F.chartTitle(PARAMS.WIN)} accent={t.amber}>
           <Chart
             height={150}
@@ -81,6 +89,7 @@ export function FactScreen({ sel }: { sel: ISODate }) {
         </Card>
       ) : null}
 
+      {adv ? (
       <Card title={F.excluded} accent={t.red}>
         {r.exclList.length ? (
           r.exclList.map((x) => (
@@ -125,6 +134,7 @@ export function FactScreen({ sel }: { sel: ISODate }) {
           </>
         ) : null}
       </Card>
+      ) : null}
 
       <Card title={pf ? tx.target.forecastTitle : F.goalTitle} accent={t.blue}>
         {pf ? <T size={14}>{planForecastText(L, pf)}</T> : null}
@@ -134,7 +144,7 @@ export function FactScreen({ sel }: { sel: ISODate }) {
       </Card>
 
       <Card title={F.howTitle} accent={t.muted}>
-        <T muted size={13}>{F.how(profile.sex === 'female')}</T>
+        <T muted size={13}>{adv ? F.how(profile.sex === 'female') : F.howBasic}</T>
       </Card>
     </View>
   );

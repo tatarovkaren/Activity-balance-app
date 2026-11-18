@@ -8,6 +8,9 @@ export type Lang = 'ru' | 'en';
 export type LangPref = 'system' | Lang;
 export type MeasureFreq = 'week' | '2weeks' | 'month';
 export type Plan = 'free' | 'premium';
+/** Режим интерфейса: «базовый» прячет сложные показатели, расчёт одинаковый. */
+export type UiMode = 'basic' | 'advanced';
+export const UI_MODES: UiMode[] = ['basic', 'advanced'];
 
 /** Причины ручной отметки «Необычный день». «cycle» — только в женском режиме. */
 export type AnomalyReason = 'trip' | 'feast' | 'illness' | 'incomplete' | 'cycle' | 'other';
@@ -37,6 +40,8 @@ export interface Profile {
   /** Как пользователь ведёт дневник: крупы сухими/мясо сырым или в готовом виде. */
   diaryWeights: 'raw' | 'cooked';
   plan: Plan;
+  /** Базовый — для неподготовленного клиента (по умолчанию), продвинутый — все показатели. */
+  uiMode: UiMode;
 }
 
 export const DEFAULT_PROFILE: Profile = {
@@ -53,6 +58,7 @@ export const DEFAULT_PROFILE: Profile = {
   proteinPerKg: undefined,
   diaryWeights: 'raw',
   plan: 'free',
+  uiMode: 'basic',
 };
 
 /**

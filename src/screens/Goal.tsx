@@ -21,6 +21,7 @@ import { Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, TextField, Fields
 import { useTheme } from '../ui/theme';
 import { errorText, useI18n } from '../i18n';
 import { basisLine, historyLine, pctText, planLine, planNotes, settingErrorText } from '../ui/targets';
+import { useAdvanced } from '../ui/mode';
 
 type PaceChoice = string; // '0.5' | 'custom' | 'date'
 
@@ -38,6 +39,7 @@ export function GoalCard() {
   const G = tx.target;
   const { data, setGoal, recalcGoal } = useStore();
   const { profile, days, keep } = data;
+  const adv = useAdvanced();
   const today = todayISO();
   const cur = activeGoal(profile.goals, today);
   const plan = useMemo(() => dayPlan(profile, days, keep, today), [profile, days, keep, today]);
@@ -69,9 +71,18 @@ export function GoalCard() {
       v: String(v),
       label: G.preset(pctText(L, v), (m === 'deficit' ? G.deficitNames : G.surplusNames)[i]),
     })),
-    { v: 'custom', label: G.custom },
-    { v: 'date', label: G.byDate },
+    // свой темп и «к дате» — только в продвинутом режиме
+    ...(adv
+      ? [
+          { v: 'custom', label: G.custom },
+          { v: 'date', label: G.byDate },
+        ]
+      : []),
   ];
+  const fixedPace =
+    !adv && cur && cur.mode !== 'maintain' && (paceChoice === 'custom' || paceChoice === 'date')
+      ? (cur.targetDate ? G.historyDate(f.dmy(cur.targetDate)) : G.paceOnly(pctText(L, cur.pacePct ?? DEFAULT_PACE_PCT[cur.mode]))).trim()
+      : null;
 
   return (
     <Card title={G.title} accent={t.amber}>
@@ -108,7 +119,8 @@ export function GoalCard() {
             }}
             options={paceOptions(cur.mode)}
           />
-          {paceChoice === 'custom' ? (
+          {fixedPace ? <T muted size={12}>{G.paceFixed(fixedPace)}</T> : null}
+          {adv && paceChoice === 'custom' ? (
             <>
               <Gap h={6} />
               <Fields>
@@ -122,7 +134,7 @@ export function GoalCard() {
               </Fields>
             </>
           ) : null}
-          {paceChoice === 'date' ? (
+          {adv && paceChoice === 'date' ? (
             <>
               <Gap h={6} />
               <Fields>
@@ -145,7 +157,7 @@ export function GoalCard() {
           ) : null}
         </>
       ) : null}
-      {cur ? (
+      {adv && cur ? (
         <>
           <Gap h={6} />
           <Fields>
@@ -167,7 +179,7 @@ export function GoalCard() {
       </T>
       {plan.kind === 'ok' ? (
         <>
-          <T muted size={12}>{basisLine(L, plan.targets)}</T>
+          {adv ? <T muted size={12}>{basisLine(L, plan.targets)}</T> : null}
           {planNotes(L, plan.targets).map((n, i) => (
             <T key={i} size={12} color={n.warn ? t.amber : t.muted}>
               {n.text}
@@ -175,7 +187,7 @@ export function GoalCard() {
           ))}
         </>
       ) : null}
-      {cur ? (
+      {adv && cur ? (
         <>
           <Gap h={6} />
           <Row>
@@ -192,7 +204,7 @@ export function GoalCard() {
           </Row>
         </>
       ) : null}
-      {profile.goals && profile.goals.length ? (
+      {adv && profile.goals && profile.goals.length ? (
         <>
           <Divider />
           <T muted size={12}>{G.history}</T>

@@ -16,6 +16,7 @@ import { reportSvg } from '../ui/reportsvg';
 import { dayPlan, fatTone, kcalTone, proteinTone, type Tone } from '../core/targets';
 import { planLine, planNotes, toneColor } from '../ui/targets';
 import { ProposalCards } from './Goal';
+import { useAdvanced } from '../ui/mode';
 
 export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d: ISODate) => void; openFact: () => void }) {
   const t = useTheme();
@@ -33,6 +34,7 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
   const [importMsg, setImportMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [reportMsg, setReportMsg] = useState('');
+  const adv = useAdvanced();
   const today = todayISO();
   const set = (patch: Parameters<typeof setDay>[1]) => setDay(sel, patch);
 
@@ -190,8 +192,10 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
         <Fields>
           <NumField label={D.workout.minutes} value={e.workoutMin} onChange={(v) => set({ workoutMin: v })} testID="workoutMin" />
           <NumField label={D.workout.hrAvg} value={e.hrAvg} onChange={(v) => set({ hrAvg: v })} testID="hrAvg" />
-          <NumField label={D.workout.hrMax} value={e.hrMax} onChange={(v) => set({ hrMax: v })} />
+          {adv ? <NumField label={D.workout.hrMax} value={e.hrMax} onChange={(v) => set({ hrMax: v })} /> : null}
         </Fields>
+        {adv ? (
+          <>
         <Gap h={8} />
         <NumField
           label={D.workout.steps}
@@ -204,6 +208,8 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
         <T muted size={12}>
           {!stepsFieldOn ? D.workout.stepsOnlyLegs : e.workoutSteps != null ? D.workout.stepsTracker : D.workout.stepsEstimate(Math.round(d.pace.pace), d.pace.personal)}
         </T>
+          </>
+        ) : null}
         {kind !== 'none' ? (
           <T muted size={12}>{kind === 'strength' ? D.workout.strengthNote : kind === 'cardioNoSteps' ? D.workout.noStepsNote : ''}</T>
         ) : null}
@@ -214,8 +220,8 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
               {D.workout.expenditure}
               <T bold mono>{int(en.total)}</T> {tx.common.kcal}
             </T>
-            <T muted size={12}>{D.workout.breakdown(int(en.bmr), int(en.neat), int(en.train), int(en.tef))}</T>
-            {en.workoutStepsDeducted > 0 ? (
+            {adv ? <T muted size={12}>{D.workout.breakdown(int(en.bmr), int(en.neat), int(en.train), int(en.tef))}</T> : null}
+            {adv && en.workoutStepsDeducted > 0 ? (
               <T muted size={12}>{D.workout.stepsDeducted(int(en.workoutStepsDeducted), en.workoutStepsSource === 'tracker')}</T>
             ) : null}
           </>
@@ -268,15 +274,18 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
                 <T bold mono color={t.amber}>{calibLine(L, r).main}</T>
               </T>
               <T muted size={12}>{calibLine(L, r).sub}</T>
-              <T size={12} color={r.reliability === 'high' ? t.green : r.reliability === 'low' ? t.amber : t.text}>
-                {D.balance.reliability(tx.common.reliability[r.reliability])}
-              </T>
+              {adv ? (
+                <T size={12} color={r.reliability === 'high' ? t.green : r.reliability === 'low' ? t.amber : t.text}>
+                  {D.balance.reliability(tx.common.reliability[r.reliability])}
+                </T>
+              ) : null}
             </>
           ) : (
             <T muted>{D.balance.factEmpty}</T>
           )}
         </Pressable>
-        {r?.autoList.slice(-3).map((a) => (
+        {adv ? null : r && r.exclList.length ? <Note>{tx.fact.moreInAdvanced(r.exclList.length)}</Note> : null}
+        {adv && r?.autoList.slice(-3).map((a) => (
           <Row key={a.d} gap={6}>
             <Note>{D.balance.autoDay(dm(a.d), detailText(L, a.detail))}</Note>
             <Btn kind="link" small title={D.balance.returnToCalc} onPress={() => setKeep(a.d, true)} />
