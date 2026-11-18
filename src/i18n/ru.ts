@@ -4,6 +4,7 @@
 
 import { FOODS } from '../core/photo/foods';
 import { pad2, type FmtSpec } from './format';
+import { helpRu } from './help.ru';
 
 /** «год / года / лет» для числа. */
 const ruYears = (n: number) => {
@@ -677,6 +678,9 @@ export const ru = {
     footer: (app: string) => `${app} · оценки по формулам и тренду веса, не медицинская рекомендация`,
     file: 'report',
   },
+
+  /** Раздел «Помощь и ЧаВо» — src/i18n/help.*.ts. */
+  help: helpRu,
 
   /** Тексты демо-данных. */
   demo: {

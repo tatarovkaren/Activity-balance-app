@@ -23,8 +23,9 @@ import { LangSwitch } from './Login';
 import { GoalCard, ProposalCards } from './Goal';
 import { ConsentCheck, openLegal } from './Legal';
 import { LEGAL_DOCS } from '../legal';
+import { HelpCard } from './Help';
 
-export function ProfileScreen({ openHand }: { openHand: () => void }) {
+export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; openHelp: () => void }) {
   const t = useTheme();
   const L = useI18n();
   const { tx, f } = L;
@@ -77,6 +78,8 @@ export function ProfileScreen({ openHand }: { openHand: () => void }) {
       <T size={22} bold>{P.title}</T>
       <T muted size={13}>{session.mode === 'cloud' ? P.cloud(session.email || '') : session.mode === 'demo' ? P.demo : P.local}</T>
       <Gap h={12} />
+
+      <HelpCard onOpen={openHelp} />
 
       <Card title={P.uiMode.title} accent={t.violet}>
         <Seg<UiMode> value={p.uiMode} onChange={(v) => set({ uiMode: v })} options={UI_MODES.map((m) => ({ v: m, label: P.uiMode[m] }))} testID="uiMode" />

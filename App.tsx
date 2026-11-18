@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Platform, Pressable, ScrollView, Text, View, type ScrollViewInstance } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { todayISO, type ISODate } from './src/core/dates';
 import { StoreProvider, useStore } from './src/data/store';
@@ -14,11 +14,12 @@ import { HandSetup, PhotoScreen } from './src/screens/Photo';
 import { ProfileScreen } from './src/screens/Profile';
 import { CuratorScreen } from './src/screens/Curator';
 import { LegalView, useLegalRoute } from './src/screens/Legal';
+import { HelpScreen } from './src/screens/Help';
 import { OnboardingScreen } from './src/screens/Onboarding';
 
-type Tab = 'day' | 'fact' | 'charts' | 'photo' | 'profile' | 'hand';
+type Tab = 'day' | 'fact' | 'charts' | 'photo' | 'profile' | 'hand' | 'help';
 
-const TABS: { id: Exclude<Tab, 'hand'>; icon: string }[] = [
+const TABS: { id: Exclude<Tab, 'hand' | 'help'>; icon: string }[] = [
   { id: 'day', icon: '◉' },
   { id: 'fact', icon: '⚖' },
   { id: 'charts', icon: '📈' },
@@ -33,6 +34,11 @@ function Shell() {
   const [tab, setTab] = useState<Tab>('day');
   const [sel, setSel] = useState<ISODate>(todayISO());
   const [legal, closeLegal] = useLegalRoute();
+  const scroll = useRef<ScrollViewInstance>(null);
+  // новый экран открывается сверху (иначе «Помощь» из профиля откроется посередине)
+  useEffect(() => {
+    scroll.current?.scrollTo({ y: 0, animated: false });
+  }, [tab]);
 
   // при первом открытии в новый день дата становится сегодняшней
   useEffect(() => {
@@ -58,7 +64,7 @@ function Shell() {
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <StatusBar style={t.dark ? 'light' : 'dark'} />
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 112, width: '100%', maxWidth: maxW, alignSelf: 'center' }} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scroll} contentContainerStyle={{ padding: 16, paddingBottom: 112, width: '100%', maxWidth: maxW, alignSelf: 'center' }} keyboardShouldPersistTaps="handled">
         {legal ? (
           <LegalView doc={legal} onClose={closeLegal} />
         ) : session.mode === 'none' ? (
@@ -73,7 +79,8 @@ function Shell() {
             {tab === 'fact' ? <FactScreen sel={sel} /> : null}
             {tab === 'charts' ? <ChartsScreen sel={sel} /> : null}
             {tab === 'photo' ? <PhotoScreen sel={sel} /> : null}
-            {tab === 'profile' ? <ProfileScreen openHand={() => setTab('hand')} /> : null}
+            {tab === 'profile' ? <ProfileScreen openHand={() => setTab('hand')} openHelp={() => setTab('help')} /> : null}
+            {tab === 'help' ? <HelpScreen onClose={() => setTab('profile')} /> : null}
             {tab === 'hand' ? <HandSetup initial={data.hand} onDone={() => setTab('profile')} /> : null}
             <Text style={{ color: sync.kind === 'offline' ? t.amber : t.muted, fontSize: 12, textAlign: 'center', marginTop: 8 }} testID="syncStatus">
               {sync.code === 'saved' || sync.code === 'synced' ? tx.sync[sync.code](sync.at || '') : tx.sync[sync.code]}
@@ -85,7 +92,7 @@ function Shell() {
         <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: t.card, borderTopWidth: 1, borderColor: t.line }}>
           <View style={{ flexDirection: 'row', maxWidth: 640, width: '100%', alignSelf: 'center' }}>
             {TABS.map((x) => {
-              const on = tab === x.id || (x.id === 'profile' && tab === 'hand');
+              const on = tab === x.id || (x.id === 'profile' && (tab === 'hand' || tab === 'help'));
               return (
                 <Pressable
                   key={x.id}

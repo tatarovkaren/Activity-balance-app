@@ -29,7 +29,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "build:web": "expo export -p web",
-    "legal": "node scripts/build-legal.mjs"
+    "legal": "node scripts/build-legal.mjs",
+    "help:shots": "node scripts/help-shots.cjs"
   },
   "private": true
 }
