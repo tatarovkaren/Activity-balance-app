@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, Text, View, type ScrollViewInstance } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { todayISO, type ISODate } from './src/core/dates';
+import type { MealSlot } from './src/core/types';
 import { StoreProvider, useStore } from './src/data/store';
 import { ThemeProvider, useTheme } from './src/ui/theme';
 import { T } from './src/ui/kit';
@@ -33,6 +34,7 @@ function Shell() {
   const { tx } = useI18n();
   const [tab, setTab] = useState<Tab>('day');
   const [sel, setSel] = useState<ISODate>(todayISO());
+  const [photoMeal, setPhotoMeal] = useState<MealSlot | undefined>();
   const [legal, closeLegal] = useLegalRoute();
   const scroll = useRef<ScrollViewInstance>(null);
   // новый экран открывается сверху (иначе «Помощь» из профиля откроется посередине)
@@ -75,10 +77,10 @@ function Shell() {
           <OnboardingScreen />
         ) : (
           <>
-            {tab === 'day' ? <DayScreen sel={sel} setSel={setSel} openFact={() => setTab('fact')} /> : null}
+            {tab === 'day' ? <DayScreen sel={sel} setSel={setSel} openFact={() => setTab('fact')} openPhoto={(m) => { setPhotoMeal(m); setTab('photo'); }} /> : null}
             {tab === 'fact' ? <FactScreen sel={sel} /> : null}
             {tab === 'charts' ? <ChartsScreen sel={sel} /> : null}
-            {tab === 'photo' ? <PhotoScreen sel={sel} /> : null}
+            {tab === 'photo' ? <PhotoScreen key={photoMeal || 'any'} sel={sel} meal={photoMeal} onBack={() => setTab('day')} /> : null}
             {tab === 'profile' ? <ProfileScreen openHand={() => setTab('hand')} openHelp={() => setTab('help')} /> : null}
             {tab === 'help' ? <HelpScreen onClose={() => setTab('profile')} /> : null}
             {tab === 'hand' ? <HandSetup initial={data.hand} onDone={() => setTab('profile')} /> : null}
@@ -96,7 +98,10 @@ function Shell() {
               return (
                 <Pressable
                   key={x.id}
-                  onPress={() => setTab(x.id)}
+                  onPress={() => {
+                    if (x.id === 'photo') setPhotoMeal(undefined);
+                    setTab(x.id);
+                  }}
                   style={{ flex: 1, alignItems: 'center', paddingTop: 8, paddingBottom: 10, borderTopWidth: 3, borderColor: on ? t.amber : 'transparent' }}
                   testID={'tab-' + x.id}
                 >

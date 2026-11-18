@@ -91,9 +91,53 @@ export interface DayEntry {
   comment?: string;
   wellbeing?: number;
   anomaly?: AnomalyReason;
+  /**
+   * Приёмы пищи, посчитанные по фото (пометка «по фото»). Их КБЖУ уже входит в kcal/protein/fat/carbs дня:
+   * запись по фото прибавляется к записанному, импорт FatSecret — к сумме этих приёмов (см. core/photo/meals.ts).
+   */
+  photoMeals?: PhotoMeal[];
   /** Отчёт дня отправлен куратору (время, мс). */
   reportSentAt?: number;
   updatedAt?: number;
+}
+
+/** Приём пищи в дневнике. */
+export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+export const MEAL_SLOTS: MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+
+/** Продукт в приёме по фото: итоговые граммы и что предложил ИИ (для калибровки). */
+export interface PhotoMealItem {
+  name: string;
+  foodId?: string;
+  grams: number;
+  kcal: number;
+  p: number;
+  f: number;
+  c: number;
+  /** Граммы в оценке ИИ до правки пользователя; нет поля — продукт добавлен вручную. */
+  estGrams?: number;
+  /** Вес «сухим/сырым» для тех, кто так ведёт дневник. */
+  diaryGrams?: number;
+}
+
+/** Подтверждённый приём пищи по фото. Снимки не хранятся. */
+export interface PhotoMeal {
+  id: string;
+  meal: MealSlot;
+  /** Время подтверждения, мс. */
+  at: number;
+  /** id провайдера (manual / demo / http), не модель. */
+  provider: string;
+  kcal: number;
+  p: number;
+  f: number;
+  c: number;
+  kcalMin: number;
+  kcalMax: number;
+  rangePct: number;
+  /** Скрытое масло, ккал (входит в kcal). */
+  oilKcal?: number;
+  items: PhotoMealItem[];
 }
 
 export type DayMap = Record<ISODate, DayEntry>;

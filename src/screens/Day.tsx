@@ -4,7 +4,7 @@ import { dayDiff, shiftDate, todayISO, ageAt, type ISODate } from '../core/dates
 import { bodyFatNorm, measureHint, navyBodyFat } from '../core/body';
 import { classifyWorkout, KCAL_PER_KG, macroKcal } from '../core/energy';
 import { applyFoodDays } from '../core/importers';
-import { ANOMALY_REASONS, type AnomalyReason } from '../core/types';
+import { ANOMALY_REASONS, MEAL_SLOTS, type AnomalyReason, type MealSlot } from '../core/types';
 import { useStore } from '../data/store';
 import { useDerived } from '../data/derived';
 import { Bar, Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, TextField, Fields } from '../ui/kit';
@@ -19,14 +19,26 @@ import { planLine, planNotes, toneColor } from '../ui/targets';
 import { ProposalCards } from './Goal';
 import { useAdvanced } from '../ui/mode';
 
-export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d: ISODate) => void; openFact: () => void }) {
+export function DayScreen({
+  sel,
+  setSel,
+  openFact,
+  openPhoto,
+}: {
+  sel: ISODate;
+  setSel: (d: ISODate) => void;
+  openFact: () => void;
+  /** «Сфотографировать» в приёме пищи: экран фото с выбранным приёмом. */
+  openPhoto?: (meal?: MealSlot) => void;
+}) {
   const t = useTheme();
   const L = useI18n();
   const { tx, f } = L;
   const D = tx.day;
   const { dm, int } = f;
   const kg = f.num;
-  const { data, setDay, clearDay, replaceDays, setKeep } = useStore();
+  const { data, setDay, clearDay, replaceDays, setKeep, removeMeal } = useStore();
+  const [askMeal, setAskMeal] = useState(false);
   const { profile, days, keep } = data;
   const e = days[sel] || {};
   const d = useDerived(profile, days, keep, sel);
@@ -152,8 +164,21 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
       <Card
         title={D.food.title}
         accent={t.amber}
-        right={<Btn small title={D.food.importFs} onPress={importCsv} testID="importCsv" />}
       >
+        <Row gap={6} style={{ marginBottom: 10 }}>
+          {openPhoto ? <Btn small kind="solid" title={D.food.photo} onPress={() => setAskMeal(!askMeal)} testID="photoMeal" /> : null}
+          <Btn small title={D.food.importFs} onPress={importCsv} testID="importCsv" />
+        </Row>
+        {askMeal && openPhoto ? (
+          <View style={{ marginBottom: 10, gap: 6 }}>
+            <T muted size={12}>{D.food.whichMeal}</T>
+            <Row gap={6}>
+              {MEAL_SLOTS.map((m) => (
+                <Btn key={m} small kind="solid" title={'📷 ' + tx.meals[m]} onPress={() => openPhoto(m)} testID={'photoMeal-' + m} />
+              ))}
+            </Row>
+          </View>
+        ) : null}
         <NumField big label={D.food.kcal} value={kcalShown} onChange={(v) => set({ kcal: v == null ? undefined : Math.round(v), kcalManual: v != null })} placeholder="0" testID="kcal" />
         {tg ? <FactTarget fact={kcalShown} target={tg.kcal} tone={kcalTone(kcalShown, tg.kcal)} testID="kcalTarget" /> : null}
         <Gap h={6} />
@@ -177,6 +202,30 @@ export function DayScreen({ sel, setSel, openFact }: { sel: ISODate; setSel: (d:
           {tg ? tx.target.targetLabel + (fatTone(e.fat, tg.weight) === 'bad' ? ' · ' + tx.target.fatLow : '') : D.food.fsHint}
         </T>
         {importMsg ? <Note color={importMsg.ok ? t.green : t.red}>{importMsg.text}</Note> : null}
+        {e.photoMeals?.length ? (
+          <>
+            <Divider />
+            <T muted size={12}>{D.food.photoMeals}</T>
+            {[...e.photoMeals]
+              .sort((a, b) => MEAL_SLOTS.indexOf(a.meal) - MEAL_SLOTS.indexOf(b.meal) || a.at - b.at)
+              .map((m) => (
+                <View key={m.id} style={{ paddingVertical: 4 }} testID="photoMealRow">
+                  <Row style={{ justifyContent: 'space-between' }}>
+                    <T size={13} style={{ flexShrink: 1 }}>
+                      <T bold size={13}>{tx.meals[m.meal]}</T>
+                      <T size={11} color={t.amber}>{'  ' + D.food.byPhoto}</T>
+                      {' · ' + m.items.map((it) => `${it.name} ${it.grams} ${tx.common.g}`).join(', ')}
+                    </T>
+                    <Btn small kind="link" title={tx.common.remove} color={t.muted} onPress={() => removeMeal(sel, m.id)} />
+                  </Row>
+                  <T muted mono size={12}>
+                    {D.food.photoLine(int(m.kcal), int(m.kcalMin), int(m.kcalMax), kg(m.p), kg(m.f), kg(m.c))}
+                  </T>
+                </View>
+              ))}
+            <T muted size={11}>{D.food.photoNote}</T>
+          </>
+        ) : null}
       </Card>
 
       {/* Тренировка */}

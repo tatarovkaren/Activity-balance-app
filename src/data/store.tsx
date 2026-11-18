@@ -8,6 +8,8 @@ import { addMonthsClamped, todayISO, type ISODate } from '../core/dates';
 import { compactEntry, mergeDays, mergeEntry } from '../core/merge';
 import { DEFAULT_PROFILE, type DayEntry, type DayMap, type KeepMap, type Plan, type Profile } from '../core/types';
 import type { HandProfile } from '../core/photo/estimate';
+import { addPhotoMeal, editsFromMeal, removePhotoMeal, type PhotoEdit } from '../core/photo/meals';
+import type { PhotoMeal } from '../core/types';
 import { withGoal, type GoalProposal, type GoalSetting } from '../core/targets';
 import { demoCuratorAccount, demoDays, demoProfile, type DemoLabels } from '../core/demo';
 import {
@@ -32,6 +34,7 @@ import {
   linkCurator,
   myGoalProposals,
   myReferralOffer,
+  savePhotoEstimate,
   recordConsents,
   respondGoalProposal,
   supabase,
@@ -95,6 +98,8 @@ export interface AppData {
   hand?: HandProfile;
   refs: FoodRef[];
   photoUsage: ISODate[];
+  /** Правки граммов после оценки ИИ (последние 300) — для будущей калибровки оценки. */
+  photoEdits?: PhotoEdit[];
   curator?: CuratorAccess;
   consent: Consent;
   /** Предложения куратора по режиму цели, ждущие подтверждения. */
@@ -139,6 +144,9 @@ interface StoreApi {
   addRef: (r: FoodRef) => void;
   removeRef: (id: string) => void;
   logPhoto: (d: ISODate) => void;
+  /** Подтвердить приём по фото: прибавить к дню и сохранить правки граммов. */
+  addMeal: (date: ISODate, m: PhotoMeal) => void;
+  removeMeal: (date: ISODate, id: string) => void;
   setCurator: (c: CuratorAccess | undefined) => void;
   /** Клиент вводит код куратора. Возвращает ошибку или null, если привязка прошла. */
   linkByCode: (code: string, selfName: string) => Promise<CodeError | null>;
@@ -427,6 +435,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     addRef: (r) => setData((cur) => ({ ...cur, refs: [r, ...cur.refs.filter((x) => x.id !== r.id)] })),
     removeRef: (id) => setData((cur) => ({ ...cur, refs: cur.refs.filter((x) => x.id !== id) })),
     logPhoto: (d) => setData((cur) => ({ ...cur, photoUsage: [...cur.photoUsage.filter((x) => x >= '2000'), d].slice(-200) })),
+    addMeal: (date, m) => {
+      setData((cur) => {
+        const merged = compactEntry({ ...(cur.days[date] || {}), ...addPhotoMeal(cur.days[date], m), updatedAt: Date.now() });
+        const edits = editsFromMeal(m, date);
+        return {
+          ...cur,
+          days: { ...cur.days, [date]: merged },
+          photoEdits: edits.length ? [...(cur.photoEdits || []), ...edits].slice(-300) : cur.photoEdits,
+        };
+      });
+      touchDays([date]);
+      if (session.mode === 'cloud') savePhotoEstimate(date, m).catch(() => {});
+    },
+    removeMeal: (date, id) => {
+      setData((cur) => {
+        const merged = compactEntry({ ...(cur.days[date] || {}), ...removePhotoMeal(cur.days[date], id), updatedAt: Date.now() });
+        const days = { ...cur.days };
+        if (Object.keys(merged).filter((k) => k !== 'updatedAt').length) days[date] = merged;
+        else delete days[date];
+        return { ...cur, days };
+      });
+      touchDays([date]);
+    },
     setCurator: (c) => setData((cur) => ({ ...cur, curator: c })),
     linkByCode: async (input, selfName) => {
       const code = normalizeCode(input);
@@ -569,6 +600,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           keep: { ...cur.keep, ...(inc.keep || {}) },
           hand: cur.hand || inc.hand,
           refs: [...cur.refs, ...(inc.refs || []).filter((r) => !cur.refs.some((x) => x.id === r.id))],
+          photoEdits: [...(cur.photoEdits || []), ...(inc.photoEdits || []).filter((e) => !(cur.photoEdits || []).some((x) => x.at === e.at && x.name === e.name))].slice(-300),
         };
       });
       touchProfile();

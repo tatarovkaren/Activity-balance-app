@@ -6,7 +6,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 import type { ISODate } from '../core/dates';
 import { AppError } from '../core/errors';
-import type { DayEntry, DayMap, KeepMap, Profile } from '../core/types';
+import type { DayEntry, DayMap, KeepMap, PhotoMeal, Profile } from '../core/types';
 import type { GoalProposal, GoalSetting } from '../core/targets';
 import { latinSurname, type CuratorPlan, type Referral, type ReferralOffer } from '../core/promo';
 
@@ -274,4 +274,30 @@ export async function recordConsents(given: Partial<Record<ConsentKind, string>>
     const r = await sb.from('consents').update({ revoked_at: new Date().toISOString() }).in('id', revoke);
     if (r.error) throw r.error;
   }
+}
+
+// ---- Подсчёт по фото ----
+
+/** Адрес серверной оценки: свой EXPO_PUBLIC_PHOTO_ENDPOINT или функция photo-estimate в Supabase. */
+export function photoEndpoint(): string | undefined {
+  const own = process.env.EXPO_PUBLIC_PHOTO_ENDPOINT;
+  if (own) return own;
+  return URL && KEY ? URL.replace(/\/$/, '') + '/functions/v1/photo-estimate' : undefined;
+}
+
+/** Токен пользователя для сервера оценки (ключ модели живёт только на сервере). */
+export async function accessToken(): Promise<string | undefined> {
+  const { data } = (await supabase()?.auth.getSession()) || { data: { session: null } };
+  return data.session?.access_token;
+}
+
+/**
+ * Подтверждённый приём по фото — в photo_estimates (без снимков): продукты, итоговые граммы и граммы ИИ до правки.
+ * По этой таблице сервер потом считает поправку оценки для пользователя.
+ */
+export async function savePhotoEstimate(date: ISODate, meal: PhotoMeal) {
+  const sb = supabase();
+  if (!sb) return;
+  const { error } = await sb.from('photo_estimates').insert({ date, provider: meal.provider, draft: meal });
+  if (error) throw error;
 }
