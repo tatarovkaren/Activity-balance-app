@@ -6,10 +6,11 @@ import { navyBodyFat } from '../core/body';
 import { normDate } from '../core/importers';
 import { useStore } from '../data/store';
 import { useDerived } from '../data/derived';
-import { Card, Gap, Row, Seg, T, TextField, Fields } from '../ui/kit';
+import { Card, Gap, Row, Seg, T, DateField, Fields } from '../ui/kit';
 import { useTheme } from '../ui/theme';
 import { Chart } from '../ui/Chart';
 import { useI18n } from '../i18n';
+import { useAdvanced } from '../ui/mode';
 
 type Scale = 'week' | 'month' | '3m' | 'all' | 'custom';
 
@@ -23,6 +24,7 @@ export function ChartsScreen({ sel }: { sel: ISODate }) {
   const [cFrom, setCFrom] = useState('');
   const [cTo, setCTo] = useState('');
   const d = useDerived(profile, days, keep, sel);
+  const adv = useAdvanced();
 
   const allDates = Object.keys(days).sort();
   const first = allDates[0] || sel;
@@ -78,8 +80,8 @@ export function ChartsScreen({ sel }: { sel: ISODate }) {
       />
       {scale === 'custom' ? (
         <Fields>
-          <TextField value={cFrom} onChange={setCFrom} placeholder={C.from(f.dateInputPlaceholder)} />
-          <TextField value={cTo} onChange={setCTo} placeholder={C.to(f.dateInputPlaceholder)} />
+          <DateField value={cFrom} onChange={setCFrom} placeholder={C.from(f.dateInputPlaceholder)} />
+          <DateField value={cTo} onChange={setCTo} placeholder={C.to(f.dateInputPlaceholder)} />
         </Fields>
       ) : null}
       {freeCut ? <T muted size={12} style={{ marginTop: 6 }}>{C.freeCut}</T> : null}
@@ -120,7 +122,7 @@ export function ChartsScreen({ sel }: { sel: ISODate }) {
               series: [
                 { label: C.eaten, color: t.amber, bars: true, points: series.intake },
                 { label: C.formula, color: t.muted, dash: true, points: series.total },
-                { label: C.fact, color: t.green, points: series.factE },
+                ...(adv ? [{ label: C.fact, color: t.green, points: series.factE }] : []),
               ],
             }}
           />
@@ -129,6 +131,7 @@ export function ChartsScreen({ sel }: { sel: ISODate }) {
         )}
       </Card>
 
+      {adv ? (
       <Card title={C.deficitTitle} accent={t.green}>
         {series.expected.length ? (
           <>
@@ -151,6 +154,7 @@ export function ChartsScreen({ sel }: { sel: ISODate }) {
           <T muted>{C.deficitEmpty}</T>
         )}
       </Card>
+      ) : null}
 
       <Card title={C.fatTitle} accent={t.teal}>
         {series.fat.length ? (

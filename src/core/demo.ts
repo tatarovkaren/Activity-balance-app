@@ -73,10 +73,12 @@ export function generateDemo(spec: DemoSpec, today: ISODate): DayMap {
       e.kcalManual = true;
       e.steps = Math.round(8000 + r() * 7000);
       if (dow === 1 || dow === 3 || dow === 5) {
+        e.workoutKind = 'strength';
         e.workoutType = spec.labels?.strength || 'Силовая';
         e.workoutMin = 60;
         e.hrAvg = 118;
       } else if (dow === 2 || dow === 6) {
+        e.workoutKind = 'cardio';
         e.workoutType = spec.labels?.elliptical || 'Орбитрек';
         e.workoutMin = 30 + Math.round(r() * 12);
         e.hrAvg = 125 + Math.round(r() * 15);
@@ -104,6 +106,8 @@ export function demoProfile(labels?: DemoLabels, today?: ISODate): Profile {
     heightCm: 176,
     goalWeightKg: 74,
     stepGoal: 12000,
+    // демо показывает все функции
+    uiMode: 'advanced',
     // режим цели с двух недель назад: дефицит 0,5 %/нед (ТЗ v36, раздел 8)
     goals: today ? [{ start: shiftDate(today, -14), mode: 'deficit', pacePct: 0.5, by: 'user' }] : undefined,
   };

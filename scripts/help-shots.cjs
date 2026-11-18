@@ -96,6 +96,14 @@ async function main() {
     await shot('start', 0, await bottom('startCurator'));
     for (const d of ['terms', 'privacy', 'consent']) await p.click(`[data-testid=consent-${d}]`);
     await p.click('[data-testid=startDemo]');
+    // анкета первого входа (в демо поля уже заполнены примером)
+    await p.waitForSelector('[data-testid=onbNext], [data-testid=tab-day]');
+    if (await p.locator('[data-testid=onbNext]').count()) {
+      await p.waitForTimeout(300);
+      await shot('onboard', 0, await bottom('onbNext'));
+      await p.click('[data-testid=onbNext]');
+      await p.click('[data-testid=onbDone]');
+    }
     await p.waitForSelector('[data-testid=tab-day]');
     await p.waitForTimeout(400);
 
@@ -112,7 +120,7 @@ async function main() {
     await shot('photo', 0, await screen('photo', 900));
     // Профиль
     await screen('profile', 0);
-    await shot('profile', (await card('sex')).top, (await card('sex')).bottom);
+    await shot('profile', (await card('uiMode')).top, (await card('sex')).bottom);
     await shot('goal', (await card('goalMode')).top, (await card('goalMode')).bottom);
     await shot('import', (await card('importWeights')).top, (await card('importWeights')).bottom);
     await shot('curator', (await card('curatorCode')).top, (await card('curatorCode')).bottom);

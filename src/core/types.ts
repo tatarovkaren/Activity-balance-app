@@ -8,6 +8,9 @@ export type Lang = 'ru' | 'en';
 export type LangPref = 'system' | Lang;
 export type MeasureFreq = 'week' | '2weeks' | 'month';
 export type Plan = 'free' | 'premium';
+/** Режим интерфейса: «базовый» прячет сложные показатели, расчёт одинаковый. */
+export type UiMode = 'basic' | 'advanced';
+export const UI_MODES: UiMode[] = ['basic', 'advanced'];
 
 /** Причины ручной отметки «Необычный день». «cycle» — только в женском режиме. */
 export type AnomalyReason = 'trip' | 'feast' | 'illness' | 'incomplete' | 'cycle' | 'other';
@@ -37,6 +40,10 @@ export interface Profile {
   /** Как пользователь ведёт дневник: крупы сухими/мясо сырым или в готовом виде. */
   diaryWeights: 'raw' | 'cooked';
   plan: Plan;
+  /** Базовый — для неподготовленного клиента (по умолчанию), продвинутый — все показатели. */
+  uiMode: UiMode;
+  /** Анкета первого входа пройдена (пол, дата рождения, рост, вес). Нет — показываем анкету. */
+  onboarded?: boolean;
 }
 
 export const DEFAULT_PROFILE: Profile = {
@@ -53,6 +60,7 @@ export const DEFAULT_PROFILE: Profile = {
   proteinPerKg: undefined,
   diaryWeights: 'raw',
   plan: 'free',
+  uiMode: 'basic',
 };
 
 /**
@@ -68,7 +76,10 @@ export interface DayEntry {
   carbs?: number;
   /** true — ккал введены руками; иначе считаются как Б×4 + Ж×9 + У×4. */
   kcalManual?: boolean;
+  /** Название тренировки — свободный текст для куратора («ноги + спина», «интервалы»). */
   workoutType?: string;
+  /** Вид тренировки для расчёта: выбирается жёстко. Нет поля (старые записи) — определяется по названию. */
+  workoutKind?: 'cardio' | 'strength';
   workoutMin?: number;
   hrAvg?: number;
   hrMax?: number;

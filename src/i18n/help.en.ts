@@ -12,8 +12,8 @@ export const helpEn: typeof helpRu = {
 
   quickTitle: 'Get started in 5 minutes',
   quick: [
-    'In **Profile**, enter your sex, date of birth, height and goal weight.',
-    'Pick a mode there too: deficit, maintenance or surplus. The app works out your calorie and macro target.',
+    'On first launch, fill in a short form: sex, date of birth, height, weight and goal.',
+    'Choose a starting target: deficit, maintenance or surplus. The app works out your calorie and macro target. You can change all of it later in **Profile**.',
     'Every morning, enter your fasted weight on the **Day** tab.',
     'During the day, add calories and macros (by hand or imported from FatSecret), steps and your workout.',
     'After 2–4 weeks, open the **Burn** tab: it shows your actual burn instead of the formula.',
@@ -34,6 +34,15 @@ export const helpEn: typeof helpRu = {
       ],
     },
     {
+      id: 'onboard',
+      title: 'First-launch form',
+      text: [
+        'Enter your sex, name, date of birth, height, current weight and goal. Type the date as digits only: separators appear by themselves, and your age is shown below.',
+        'The burn formulas need this data: age, height and weight change the result by hundreds of kcal.',
+        'In the second step, choose a starting target: mode and pace. You can skip it and pick a target later in Profile, or your coach can suggest one.',
+      ],
+    },
+    {
       id: 'profile',
       title: 'Profile and starting data',
       text: [
@@ -42,6 +51,7 @@ export const helpEn: typeof helpRu = {
         '"Step goal" is your daily step target, shown as a bar on the Day tab.',
         'Body measurement frequency sets how often the app reminds you to measure your neck, waist (and hips).',
         '"How I log food": if you weigh grains dry and meat raw, photo estimates convert portions to raw weight.',
+        'At the top of Profile is the **app mode**: basic shows only the essentials, advanced shows every metric and fine-tuning.',
       ],
     },
     {
@@ -49,9 +59,9 @@ export const helpEn: typeof helpRu = {
       title: 'Calorie and macro target',
       text: [
         'Pick a mode: **deficit** (lose weight), **maintenance** or **surplus** (gain).',
-        'Pace is set as a percentage of body weight per week: presets, your own pace, or "by date" if a specific date matters.',
+        'Pace is set as a percentage of body weight per week. In advanced mode you can set your own pace or "by date" if a specific date matters.',
         'Target = actual burn ± pace. It is the same for every day of the week and is recalculated on Mondays, when you change the mode, or with "Recalculate now".',
-        'Protein is based on lean body mass by default (needs a body measurement) and can be set by hand. Fat is 0.8 g per kg of body weight, carbs are the remaining calories.',
+        'Protein is based on lean body mass by default (needs a body measurement); in advanced mode you can set the factor by hand. Fat is 0.8 g per kg of body weight, carbs are the remaining calories.',
         'If your coach suggests a different target, a card appears at the top of Profile: accept or decline it.',
       ],
     },
@@ -70,7 +80,7 @@ export const helpEn: typeof helpRu = {
       id: 'workout',
       title: 'Workout and energy balance',
       text: [
-        'Choose the workout type (strength or cardio) and give it a name, such as "legs" or "elliptical", so your coach knows what you did.',
+        'Choose **Cardio** or **Strength**: the calculation depends on it. In the field below, add a name such as "running", "elliptical" or "legs + back", so your coach knows what you did.',
         'Enter the duration and average heart rate. Strength is counted by load and time, cardio by heart rate.',
         '"Workout steps" is for on-foot cardio only. The app subtracts them from your daily steps so the same effort is not counted twice. If the field is empty, steps are estimated from your usual pace.',
         'The **Energy balance** card shows what you ate and burned today and over 7 days, and the expected weight change per week.',
@@ -92,7 +102,7 @@ export const helpEn: typeof helpRu = {
       text: [
         'At first the burn comes from a formula. As weigh-ins and logged days add up, the app compares what you ate with your weight trend and moves the estimate towards your real burn.',
         '**Reliability** shows how far you can trust the number: it grows with weigh-ins and logged days and drops with gaps and many unusual days.',
-        'This screen also lists the days left out of the estimate: you can include any of them again or exclude it once more.',
+        'In advanced mode this screen also shows reliability and the days left out of the estimate: you can include any of them again or exclude it once more.',
         '**Goal forecast** is the date you will reach your goal weight at the current pace.',
       ],
     },
@@ -120,7 +130,7 @@ export const helpEn: typeof helpRu = {
       id: 'import',
       title: 'Importing data and backups',
       text: [
-        '**FatSecret**: export your food diary as CSV and tap "Import FatSecret". You can load one day or a whole period. Empty days are skipped, and days you filled in by hand are not overwritten.',
+        '**FatSecret**: export your food diary as CSV or a PDF report and tap "Import FatSecret". You can load one day or a whole period. Empty days are skipped, and days you filled in by hand are not overwritten. PDF is read in the web version for now.',
         '**Weight history**: a CSV with "date; weight" rows from smart scales, Google Fit or Excel. Days already logged stay as they are.',
         '**Export data** saves all your records to a file, and "Import backup" brings them back without overwriting anything.',
         'Health Connect, Apple Health, Garmin and Huawei will arrive with the mobile app.',
@@ -137,8 +147,9 @@ export const helpEn: typeof helpRu = {
     },
     {
       id: 'settings',
-      title: 'Language, theme and account',
+      title: 'Mode, language, theme and account',
       text: [
+        '**App mode**: basic shows weight, steps, food, workouts and the day summary; advanced adds the burn breakdown, reliability, excluded days, custom pace, protein factor and BMR formula. The calculation is the same in both.',
         'Language: Russian, English or same as system. Dates, numbers and the coach report follow your choice.',
         'Theme: light, dark or same as system.',
         'The "Account and data" card holds your consents, documents, the coach dashboard and sign-out.',
@@ -173,12 +184,16 @@ export const helpEn: typeof helpRu = {
       a: 'Steps on a treadmill or elliptical are already part of your daily steps. Without subtracting them the workout would be counted twice. Enter the number from your tracker; if you do not have it, the app estimates steps from your usual pace.',
     },
     {
+      q: 'What is the difference between basic and advanced mode?',
+      a: 'Only what is shown on screen. The burn and target calculations are the same, and your coach sees everything. Basic is a good start without extra numbers; advanced is for when you want the burn breakdown, reliability and excluded days, and fine control over your target. Switch it at the top of Profile.',
+    },
+    {
       q: 'Why is strength training not counted by heart rate?',
       a: 'In strength training your heart rate jumps with effort and rests, and a heart-rate estimate greatly overstates the burn. So strength is counted by time and load, and heart rate is used for cardio.',
     },
     {
       q: 'How do I bring over my FatSecret diary?',
-      a: 'In FatSecret, export your food diary as CSV for the period you need, then tap "Import FatSecret" on the Day tab or in Profile. All days load at once, empty days are skipped, and data you already entered is not overwritten.',
+      a: 'In FatSecret, export your food diary for the period you need as CSV or a PDF report, then tap "Import FatSecret" on the Day tab or in Profile. All days load at once, empty days are skipped, and data you already entered is not overwritten. PDF is read in the web version only for now.',
     },
     {
       q: 'When does my calorie and macro target change?',

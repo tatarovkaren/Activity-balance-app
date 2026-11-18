@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { isISODate, todayISO } from '../core/dates';
+import { ageAt, isISODate, todayISO } from '../core/dates';
 import { MEASURE_FREQS } from '../core/body';
 import {
   applyFoodDays,
@@ -8,15 +8,15 @@ import {
   makeBackup,
   normDate,
   parseBackup,
-  parseFatSecret,
   parseWeightHistory,
 } from '../core/importers';
-import type { MeasureFreq, Profile, Sex, ThemePref } from '../core/types';
+import { UI_MODES, type MeasureFreq, type Profile, type Sex, type ThemePref, type UiMode } from '../core/types';
 import { useStore } from '../data/store';
 import { cloudConfigured, linkCurator } from '../data/cloud';
-import { Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, TextField, Fields } from '../ui/kit';
+import { Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, TextField, DateField, Fields } from '../ui/kit';
 import { useTheme } from '../ui/theme';
 import { downloadText, pickTextFile } from '../ui/files';
+import { importFatSecretFile } from '../ui/fatsecret';
 import { importSummaryText } from '../ui/format';
 import { errorText, useI18n } from '../i18n';
 import { LangSwitch } from './Login';
@@ -37,6 +37,7 @@ export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; op
   const [birth, setBirth] = useState(f.dateInput(p.birthDate));
   // смена языка — показать дату рождения в формате нового языка
   useEffect(() => setBirth(f.dateInput(p.birthDate)), [f]); // eslint-disable-line react-hooks/exhaustive-deps
+  const age = ageAt(p.birthDate, todayISO());
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [code, setCode] = useState('');
   const set = (patch: Partial<Profile>) => setProfile(patch);
@@ -51,9 +52,8 @@ export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; op
     setMsg({ text: P.weightsDone(a.added, a.kept), ok: true });
   };
   const importFood = async () => {
-    const f = await pickTextFile();
-    if (!f) return;
-    const r = parseFatSecret(f.text);
+    const r = await importFatSecretFile();
+    if (!r) return;
     if (!r.ok) return setMsg({ text: errorText(L, r.error), ok: false });
     const s = applyFoodDays(data.days, r.days, r.skipped);
     replaceDays(s.days);
@@ -81,6 +81,12 @@ export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; op
 
       <HelpCard onOpen={openHelp} />
 
+      <Card title={P.uiMode.title} accent={t.violet}>
+        <Seg<UiMode> value={p.uiMode} onChange={(v) => set({ uiMode: v })} options={UI_MODES.map((m) => ({ v: m, label: P.uiMode[m] }))} testID="uiMode" />
+        <Gap h={6} />
+        <T muted size={12}>{p.uiMode === 'basic' ? P.uiMode.basicNote : P.uiMode.advancedNote}</T>
+      </Card>
+
       <Card title={P.sexTitle} accent={t.amber}>
         <Seg<Sex> value={p.sex} onChange={(v) => set({ sex: v })} options={[{ v: 'male', label: P.male }, { v: 'female', label: P.female }]} testID="sex" />
         <Gap h={6} />
@@ -88,7 +94,7 @@ export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; op
         <Gap />
         <Fields>
           <TextField label={P.name} value={p.name} onChange={(v) => set({ name: v })} />
-          <TextField
+          <DateField
             label={P.birth}
             value={birth}
             onChange={(v) => {
@@ -96,9 +102,10 @@ export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; op
               const iso = normDate(v);
               if (isISODate(iso)) set({ birthDate: iso });
             }}
-            placeholder={f.dateInputPlaceholder}
+            testID="birth"
           />
         </Fields>
+        {age != null ? <T muted size={12} style={{ textAlign: 'right' }}>{P.age(age)}</T> : null}
         <Gap h={6} />
         <Fields>
           <NumField label={P.height} value={p.heightCm} onChange={(v) => v && set({ heightCm: v })} />
@@ -109,9 +116,13 @@ export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; op
         <T muted size={12}>{P.measureFreq}</T>
         <Seg<MeasureFreq> value={p.measureFreq} onChange={(v) => set({ measureFreq: v })} options={MEASURE_FREQS.map((k) => ({ v: k, label: tx.common.freq[k] }))} />
         <Gap h={8} />
-        <T muted size={12}>{P.bmr}</T>
-        <Seg value={p.bmrFormula} onChange={(v) => set({ bmrFormula: v })} options={[{ v: 'mifflin', label: P.mifflin }, { v: 'lean', label: P.lean }]} />
-        <Gap h={8} />
+        {p.uiMode !== 'basic' ? (
+          <>
+            <T muted size={12}>{P.bmr}</T>
+            <Seg value={p.bmrFormula} onChange={(v) => set({ bmrFormula: v })} options={[{ v: 'mifflin', label: P.mifflin }, { v: 'lean', label: P.lean }]} />
+            <Gap h={8} />
+          </>
+        ) : null}
         <T muted size={12}>{P.diary}</T>
         <Seg value={p.diaryWeights} onChange={(v) => set({ diaryWeights: v })} options={[{ v: 'raw', label: P.diaryRaw }, { v: 'cooked', label: P.diaryCooked }]} />
       </Card>
