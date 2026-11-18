@@ -60,7 +60,7 @@ export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; op
     setMsg({ text: importSummaryText(L, s), ok: true });
   };
   const exportAll = () => {
-    const b = makeBackup(session.userId, { profile: p, days: data.days, keep: data.keep, hand: data.hand, refs: data.refs });
+    const b = makeBackup(session.userId, { profile: p, days: data.days, keep: data.keep, hand: data.hand, refs: data.refs, photoEdits: data.photoEdits });
     downloadText(`${P.backupFile}-${todayISO()}.json`, JSON.stringify(b, null, 1));
     setMsg({ text: P.backupDone(Object.keys(data.days).length), ok: true });
   };

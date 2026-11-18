@@ -32,6 +32,8 @@ export interface PhotoEstimateResponse {
    * любой другой текст сервер присылает уже на языке locale.
    */
   retake?: string[];
+  /** Одна строка о главном источнике погрешности (масло, соус, начинка) — на языке locale. */
+  comment?: string;
 }
 
 /** Коды подсказок «переснять», которые приложение переводит само. */
@@ -102,6 +104,13 @@ export const demoProvider: FoodPhotoProvider = {
  * Модель выбирается на сервере (по контуру рынка: РФ — российская модель, вне РФ — любая),
  * ключи API на клиент не попадают. Контракт описан в docs/photo-provider.md.
  */
+/** Сервер ответил 429: лимит тарифа исчерпан. */
+export class PhotoLimitError extends Error {
+  constructor(public limit: number, public per: 'week' | 'day') {
+    super('photoLimit');
+  }
+}
+
 export function httpProvider(endpoint: string, getToken?: () => Promise<string | undefined>): FoodPhotoProvider {
   return {
     id: 'http',
@@ -113,6 +122,10 @@ export function httpProvider(endpoint: string, getToken?: () => Promise<string |
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(req),
       });
+      if (res.status === 429) {
+        const j = (await res.json().catch(() => ({}))) as { limit?: number; per?: 'week' | 'day' };
+        throw new PhotoLimitError(j.limit ?? 0, j.per === 'day' ? 'day' : 'week');
+      }
       if (!res.ok) throw new PhotoServiceError('photoServiceStatus', res.status);
       const j = (await res.json()) as PhotoEstimateResponse;
       if (!j || !Array.isArray(j.components)) throw new PhotoServiceError('photoServiceBadResponse');
@@ -121,12 +134,14 @@ export function httpProvider(endpoint: string, getToken?: () => Promise<string |
   };
 }
 
-// ---- Лимиты фото по тарифу (гипотеза из плана: бесплатно 5/нед, премиум 5/день) ----
+// ---- Лимиты фото по тарифу (решение Карена 18.11.2026) ----
+// Считается приём пищи, а не снимок: все блюда на столе + снимок сбоку = одна оценка.
+// Бесплатно — 2 приёма в день; Премиум — без лимита, защита от злоупотреблений 30 оценок в день.
+// Пока только счётчик: приложение показывает остаток и не блокирует. Блокирует сервер (supabase/functions/photo-estimate).
 
-
-export const PHOTO_LIMITS: Record<Plan, { count: number; per: 'week' | 'day' }> = {
-  free: { count: 5, per: 'week' },
-  premium: { count: 5, per: 'day' },
+export const PHOTO_LIMITS: Record<Plan, { count: number; per: 'week' | 'day'; fairUse?: boolean }> = {
+  free: { count: 2, per: 'day' },
+  premium: { count: 30, per: 'day', fairUse: true },
 };
 
 /** usage: даты (ГГГГ-ММ-ДД) каждой автоматической оценки. Неделя — скользящие 7 дней. */
@@ -134,5 +149,5 @@ export function photoQuota(plan: Plan, usage: ISODate[], today: ISODate) {
   const lim = PHOTO_LIMITS[plan];
   const from = lim.per === 'day' ? today : shiftDate(today, -6);
   const used = usage.filter((d) => d >= from && d <= today).length;
-  return { used, limit: lim.count, per: lim.per, left: Math.max(0, lim.count - used) };
+  return { used, limit: lim.count, per: lim.per, fairUse: !!lim.fairUse, left: Math.max(0, lim.count - used) };
 }

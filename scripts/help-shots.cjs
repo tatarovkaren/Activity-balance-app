@@ -114,10 +114,29 @@ async function main() {
     // Расход, графики, фото — верх экрана целыми карточками
     await shot('fact', 0, await screen('fact', 980));
     await shot('charts', 0, await screen('charts', 900));
-    await p.click('[data-testid=tab-photo]');
+    // Фото: из дневника «Сфотографировать» → обед, два снимка (рисунки из scripts/help-assets); снимок экрана до оценки
+    await p.click('[data-testid=tab-day]');
+    await p.click('[data-testid=photoMeal]');
+    await p.click('[data-testid=photoMeal-lunch]');
     await p.waitForTimeout(300);
     if (await p.locator('[data-testid=photoConsent]').count()) await p.click('[data-testid=photoConsent]');
-    await shot('photo', 0, await screen('photo', 900));
+    await p.waitForTimeout(200);
+    if (await p.locator('[data-testid=saveHand]').count()) {
+      await p.click('[data-testid=handAverage]');
+      await p.click('[data-testid=saveHand]');
+    }
+    await p.waitForTimeout(300);
+    for (const [i, f] of [[0, 'plate-top.jpg'], [1, 'plate-side.jpg']]) {
+      const [fc] = await Promise.all([p.waitForEvent('filechooser'), p.locator('[data-testid=gallery]').nth(i).click()]);
+      await fc.setFiles(path.join(__dirname, 'help-assets', f));
+      await p.waitForTimeout(400);
+    }
+    await shot('photo', 0, (await card('estimate')).bottom);
+    await p.click('[data-testid=estimate]');
+    await p.waitForSelector('[data-testid=confirmPhoto]');
+    await p.click('[data-testid=confirmPhoto]');
+    await p.click('[data-testid=photoToDiary]');
+    await p.waitForTimeout(300);
     // Профиль
     await screen('profile', 0);
     await shot('profile', (await card('uiMode')).top, (await card('sex')).bottom);

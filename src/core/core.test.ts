@@ -215,8 +215,9 @@ describe('фото без ИИ', () => {
     expect(handFromCard(428, 500)).toBe(10);
   });
   it('лимиты', () => {
-    expect(photoQuota('free', ['2026-11-09', '2026-11-12', '2026-11-16'], '2026-11-16')).toMatchObject({ used: 2, left: 3 });
-    expect(photoQuota('premium', ['2026-11-16', '2026-11-16'], '2026-11-16')).toMatchObject({ used: 2, left: 3 });
+    // приём пищи = одна оценка; бесплатно 2 в день, премиум без лимита (защита 30 в день)
+    expect(photoQuota('free', ['2026-11-15', '2026-11-16'], '2026-11-16')).toMatchObject({ used: 1, left: 1, per: 'day' });
+    expect(photoQuota('premium', ['2026-11-16', '2026-11-16'], '2026-11-16')).toMatchObject({ used: 2, left: 28, fairUse: true });
   });
 });
 

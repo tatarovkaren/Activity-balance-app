@@ -2,6 +2,7 @@
 
 import { isISODate, type ISODate } from './dates';
 import { mergeEntry } from './merge';
+import { withPhotoOnTop } from './photo/meals';
 import type { DayEntry, DayMap } from './types';
 
 export function parseCSV(text: string): string[][] {
@@ -341,7 +342,8 @@ export function applyFoodDays(cur: DayMap, food: FoodDay[], skipped = 0): Import
   let updated = 0;
   for (const f of food) {
     const had = !!(cur[f.date] && (cur[f.date].kcal || cur[f.date].protein));
-    const inc: DayEntry = { kcal: f.kcal, protein: f.protein, fat: f.fat, carbs: f.carbs, kcalManual: true };
+    // приёмы «по фото» за этот день не теряются: FatSecret + фото (core/photo/meals.ts)
+    const inc: DayEntry = { ...withPhotoOnTop(cur[f.date], { kcal: f.kcal, protein: f.protein, fat: f.fat, carbs: f.carbs }), kcalManual: true };
     out[f.date] = { ...mergeEntry(cur[f.date], inc), updatedAt: Date.now() };
     had ? updated++ : added++;
   }
@@ -434,7 +436,7 @@ export interface Backup {
   version: 1;
   exportedAt: string;
   owner: string;
-  data: { profile: unknown; days: DayMap; keep: unknown; hand?: unknown; refs?: unknown };
+  data: { profile: unknown; days: DayMap; keep: unknown; hand?: unknown; refs?: unknown; photoEdits?: unknown };
 }
 
 export function makeBackup(owner: string, data: Backup['data'], now = new Date()): Backup {
