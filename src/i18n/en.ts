@@ -2,6 +2,7 @@
 
 import { pad2, type FmtSpec } from './format';
 import type { Dict } from './ru';
+import { helpEn } from './help.en';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -622,6 +623,8 @@ export const en: Dict = {
     footer: (app) => `${app} · estimates from formulas and the weight trend, not medical advice`,
     file: 'report',
   },
+
+  help: helpEn,
 
   demo: {
     strength: 'Strength',
