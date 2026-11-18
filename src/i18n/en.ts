@@ -68,6 +68,7 @@ export const en: Dict = {
     note: 'Dates, numbers and the curator report use the selected language.',
   },
 
+  meals: { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snack' },
   tabs: { day: 'Day', fact: 'Burn', charts: 'Charts', photo: 'Photo', profile: 'Profile' },
 
   sync: {
@@ -169,6 +170,12 @@ export const en: Dict = {
       manual: 'Kcal entered manually · ',
       auto: 'Kcal = P×4 + F×9 + C×4 · ',
       proteinNorm: (g, perKg) => `protein target ${g} g (${perKg} g/kg)`,
+      photo: '📷 Snap a meal',
+      whichMeal: 'Which meal are you photographing?',
+      photoMeals: 'Logged from photo (already included above):',
+      byPhoto: 'from photo',
+      photoLine: (kcal, min, max, p, f, c) => `${kcal} kcal (${min}–${max}) · P ${p} · F ${f} · C ${c}`,
+      photoNote: 'A FatSecret import for this day adds photo meals on top of its numbers. If a dish is logged there too, delete the photo entry.',
       fsHint: 'FatSecret export: one day or a period — all days at once',
     },
     workout: {
@@ -336,7 +343,11 @@ export const en: Dict = {
     providers: { manual: 'Manual portions', demo: 'Demo estimate (no AI)', http: 'Photo estimate (beta)' },
     retake: { addSide: 'Add a side shot at 30–45° — it shows the height of the portion.' },
     cameraError: 'Camera unavailable — choose a photo from the gallery.',
-    limit: (limit, perWeek) => `Estimate limit reached: ${limit} per ${perWeek ? 'week' : 'day'}. You can enter portions manually.`,
+    limit: (limit, fairUse) =>
+      fairUse
+        ? `${limit} estimates today already — that's the fair-use cap. The counter resets tomorrow; you can enter portions manually for now.`
+        : `The free plan includes ${limit} photo meals a day — that's it for today. Enter portions manually or switch to Premium (no limit).`,
+    overLimit: "Today's limit is used up. For now it's only a counter: the demo still estimates, but with the server connected estimates pause until tomorrow.",
     failed: 'Could not estimate — try again or enter portions manually.',
     twoShots: 'Two shots',
     twoShotsHint: 'Hand at the same level as the plate. First shot from above, second from the side at 30–45°. Show fillings (pie, roll) in cross-section.',
@@ -344,8 +355,10 @@ export const en: Dict = {
     side: 'Side 30–45°',
     notePlaceholder: 'Hint: “buckwheat with a cutlet, restaurant”',
     howToCount: 'How to count',
-    quota: (left, limit, perWeek, free) =>
-      `Automatic estimates: ${left} of ${limit} left ${perWeek ? 'for 7 days' : 'today'} (${free ? 'free' : 'premium'} plan).`,
+    quota: (used, limit, fairUse) =>
+      fairUse
+        ? `Premium: no limit (estimates today: ${used}). One meal = one estimate, however many dishes are on the table.`
+        : `Free plan: ${used} of ${limit} photo meals today. One meal = one estimate, however many dishes are on the table.`,
     manualHint: 'No AI: you describe portions in palms and fists — the app converts them to grams using your hand size.',
     demoHint: ' The demo does not look at the photo; it shows what a draft looks like.',
     busy: 'Estimating…',
@@ -372,9 +385,19 @@ export const en: Dict = {
     refName: 'Reference name',
     refPlaceholder: 'Buckwheat with a cutlet',
     error: (pct) => `Weight estimate error: ${pct}%`,
-    addToDiary: (date) => `Add to log for ${date}`,
-    addNote: 'Calories are added to those already logged for the day. Photos are deleted after confirmation.',
-    added: (date, kcal) => `Added to the log for ${date}: ${kcal} kcal. Photos deleted.`,
+    addToDiary: (meal, date) => `Save: ${meal}, ${date}`,
+    addNote: 'The entry is marked "from photo" and adds to what is already logged for the day (by hand or from FatSecret) without overwriting it. Photos are deleted after saving.',
+    added: (meal, date, kcal) => `Saved to the log: ${meal}, ${date} — ${kcal} kcal. Photos deleted.`,
+    toDiary: 'Back to log',
+    mealFor: (date) => `Meal · ${date}`,
+    gramsLabel: 'Weight, g',
+    aiSaid: (g) => `AI estimated ≈${g} g — your correction is saved for calibration`,
+    orHand: 'in hand measures',
+    editsTitle: 'Your corrections',
+    editsLine: (n, pct) =>
+      pct === 0
+        ? `Corrections: ${n}. On average the photo estimate matches your grams.`
+        : `Corrections: ${n}. On average the photo estimate ${pct > 0 ? 'overstates' : 'understates'} weight by ${Math.abs(pct)}%. An automatic adjustment will come once there are more corrections.`,
     more: 'Another dish',
     refsTitle: 'Personal references',
     refLine: (date, name, g, kcal, err) => `${date} · ${name}: ${g} g, ${kcal} kcal${err ? ` · estimate ${err}` : ''}`,

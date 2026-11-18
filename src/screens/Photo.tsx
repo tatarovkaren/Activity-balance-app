@@ -17,18 +17,29 @@ import {
   type HandUnit,
   type PhotoQuality,
 } from '../core/photo/estimate';
-import { demoProvider, httpProvider, manualProvider, photoQuota, type FoodPhotoProvider } from '../core/photo/provider';
+import { demoProvider, httpProvider, manualProvider, photoQuota, PhotoLimitError, type FoodPhotoProvider } from '../core/photo/provider';
+import { editsSummary, mealFromDraft } from '../core/photo/meals';
+import { MEAL_SLOTS, type MealSlot } from '../core/types';
 import { useStore } from '../data/store';
+import { accessToken, photoEndpoint } from '../data/cloud';
 import { Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, TextField, Fields } from '../ui/kit';
 import { useTheme } from '../ui/theme';
 import { errorText, foodName, useI18n, type I18n } from '../i18n';
 
-const ENDPOINT = process.env.EXPO_PUBLIC_PHOTO_ENDPOINT;
+const ENDPOINT = photoEndpoint();
+const HTTP = ENDPOINT ? httpProvider(ENDPOINT, accessToken) : null;
 
+/** Без сервера — демо-ответ (весь путь виден, снимок не анализируется); с сервером — настоящая оценка. */
 export function providers(): FoodPhotoProvider[] {
   const list = [manualProvider, demoProvider];
-  if (ENDPOINT) list.push(httpProvider(ENDPOINT));
+  if (HTTP) list.push(HTTP);
   return list;
+}
+
+/** Приём пищи по времени суток: до 11 — завтрак, до 16 — обед, до 21 — ужин, иначе перекус. */
+export function mealByTime(d = new Date()): MealSlot {
+  const h = d.getHours();
+  return h < 11 ? 'breakfast' : h < 16 ? 'lunch' : h < 21 ? 'dinner' : 'snack';
 }
 
 type Step = 'capture' | 'draft' | 'done';
@@ -40,17 +51,20 @@ function findFoodL(L: I18n, query: string) {
   return FOODS.filter((x) => foodName(L, x.id).toLowerCase().includes(q) || x.name.toLowerCase().includes(q));
 }
 
-export function PhotoScreen({ sel }: { sel: ISODate }) {
+export function PhotoScreen({ sel, meal: mealProp, onBack }: { sel: ISODate; meal?: MealSlot; onBack?: () => void }) {
   const t = useTheme();
   const L = useI18n();
   const { tx, f } = L;
   const Ph = tx.photo;
   const { int, dm } = f;
   const kg = f.num;
-  const { data, setDay, logPhoto, addRef, setConsent } = useStore();
+  const { data, addMeal, logPhoto, addRef, setConsent } = useStore();
   const { profile, hand, consent } = data;
   const [editingHand, setEditingHand] = useState(false);
-  const [providerId, setProviderId] = useState(ENDPOINT ? 'http' : 'manual');
+  const [providerId, setProviderId] = useState(HTTP ? 'http' : 'demo');
+  const [meal, setMeal] = useState<MealSlot>(mealProp || mealByTime());
+  /** Граммы каждого продукта в ответе ИИ (до правки), по индексу items; undefined — добавлен вручную. */
+  const [est, setEst] = useState<(number | undefined)[]>([]);
   const provider = providers().find((p) => p.id === providerId) || manualProvider;
   const [top, setTop] = useState<string | undefined>();
   const [side, setSide] = useState<string | undefined>();
@@ -62,6 +76,7 @@ export function PhotoScreen({ sel }: { sel: ISODate }) {
   const [quality, setQuality] = useState<PhotoQuality>('good');
   const [oil, setOil] = useState(false);
   const [retake, setRetake] = useState<string[]>([]);
+  const [comment, setComment] = useState('');
   const [realGrams, setRealGrams] = useState<number | undefined>();
   const [saveRefName, setSaveRefName] = useState('');
   const today = todayISO();
@@ -101,37 +116,34 @@ export function PhotoScreen({ sel }: { sel: ISODate }) {
 
   const estimate = async () => {
     if (!top) return;
-    if (provider.automatic && quota.left <= 0) {
-      setErr(Ph.limit(quota.limit, quota.per === 'week'));
-      return;
-    }
+    // лимит пока только считаем: блокирует сервер (ответ 429), без сервера — только предупреждение
     setBusy(true);
     setErr('');
     try {
       const res = await provider.estimate({ photos: { top, side }, hand: h, note, locale: L.lang });
       if (provider.automatic) logPhoto(today);
-      setItems(res.components.length ? res.components : [{ foodId: 'buckwheat', amount: { kind: 'hand', unit: 'fist', count: 1 } }]);
+      const comps: ComponentInput[] = res.components.length ? res.components : [{ foodId: 'buckwheat', amount: { kind: 'hand', unit: 'fist', count: 1 } }];
+      setItems(comps);
+      // что предложил ИИ — запоминаем, чтобы при сохранении записать ошибку правки граммов
+      const first = buildDraft(comps, { hand: h, quality: res.quality, hiddenOil: false, diaryWeights: profile.diaryWeights });
+      setEst(provider.automatic && res.components.length ? comps.map((c) => first.components.find((x) => x.amount === c.amount)?.grams) : comps.map(() => undefined));
       setQuality(res.quality);
       setOil(res.oilyGuess);
       setRetake(res.retake || []);
+      setComment(res.comment || '');
       setStep('draft');
     } catch (e) {
-      setErr(errorText(L, e) || Ph.failed);
+      if (e instanceof PhotoLimitError) setErr(Ph.limit(e.limit || quota.limit, quota.fairUse));
+      else setErr(errorText(L, e) || Ph.failed);
     } finally {
       setBusy(false);
     }
   };
 
   const confirm = () => {
-    const cur = data.days[sel] || {};
-    const base = cur.kcal || 0;
-    setDay(sel, {
-      kcal: Math.round(base + draft.kcal),
-      kcalManual: true,
-      protein: Math.round(((cur.protein || 0) + draft.p) * 10) / 10,
-      fat: Math.round(((cur.fat || 0) + draft.f) * 10) / 10,
-      carbs: Math.round(((cur.carbs || 0) + draft.c) * 10) / 10,
-    });
+    // приём «по фото» прибавляется к записанному за день (руками или из FatSecret), ничего не затирая
+    const at = Date.now();
+    addMeal(sel, mealFromDraft(draft, { id: String(at), meal, provider: provider.id, at }, est));
     if (realGrams && saveRefName.trim()) {
       addRef({ id: String(Date.now()), date: sel, name: saveRefName.trim(), grams: realGrams, kcal: Math.round((draft.kcal * realGrams) / Math.max(1, draft.grams)), estGrams: draft.grams });
     }
@@ -143,6 +155,7 @@ export function PhotoScreen({ sel }: { sel: ISODate }) {
 
   const reset = () => {
     setItems([]);
+    setEst([]);
     setTop(undefined);
     setSide(undefined);
     setNote('');
@@ -153,12 +166,16 @@ export function PhotoScreen({ sel }: { sel: ISODate }) {
 
   const errors = data.refs.map((r) => (r.estGrams ? estimateErrorPct(r.estGrams, r.grams) : null)).filter((x): x is number => x != null);
   const bias = biasFactor(errors);
+  const edits = editsSummary(data.photoEdits || []);
 
   return (
     <View>
       <Title />
       {step === 'capture' ? (
         <>
+          <Card title={Ph.mealFor(dm(sel))} accent={t.amber}>
+            <Seg<MealSlot> value={meal} onChange={setMeal} options={MEAL_SLOTS.map((m) => ({ v: m, label: tx.meals[m] }))} testID="mealSlot" />
+          </Card>
           <Card title={Ph.twoShots} accent={t.amber}>
             <T muted size={13}>{Ph.twoShotsHint}</T>
             <Gap />
@@ -173,9 +190,10 @@ export function PhotoScreen({ sel }: { sel: ISODate }) {
             <Seg value={providerId} onChange={setProviderId} options={providers().map((p) => ({ v: p.id, label: Ph.providers[p.id] || p.id }))} testID="provider" />
             <Gap h={6} />
             <T muted size={12}>
-              {provider.automatic ? Ph.quota(quota.left, quota.limit, quota.per === 'week', profile.plan === 'free') : Ph.manualHint}
+              {provider.automatic ? Ph.quota(quota.used, quota.limit, quota.fairUse) : Ph.manualHint}
               {provider.id === 'demo' ? Ph.demoHint : ''}
             </T>
+            {provider.automatic && quota.left <= 0 ? <Note>{Ph.overLimit}</Note> : null}
             {err ? <Note color={t.red}>{err}</Note> : null}
             <Gap />
             <Btn kind="solid" title={busy ? Ph.busy : provider.automatic ? Ph.estimate : Ph.toPortions} onPress={estimate} disabled={!top || busy} testID="estimate" />
@@ -193,17 +211,29 @@ export function PhotoScreen({ sel }: { sel: ISODate }) {
           {retake.map((x) => (
             <Note key={x}>📷 {Ph.retake[x] || x}</Note>
           ))}
+          {comment ? <T muted size={12}>{comment}</T> : null}
           {items.map((it, i) => (
             <ComponentEditor
               key={i}
               value={it}
               hand={h}
+              estGrams={est[i]}
               onChange={(v) => setItems(items.map((x, j) => (j === i ? v : x)))}
-              onRemove={() => setItems(items.filter((_, j) => j !== i))}
-              computed={draft.components[i]}
+              onRemove={() => {
+                setItems(items.filter((_, j) => j !== i));
+                setEst(est.filter((_, j) => j !== i));
+              }}
+              computed={draft.components.find((c) => c.amount === it.amount)}
             />
           ))}
-          <Btn small title={Ph.addFood} onPress={() => setItems([...items, { foodId: 'veg_fresh', amount: { kind: 'hand', unit: 'fist', count: 1 } }])} />
+          <Btn
+            small
+            title={Ph.addFood}
+            onPress={() => {
+              setItems([...items, { foodId: 'veg_fresh', amount: { kind: 'hand', unit: 'fist', count: 1 } }]);
+              setEst([...est, undefined]);
+            }}
+          />
           <Divider />
           <Row>
             <T size={13}>{Ph.hiddenOil}</T>
@@ -233,7 +263,7 @@ export function PhotoScreen({ sel }: { sel: ISODate }) {
           {realGrams ? <T muted size={12}>{Ph.error(kg(estimateErrorPct(draft.grams, realGrams) || 0, 0))}</T> : null}
           <Gap />
           <Row>
-            <Btn kind="solid" title={Ph.addToDiary(dm(sel))} onPress={confirm} disabled={!draft.components.length} testID="confirmPhoto" style={{ flexGrow: 1 }} />
+            <Btn kind="solid" title={Ph.addToDiary(tx.meals[meal].toLowerCase(), dm(sel))} onPress={confirm} disabled={!draft.components.length} testID="confirmPhoto" style={{ flexGrow: 1 }} />
             <Btn title={tx.common.cancel} onPress={reset} />
           </Row>
           <T muted size={12}>{Ph.addNote}</T>
@@ -242,9 +272,18 @@ export function PhotoScreen({ sel }: { sel: ISODate }) {
 
       {step === 'done' ? (
         <Card accent={t.green}>
-          <T>{Ph.added(dm(sel), int(draft.kcal))}</T>
+          <T>{Ph.added(tx.meals[meal].toLowerCase(), dm(sel), int(draft.kcal))}</T>
           <Gap />
-          <Btn kind="solid" title={Ph.more} onPress={reset} />
+          <Row>
+            {onBack ? <Btn kind="solid" title={Ph.toDiary} onPress={onBack} testID="photoToDiary" /> : null}
+            <Btn kind={onBack ? undefined : 'solid'} title={Ph.more} onPress={reset} />
+          </Row>
+        </Card>
+      ) : null}
+
+      {edits ? (
+        <Card title={Ph.editsTitle} accent={t.violet}>
+          <T size={13}>{Ph.editsLine(edits.n, edits.medianPct)}</T>
         </Card>
       ) : null}
 
@@ -287,7 +326,7 @@ function Slot({ label, uri, onCamera, onGallery, onClear }: { label: string; uri
       </View>
       <Row gap={6}>
         <Btn small title={tx.photo.camera} onPress={onCamera} />
-        <Btn small title={tx.photo.gallery} onPress={onGallery} />
+        <Btn small title={tx.photo.gallery} onPress={onGallery} testID="gallery" />
         {uri ? <Btn small kind="link" title={tx.common.remove} onPress={onClear} color={t.muted} /> : null}
       </Row>
     </View>
@@ -299,9 +338,12 @@ function ComponentEditor({
   onChange,
   onRemove,
   computed,
+  estGrams,
 }: {
   value: ComponentInput;
   hand: HandProfile;
+  /** Граммы в оценке ИИ — показываем, если пользователь их поправил. */
+  estGrams?: number;
   onChange: (v: ComponentInput) => void;
   onRemove: () => void;
   computed?: { grams: number; kcal: number; diaryGrams?: number; diaryKind?: 'dry' | 'raw' };
@@ -311,6 +353,8 @@ function ComponentEditor({
   const Ph = L.tx.photo;
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
+  // меры руки — запасной способ, по умолчанию свёрнуты (главное поле — граммы)
+  const [handOpen, setHandOpen] = useState(value.amount.kind === 'hand' && estGrams == null);
   const food = value.foodId ? FOOD_BY_ID[value.foodId] : undefined;
   const a = value.amount;
   const unit: HandUnit | 'grams' = a.kind === 'hand' ? a.unit : 'grams';
@@ -320,7 +364,22 @@ function ComponentEditor({
         <Pressable onPress={() => setOpen(!open)} style={{ flexShrink: 1 }}>
           <T bold size={14}>{(food ? foodName(L, food.id) : value.name) || Ph.product} ▾</T>
         </Pressable>
-        <T mono size={13} color={t.amber}>{computed ? `≈${computed.grams} ${L.tx.common.g} · ${computed.kcal} ${L.tx.common.kcal}` : '—'}</T>
+        <T mono size={13} color={t.amber}>{computed ? `${computed.kcal} ${L.tx.common.kcal}` : '—'}</T>
+      </Row>
+      {/* граммы — главное поле правки: ИИ предлагает, пользователь поправляет */}
+      <Row gap={6} style={{ alignItems: 'flex-end' }}>
+        <NumField
+          width={110}
+          label={Ph.gramsLabel}
+          value={computed?.grams}
+          digits={0}
+          suffix={L.tx.common.g}
+          testID="itemGrams"
+          onChange={(v) => onChange({ ...value, amount: { kind: 'grams', grams: v || 0 } })}
+        />
+        {estGrams != null && computed && Math.abs(computed.grams - estGrams) >= 3 ? (
+          <T muted size={12}>{Ph.aiSaid(estGrams)}</T>
+        ) : null}
       </Row>
       {computed?.diaryKind && computed.diaryGrams ? <T muted size={12}>{Ph.diary(computed.diaryGrams, computed.diaryKind)}</T> : null}
       {open ? (
@@ -343,16 +402,21 @@ function ComponentEditor({
           </Row>
         </View>
       ) : null}
+      <Row style={{ justifyContent: 'space-between' }}>
+        <Btn small kind="link" title={Ph.orHand + (handOpen ? ' ▴' : ' ▾')} color={t.muted} onPress={() => setHandOpen(!handOpen)} />
+        <Btn small kind="link" title={L.tx.common.remove} color={t.red} onPress={onRemove} />
+      </Row>
+      {handOpen ? (
       <Row gap={6} style={{ alignItems: 'flex-end' }}>
-        <NumField
-          width={90}
-          label={unit === 'grams' ? Ph.grams : Ph.howMany}
-          value={a.kind === 'hand' ? a.count : a.kind === 'grams' ? a.grams : undefined}
-          digits={unit === 'grams' ? 0 : 2}
-          onChange={(v) =>
-            onChange({ ...value, amount: unit === 'grams' ? { kind: 'grams', grams: v || 0 } : { kind: 'hand', unit: unit as HandUnit, count: v || 0 } })
-          }
-        />
+        {unit !== 'grams' ? (
+          <NumField
+            width={90}
+            label={Ph.howMany}
+            value={a.kind === 'hand' ? a.count : undefined}
+            digits={2}
+            onChange={(v) => onChange({ ...value, amount: { kind: 'hand', unit: unit as HandUnit, count: v || 0 } })}
+          />
+        ) : null}
         <View style={{ flex: 1, minWidth: 200 }}>
           <Seg
             value={unit}
@@ -365,9 +429,9 @@ function ComponentEditor({
             options={(['fist', 'palm', 'cupped', 'thumb', 'grams'] as const).map((v) => ({ v, label: Ph.units[v] }))}
           />
         </View>
-        <Btn small kind="link" title={L.tx.common.remove} color={t.red} onPress={onRemove} />
       </Row>
-      {unit !== 'grams' ? <T muted size={11}>{Ph.unitHint[unit as HandUnit]}</T> : null}
+      ) : null}
+      {handOpen && unit !== 'grams' ? <T muted size={11}>{Ph.unitHint[unit as HandUnit]}</T> : null}
     </View>
   );
 }
@@ -415,7 +479,7 @@ export function HandSetup({ initial, onDone }: { initial?: HandProfile; onDone: 
               onDone();
             }}
           />
-          <Btn title={H.average} onPress={() => setH({ ...REFERENCE_HAND })} />
+          <Btn title={H.average} onPress={() => setH({ ...REFERENCE_HAND })} testID="handAverage" />
         </Row>
       </Card>
 
