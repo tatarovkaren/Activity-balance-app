@@ -371,3 +371,79 @@ export async function curatorCommentsFor(clientId: string, since: ISODate): Prom
     createdAt: r.created_at,
   }));
 }
+
+// ---- Уведомления: веб-пуши и Telegram (миграция 0007, функция notify) ----
+
+/** Адрес функции уведомлений или undefined без сервера. */
+export function notifyEndpoint(): string | undefined {
+  return URL && KEY ? URL.replace(/\/$/, '') + '/functions/v1/notify' : undefined;
+}
+
+export interface NotifyServerInfo {
+  vapidKey: string;
+  telegram: boolean;
+}
+
+/** Развёрнута ли функция уведомлений и подключён ли бот. null — функции нет (ещё не развёрнута). */
+export async function notifyInfo(): Promise<NotifyServerInfo | null> {
+  const url = notifyEndpoint();
+  if (!url) return null;
+  try {
+    const r = await fetch(url, { headers: { apikey: KEY! } });
+    if (!r.ok) return null;
+    const j = (await r.json()) as Partial<NotifyServerInfo>;
+    return typeof j.vapidKey === 'string' ? { vapidKey: j.vapidKey, telegram: !!j.telegram } : null;
+  } catch {
+    return null;
+  }
+}
+
+async function notifyCall<T>(action: string): Promise<T> {
+  const url = notifyEndpoint();
+  const token = await accessToken();
+  if (!url || !token) throw new AppError('serverNotConnected');
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token, apikey: KEY! },
+    body: JSON.stringify({ action }),
+  });
+  if (!r.ok) throw new AppError(r.status === 503 ? 'telegramOff' : 'notifyServer');
+  return (await r.json()) as T;
+}
+
+/** Ссылка t.me/<бот>?start=<код> для привязки Telegram (код годен 30 минут). */
+export const telegramLinkUrl = () => notifyCall<{ url: string }>('tg-link').then((r) => r.url);
+
+/** Тестовое уведомление на все подключённые каналы. */
+export const sendTestNotification = () => notifyCall<{ push: number; telegram: boolean }>('test');
+
+/** Привязан ли Telegram у текущего пользователя (видна только своя строка). */
+export async function telegramStatus(): Promise<{ username?: string } | null> {
+  const sb = supabase();
+  if (!sb) return null;
+  const { data, error } = await sb.from('telegram_links').select('username').maybeSingle();
+  if (error) throw error;
+  return data ? { username: (data.username as string) || undefined } : null;
+}
+
+export async function telegramUnlink() {
+  const sb = supabase();
+  if (!sb) throw new AppError('serverNotConnected');
+  const { data: u } = await sb.auth.getUser();
+  const { error } = await sb.from('telegram_links').delete().eq('user_id', u.user?.id || '');
+  if (error) throw error;
+}
+
+export async function savePushSubscription(s: { endpoint: string; p256dh: string; auth: string }) {
+  const sb = supabase();
+  if (!sb) throw new AppError('serverNotConnected');
+  const { error } = await sb.rpc('save_push_subscription', { sub_endpoint: s.endpoint, sub_p256dh: s.p256dh, sub_auth: s.auth });
+  if (error) throw error;
+}
+
+export async function deletePushSubscription(endpoint: string) {
+  const sb = supabase();
+  if (!sb) return;
+  const { error } = await sb.from('push_subscriptions').delete().eq('endpoint', endpoint);
+  if (error) throw error;
+}

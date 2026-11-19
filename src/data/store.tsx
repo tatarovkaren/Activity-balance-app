@@ -47,6 +47,7 @@ import {
   type CloudRepo,
 } from './cloud';
 import { LEGAL_VERSION } from '../legal';
+import { disablePush } from '../ui/push';
 
 export type Mode = 'none' | 'local' | 'demo' | 'cloud';
 export type Role = 'client' | 'curator';
@@ -575,7 +576,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       });
     },
     setConsent: (c) => setData((cur) => ({ ...cur, consent: { ...cur.consent, ...c } })),
-    markBackup: () => setData((cur) => ({ ...cur, lastBackupAt: Date.now() })),
+    markBackup: () => {
+      const at = Date.now();
+      // в облаке время копии уходит и на сервер — для напоминания о копии в пушах и Telegram
+      setData((cur) => ({ ...cur, lastBackupAt: at, profile: session.mode === 'cloud' ? { ...cur.profile, notify: { ...cur.profile.notify, backupAt: at } } : cur.profile }));
+      if (session.mode === 'cloud') touchProfile();
+    },
     setGoal: (g) => {
       const start = todayISO();
       setData((cur) => ({ ...cur, profile: { ...cur.profile, goals: withGoal(cur.profile.goals, { ...g, start }) } }));
@@ -625,6 +631,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     logout: async () => {
       if (session.mode === 'cloud') {
         await pushNow();
+        // этот браузер больше не получает уведомления вышедшего пользователя
+        await disablePush().catch(() => {});
         await signOut();
       }
       // после выхода из аккаунта копия на устройстве не нужна (всё на сервере), и следующий вошедший

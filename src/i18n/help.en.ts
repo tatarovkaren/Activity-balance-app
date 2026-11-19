@@ -154,6 +154,17 @@ export const helpEn: typeof helpRu = {
       ],
     },
     {
+      id: 'notify',
+      title: 'Notifications: push and Telegram',
+      text: [
+        'Profile → **Notifications**: choose what to be reminded about: morning weigh-in, diary not filled in, coach comment, backup. You can change the time of the morning and evening reminders; it is your local time.',
+        '**Browser push**: tap “Turn on” and allow notifications. On Android and computers it works right away. On iPhone and iPad it works only in the app added to the Home Screen (Safari → Share → “Add to Home Screen”), iOS 16.4 or later: open Activity Balance from the icon and turn push on there.',
+        '**Telegram**: tap “Connect”, our bot opens in Telegram, tap “Start” there. Come back to the app and tap “Check”. You can disconnect here or by sending /stop to the bot.',
+        '“Send a test” checks that everything arrives. Notifications contain none of your numbers or comment texts, only a reason to open the app.',
+        'Notifications work once you sign in. Push is turned on separately on each device, Telegram once per account.',
+      ],
+    },
+    {
       id: 'settings',
       title: 'Mode, language, theme and account',
       text: [
@@ -226,6 +237,14 @@ export const helpEn: typeof helpRu = {
     {
       q: 'I am a coach. Where is my code and how many clients can I have?',
       a: 'At the bottom of the coach dashboard: enter your surname and the system issues a code with a system-wide number and an invite link. Seats: Trial 2, Start 10, Pro 50. The same place lists everyone who joined with your code: you can end coaching or remove a client, and the seat is freed. Client logs refresh when you open the dashboard and with the "Refresh client data" button. For every 3 Premium payments by former clients you get a month of your plan free.',
+    },
+    {
+      q: 'Why do notifications not arrive on my iPhone?',
+      a: 'On iPhone and iPad, push arrives only in the app added to the Home Screen and only on iOS 16.4 or later. Open the site in Safari → Share → “Add to Home Screen”, launch Activity Balance from the icon and turn push on in Profile → “Notifications”. If that does not work, connect Telegram: it works on any phone.',
+    },
+    {
+      q: 'A reminder came at the wrong time. Why?',
+      a: 'Reminder times are local, using your phone’s time zone, shown under the list of reminders. After moving, open Profile and the time zone updates itself. The server checks reminders every 5 minutes, so they may arrive a few minutes late. If the weight or calories for the day are already entered, the reminder does not come.',
     },
     {
       q: 'Where is my data stored?',

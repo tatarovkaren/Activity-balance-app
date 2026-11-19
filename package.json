@@ -31,7 +31,8 @@
     "build:web": "expo export -p web",
     "legal": "node scripts/build-legal.mjs",
     "help:shots": "node scripts/help-shots.cjs",
-    "db:setup": "node scripts/build-db-setup.mjs"
+    "db:setup": "node scripts/build-db-setup.mjs",
+    "fn:bundle": "node scripts/build-functions.mjs"
   },
   "private": true
 }
