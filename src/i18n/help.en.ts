@@ -63,7 +63,9 @@ export const helpEn: typeof helpRu = {
         'Pick a mode: **deficit** (lose weight), **maintenance** or **surplus** (gain).',
         'Pace is set as a percentage of body weight per week. In advanced mode you can set your own pace or "by date" if a specific date matters.',
         'Target = actual burn ± pace. It is the same for every day of the week and is recalculated on Mondays, when you change the mode, or with "Recalculate now".',
-        'Protein is based on lean body mass by default (needs a body measurement); in advanced mode you can set the factor by hand. Fat is 0.8 g per kg of body weight, carbs are the remaining calories.',
+        'Protein: until you have a body fat measurement it is per kg of body weight (1.6 g by default); after one, per kg of lean mass. In advanced mode you can set the factor by hand, and the field label shows what it is based on. Fat is 0.8 g per kg of body weight, carbs are the remaining calories.',
+        'You can also set the target by hand in "Custom calorie target, kcal a day". Protein and fat are calculated as usual, carbs are the rest, and the pace and goal date come from the gap to your burn. Clear the field or pick a pace to go back to the calculation.',
+        'The target never drops below a safe minimum: 1500 kcal for men and 1200 for women, with at least 50 g of carbs. If the target had to be raised, the app tells you.',
         'If your coach suggests a different target, a card appears at the top of Profile: accept or decline it.',
       ],
     },
@@ -220,7 +222,11 @@ export const helpEn: typeof helpRu = {
     },
     {
       q: 'How is my protein target calculated?',
-      a: 'Per kilogram of lean body mass (without fat): 2.0 g by default in a deficit and 1.8 g for maintenance and gain. Lean mass comes from your body measurement. Until you have one, 1.6 g per kg of body weight is used. You can change the factor by hand.',
+      a: 'Until you have a body fat measurement, per kg of body weight: 1.6 g by default, your own factor from 1.0 to 2.5 g. After a measurement, per kg of lean mass (without fat): 2.0 g by default in a deficit and 1.8 g for maintenance and gain, your own from 1.6 to 3.0 g. The field label in Profile shows which one is used now.',
+    },
+    {
+      q: 'Can I set the calorie target by hand?',
+      a: 'Yes: Profile → "Calorie and macro target" → "Custom calorie target, kcal a day" (1000 to 5000). Protein and fat are calculated as usual, carbs are the rest. The app works out the pace and goal date forecast from the gap between the target and your burn. It never goes below the safe minimum (1500 kcal for men, 1200 for women). Clear the field or pick a pace to go back to the calculation.',
     },
     {
       q: 'What does my coach see? How do I disconnect them?',

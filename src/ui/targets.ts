@@ -19,13 +19,17 @@ export function settingErrorText(L: I18n, e: SettingError): string {
       return E.paceLow(pctText(L, e.min));
     case 'proteinRange':
       return E.proteinRange(L.f.input(e.min), L.f.input(e.max));
+    case 'proteinWeightRange':
+      return E.proteinWeightRange(L.f.input(e.min), L.f.input(e.max));
+    case 'kcalRange':
+      return E.kcalRange(L.f.int(e.min), L.f.int(e.max));
     default:
       return E[e.code];
   }
 }
 
-function pacePart(L: I18n, t: Pick<Targets, 'mode' | 'pct' | 'kgPerWeek'>): string {
-  return t.mode === 'maintain' ? '' : L.tx.target.pacePart(pctText(L, t.pct), L.f.signed(t.kgPerWeek, 2));
+function pacePart(L: I18n, t: Pick<Targets, 'mode' | 'pct' | 'kgPerWeek' | 'manual'>): string {
+  return t.mode === 'maintain' && !t.manual ? '' : L.tx.target.pacePart(pctText(L, t.pct), L.f.signed(t.kgPerWeek, 2));
 }
 
 /** «План: дефицит 0,5 %/нед (−0,36 кг) → 1870 ккал · Б 116 · Ж 57 · У 223 · с 17.11». */
@@ -45,7 +49,8 @@ export function planNotes(L: I18n, t: Targets): { text: string; warn: boolean }[
   const out: { text: string; warn: boolean }[] = [];
   if (t.pace.clamped) out.push({ text: T.clamped(pctText(L, t.pace.clamped.max), L.f.dmy(t.pace.clamped.realDate)), warn: true });
   else if (t.pace.fromDate) out.push({ text: T.fromDate(pctText(L, t.pct)), warn: false });
-  if (t.proteinBasis === 'weight') out.push({ text: T.proteinNoMeasure, warn: false });
+  if (t.manual) out.push({ text: T.manualNote(pctText(L, Math.round(t.pct * 100) / 100)), warn: false });
+  if (t.proteinBasis === 'weight') out.push({ text: T.proteinNoMeasure(L.f.num(t.proteinCoef, 1)), warn: false });
   for (const w of t.warnings)
     out.push({ text: w === 'floored' ? T.warn.floored(L.f.int(t.floor ?? t.kcal)) : T.warn[w], warn: w !== 'start' });
   return out;
@@ -65,7 +70,8 @@ export function historyLine(L: I18n, g: GoalSetting): string {
       : g.targetDate
         ? T.historyDate(L.f.dmy(g.targetDate))
         : T.paceOnly(pctText(L, g.pacePct ?? DEFAULT_PACE_PCT[g.mode]));
-  return T.historyLine(L.f.dmy(g.start), T.modeLower[g.mode], pace, g.by === 'curator');
+  const kcal = g.kcalManual != null ? T.historyKcal(L.f.int(g.kcalManual)) : '';
+  return T.historyLine(L.f.dmy(g.start), T.modeLower[g.mode], (g.kcalManual != null && g.mode !== 'maintain' ? '' : pace) + kcal, g.by === 'curator');
 }
 
 export function planForecastText(L: I18n, p: PlanForecast): string {

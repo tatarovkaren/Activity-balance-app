@@ -256,4 +256,39 @@ describe('цели КБЖУ: история режимов и пересчёт �
   it('без роста — «заполните профиль»', () => {
     expect(dayPlan({ ...prof, heightCm: 0 }, days, {}, '2026-11-17').kind).toBe('noData');
   });
+
+  it('без замера белок — свой коэффициент на кг веса (жалоба 19.11: 1 г/кг ничего не меняло)', () => {
+    const t = calc({ proteinPerKg: 1 }, { bodyFatPct: undefined });
+    expect(t.proteinBasis).toBe('weight');
+    expect(t.proteinCoef).toBe(1);
+    expect(t.protein).toBe(72); // 1 × 71,8
+    // коэффициент на сухую массу без замера не используется, на кг веса при замере — тоже
+    expect(calc({ proteinPerLean: 2.5 }, { bodyFatPct: undefined }).protein).toBe(115);
+    expect(calc({ proteinPerKg: 1 }).protein).toBe(116);
+    expect(validateSetting({ mode: 'deficit', proteinPerKg: 0.5 })?.code).toBe('proteinWeightRange');
+  });
+  it('своя планка ккал: БЖУ от неё, темп и дата цели пересчитаны', () => {
+    const t = calc({ kcalManual: 1700, pacePct: 0.25 });
+    expect(t.manual).toBe(true);
+    expect(macros(t)).toEqual([1700, 116, 57, 181]);
+    // (1700 − 2268) × 7 / 7700 ≈ −0,52 кг/нед ≈ 0,72 %
+    expect(t.kgPerWeek.toFixed(2)).toBe('-0.52');
+    expect(t.pct.toFixed(2)).toBe('0.72');
+    const f = planForecast(t, 68, 71.8, '2026-11-17');
+    expect(f.kind).toBe('date');
+    // в поддержании своя планка тоже даёт прогноз
+    const m = calc({ mode: 'maintain', kcalManual: 2000 });
+    expect(planForecast(m, 68, 71.8, '2026-11-17').kind).toBe('date');
+  });
+  it('своя планка не ниже безопасного минимума; вне 1000–5000 — отклонить', () => {
+    const t = calc({ kcalManual: 1100 });
+    expect(t.kcal).toBe(1500);
+    expect(t.warnings).toContain('floored');
+    expect(calc({ kcalManual: 1000 }, { E: 2268 }).warnings).toContain('floored');
+    expect(validateSetting({ mode: 'deficit', kcalManual: 900 })?.code).toBe('kcalRange');
+    expect(calc({ kcalManual: 1100 }, { sex: 'female' }).kcal).toBeGreaterThanOrEqual(1200);
+  });
+  it('своя планка с большим дефицитом — «темп выше 1 %»', () => {
+    expect(calc({ kcalManual: 1500 }, { E: 2600 }).warnings).toContain('paceHigh');
+  });
 });
