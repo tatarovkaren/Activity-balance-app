@@ -301,3 +301,73 @@ export async function savePhotoEstimate(date: ISODate, meal: PhotoMeal) {
   const { error } = await sb.from('photo_estimates').insert({ date, provider: meal.provider, draft: meal });
   if (error) throw error;
 }
+
+// ---- Пилот: связь, доступ и комментарии на сервере (миграция 0006) ----
+
+export interface CloudCuratorLink {
+  name: string;
+  code: string;
+  linkedAt: ISODate;
+  share: { food: boolean; workouts: boolean; measurements: boolean; comments: boolean; photos: boolean };
+}
+
+/** Активный куратор текущего клиента по данным сервера; null — связи нет (или куратор её завершил). */
+export async function myCuratorLink(): Promise<CloudCuratorLink | null> {
+  const sb = supabase();
+  if (!sb) return null;
+  const { data, error } = await sb.rpc('my_curator_link');
+  if (error) throw error;
+  const r = ((data || []) as { curator_name: string; invite_code: string; linked_at: string; share: CloudCuratorLink['share'] }[])[0];
+  return r ? { name: r.curator_name, code: r.invite_code, linkedAt: r.linked_at.slice(0, 10), share: r.share } : null;
+}
+
+/** Клиент меняет, что видит куратор. */
+export async function setCuratorShare(share: CloudCuratorLink['share']) {
+  const sb = supabase();
+  if (!sb) throw new AppError('serverNotConnected');
+  const { error } = await sb.rpc('set_curator_share', { new_share: share });
+  if (error) throw error;
+}
+
+export interface DayComment {
+  id: string;
+  date: ISODate;
+  text: string;
+  /** Имя куратора (для клиента); у куратора не заполнено. */
+  curatorName?: string;
+  createdAt: string;
+}
+
+/** Клиенту: комментарии куратора к дням начиная с since. */
+export async function myDayComments(since: ISODate): Promise<DayComment[]> {
+  const sb = supabase();
+  if (!sb) return [];
+  const { data, error } = await sb.rpc('my_day_comments', { since });
+  if (error) throw error;
+  return ((data || []) as { id: number; date: string; text: string; curator_name: string; created_at: string }[]).map((r) => ({
+    id: String(r.id),
+    date: r.date,
+    text: r.text,
+    curatorName: r.curator_name,
+    createdAt: r.created_at,
+  }));
+}
+
+/** Куратору: свои комментарии клиенту начиная с since. */
+export async function curatorCommentsFor(clientId: string, since: ISODate): Promise<DayComment[]> {
+  const sb = supabase();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from('day_comments')
+    .select('id, date, text, created_at')
+    .eq('client_id', clientId)
+    .gte('date', since)
+    .order('created_at');
+  if (error) throw error;
+  return ((data || []) as { id: number; date: string; text: string; created_at: string }[]).map((r) => ({
+    id: String(r.id),
+    date: r.date,
+    text: r.text,
+    createdAt: r.created_at,
+  }));
+}

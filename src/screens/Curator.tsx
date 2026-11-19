@@ -2,7 +2,7 @@
 // у кого низкая надёжность, темп и прогноз цели; ниже — отчёт дня выбранного клиента и комментарий.
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, useWindowDimensions, View } from 'react-native';
+import { AppState, ScrollView, useWindowDimensions, View } from 'react-native';
 import { dayDiff, shiftDate, todayISO, type ISODate } from '../core/dates';
 import { adaptiveTDEE, goalForecast, type AdaptiveResult } from '../core/adaptive';
 import { demoClients } from '../core/demo';
@@ -13,6 +13,7 @@ import {
   addCuratorComment,
   createCuratorCode,
   curatorClients,
+  curatorCommentsFor,
   curatorReferrals,
   endCuratorLink,
   myCuratorAccount,
@@ -74,7 +75,7 @@ export function CuratorScreen() {
   const [err, setErr] = useState('');
   const [selId, setSelId] = useState<string | null>(null);
   const [comment, setComment] = useState('');
-  const [comments, setComments] = useState<Record<string, string[]>>({});
+  const [comments, setComments] = useState<Record<string, { date: ISODate; text: string }[]>>({});
   const [cloudAcc, setCloudAcc] = useState<CuratorAccount | undefined>(undefined);
   const [reload, setReload] = useState(0);
   const [promoErr, setPromoErr] = useState('');
@@ -93,6 +94,13 @@ export function CuratorScreen() {
       )
       .catch((e) => setPromoErr(errorText(L, e)));
   }, [cloud, today, L, reload]);
+
+  // вернулись в приложение — подтянуть свежие дневники клиентов
+  useEffect(() => {
+    if (!cloud) return;
+    const sub = AppState.addEventListener('change', (st) => st === 'active' && setReload((n) => n + 1));
+    return () => sub.remove();
+  }, [cloud]);
 
   // без сервера: в таблице — клиенты на ведении из списка «пришли по коду»
   const self = !!(data.curator && acc && data.curator.code === acc.code);
@@ -137,6 +145,15 @@ export function CuratorScreen() {
   const attention = rows.filter((r) => r.status.tone === 'warn' || r.r?.reliability === 'low').length;
   const sel = rows.find((r) => r.id === selId) || rows[0];
 
+  // комментарии, оставленные раньше (в облаке они хранятся на сервере)
+  const selKey = sel?.id;
+  useEffect(() => {
+    if (!cloud || !selKey) return;
+    curatorCommentsFor(selKey, shiftDate(today, -14))
+      .then((list) => setComments((cur) => ({ ...cur, [selKey]: list.map((x) => ({ date: x.date, text: x.text })) })))
+      .catch(() => {});
+  }, [cloud, selKey, today, reload]);
+
   const cols = C.cols;
 
   const sidebar = (
@@ -149,6 +166,12 @@ export function CuratorScreen() {
       <Gap />
       <PromoSidebar acc={acc} />
       <Gap />
+      {cloud ? (
+        <>
+          <Btn small title={C.refresh} onPress={() => { setErr(''); setReload((n) => n + 1); }} testID="curatorRefresh" />
+          <Gap h={6} />
+        </>
+      ) : null}
       <Btn small title={C.myDiary} onPress={() => setRole('client')} />
       <Gap h={6} />
       <Btn small title={C.logout} color={t.red} onPress={logout} />
@@ -209,7 +232,7 @@ export function CuratorScreen() {
 
         {sel ? <ClientDay c={sel} today={today} comments={comments[sel.id] || []} onComment={async (text) => {
           if (session.mode === 'cloud') await addCuratorComment(sel.id, today, text).catch((e) => setErr(errorText(L, e)));
-          setComments({ ...comments, [sel.id]: [...(comments[sel.id] || []), text] });
+          setComments({ ...comments, [sel.id]: [...(comments[sel.id] || []), { date: today, text }] });
         }} comment={comment} setComment={setComment} /> : null}
 
         <View testID="promoPanel">
@@ -220,7 +243,7 @@ export function CuratorScreen() {
   );
 }
 
-function ClientDay({ c, today, comments, onComment, comment, setComment }: { c: ClientRow; today: ISODate; comments: string[]; onComment: (t: string) => void; comment: string; setComment: (s: string) => void }) {
+function ClientDay({ c, today, comments, onComment, comment, setComment }: { c: ClientRow; today: ISODate; comments: { date: ISODate; text: string }[]; onComment: (t: string) => void; comment: string; setComment: (s: string) => void }) {
   const t = useTheme();
   const L = useI18n();
   const { tx, f } = L;
@@ -259,7 +282,7 @@ function ClientDay({ c, today, comments, onComment, comment, setComment }: { c: 
       <ProposeGoal c={c} />
       <Divider />
       {comments.map((x, i) => (
-        <T key={i} size={13} color={t.violet}>{C.you(x)}</T>
+        <T key={i} size={13} color={t.violet}>{x.date === today ? C.you(x.text) : C.youOn(f.dm(x.date), x.text)}</T>
       ))}
       <Gap h={6} />
       <Fields>

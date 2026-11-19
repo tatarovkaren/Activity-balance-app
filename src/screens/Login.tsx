@@ -35,7 +35,7 @@ export function LoginScreen() {
   const t = useTheme();
   const L = useI18n();
   const { tx } = L;
-  const { startLocal, startDemo, startCloud, setConsent, data } = useStore();
+  const { startLocal, startDemo, startCloud, setConsent, setRole, session, data } = useStore();
   // галочки уже принятой версии документов остаются отмеченными; новая версия — отметить заново
   const c = data.consent.version === LEGAL_VERSION ? data.consent : {};
   const [checks, setChecks] = useState<Record<LegalDoc, boolean>>({
@@ -82,6 +82,18 @@ export function LoginScreen() {
         <T size={13} color={t.green} style={{ textAlign: 'center', marginTop: 8 }}>{tx.promo.loginInvite(data.invite)}</T>
       ) : null}
       <Gap h={28} />
+      {cloud ? (
+        <View style={{ marginBottom: 12 }}>
+          <T muted size={12} style={{ textAlign: 'center', marginBottom: 6 }}>{tx.login.roleTitle}</T>
+          <Row style={{ justifyContent: 'center' }}>
+            <Seg
+              value={session.role}
+              onChange={setRole}
+              options={[{ v: 'client', label: tx.login.roleClient }, { v: 'curator', label: tx.login.roleCurator }]}
+            />
+          </Row>
+        </View>
+      ) : null}
       {PROVIDERS.map((p) => {
         const available = cloud && NATIVE_OAUTH.includes(p.id);
         return (

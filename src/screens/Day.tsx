@@ -413,6 +413,20 @@ export function DayScreen({
         </Row>
       </Card>
 
+      {/* Комментарии куратора к этому дню */}
+      {(data.curatorComments || []).some((c) => c.date === sel) ? (
+        <Card title={D.curatorNotes} accent={t.blue}>
+          {(data.curatorComments || [])
+            .filter((c) => c.date === sel)
+            .map((c) => (
+              <T key={c.id} size={14}>
+                <T bold size={14}>{c.curatorName}: </T>
+                {c.text}
+              </T>
+            ))}
+        </Card>
+      ) : null}
+
       {/* Комментарий */}
       <Card title={D.comment.title} accent={t.violet}>
         <TextField multiline value={e.comment} onChange={(v) => set({ comment: v })} placeholder={D.comment.placeholder} testID="comment" />
