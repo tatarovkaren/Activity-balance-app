@@ -22,7 +22,7 @@
       "favicon": "./assets/favicon.png",
       "output": "single",
       "name": "Activity Balance — баланс энергии",
-      "shortName": "Activity Balance",
+      "shortName": "A·Balance",
       "description": "Activity Balance — ваш персональный дашборд баланса энергии: тренировки, повседневная активность, питание и вес в одном визуале.",
       "lang": "ru",
       "themeColor": "#080B10",
