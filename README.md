@@ -4,6 +4,8 @@
 >
 > _Activity Balance is your personal energy balance dashboard: workouts, daily activity, nutrition and weight in a single view._
 
+**Рабочий адрес:** https://activity-balance-app.vercel.app/ (только тестовые данные, см. «Публикация в интернете»).
+
 Дневник питания, активности и веса с честным «расходом по факту». Веб-приложение с установкой на главный экран (PWA) и кабинет куратора. Код на Expo (React Native): тот же код позже собирается в приложения для iPhone и Android (этап мобильных приложений с Health Connect и Apple Health).
 
 ## Что есть
@@ -32,6 +34,8 @@ npm run build:web     # сборка в dist/ — статические фай�
 ```
 
 ## Публикация в интернете (Vercel)
+
+Постоянный адрес: **https://activity-balance-app.vercel.app/** (проект `activity-balance-app` в команде `activity-balance` на Vercel, выкладывается из `main`). Адреса отдельных сборок вида `activity-balance-…-activity-balance.vercel.app` закрыты входом в Vercel — для показа давайте постоянный адрес.
 
 Настройки сборки лежат в `vercel.json`: Vercel сам ставит зависимости, выполняет `npx expo export -p web` и раздаёт папку `dist/`.
 
