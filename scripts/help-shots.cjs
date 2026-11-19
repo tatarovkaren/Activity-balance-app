@@ -16,6 +16,8 @@ const DIST = path.join(ROOT, 'dist');
 const OUT = path.join(ROOT, 'assets', 'help');
 const GEN = path.join(ROOT, 'src', 'help', 'shots.gen.ts');
 const LANGS = { ru: 'ru-RU', en: 'en-US' };
+/** Часовой пояс на картинке «Уведомления». */
+const TZ = { ru: 'Europe/Moscow', en: 'Europe/London' };
 const W = 390;
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.ico': 'image/x-icon', '.css': 'text/css', '.ttf': 'font/ttf' };
@@ -72,7 +74,7 @@ async function main() {
     const dir = path.join(OUT, lang);
     fs.mkdirSync(dir, { recursive: true });
     sizes[lang] = {};
-    const ctx = await browser.newContext({ viewport: { width: W, height: 3600 }, deviceScaleFactor: 2, locale, colorScheme: 'light' });
+    const ctx = await browser.newContext({ viewport: { width: W, height: 3600 }, deviceScaleFactor: 2, locale, colorScheme: 'light', timezoneId: TZ[lang], permissions: ['notifications'] });
     const p = await ctx.newPage();
     const card = async (sel) => p.locator(`[data-testid=${sel}]`).first().evaluate(new Function('return ' + CARD_BOX)());
     const top = async (sel) => p.locator(`[data-testid=${sel}]`).first().evaluate((el) => el.getBoundingClientRect().top + scrollY);
@@ -148,6 +150,7 @@ async function main() {
     await shot('goal', (await card('goalMode')).top, (await card('goalMode')).bottom);
     await shot('import', (await card('importWeights')).top, (await card('importWeights')).bottom);
     await shot('curator', (await card('curatorCode')).top, (await card('curatorCode')).bottom);
+    await shot('notify', (await card('notify-weigh')).top, (await card('notify-weigh')).bottom);
     await shot('settings', (await card('lang')).top, (await card('theme')).bottom);
     await ctx.close();
   }

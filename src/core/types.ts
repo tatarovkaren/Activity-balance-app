@@ -1,5 +1,6 @@
 import type { ISODate } from './dates';
 import type { GoalSetting } from './targets';
+import type { NotifyPrefs } from './notify';
 
 export type Sex = 'male' | 'female';
 export type ThemePref = 'system' | 'light' | 'dark';
@@ -46,6 +47,8 @@ export interface Profile {
   onboarded?: boolean;
   /** Напоминать на «Дне», если резервной копии не было 7 дней. Нет поля — да. */
   backupReminder?: boolean;
+  /** Уведомления: что и во сколько присылать (пуши, Telegram). Нет поля — по умолчанию (core/notify.ts). */
+  notify?: Partial<NotifyPrefs>;
 }
 
 export const DEFAULT_PROFILE: Profile = {

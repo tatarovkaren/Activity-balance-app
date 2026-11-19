@@ -25,6 +25,7 @@ import { ConsentCheck, openLegal } from './Legal';
 import { LEGAL_DOCS } from '../legal';
 import { HelpCard } from './Help';
 import { CodeEntry, OfferCard } from './Promo';
+import { NotifyCard } from './Notify';
 
 export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; openHelp: () => void }) {
   const t = useTheme();
@@ -202,6 +203,8 @@ export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; op
           <CodeEntry />
         )}
       </Card>
+
+      <NotifyCard />
 
       <Card title={P.plan} accent={t.amber}>
         {data.curator && data.curator.premium !== false ? (
