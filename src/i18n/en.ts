@@ -145,6 +145,13 @@ export const en: Dict = {
     motto: 'PROCESS · DISCIPLINE',
     title: (date, weekday, relative = false) => (relative ? `${date}, ${weekday}` : `${weekday}, ${date}`),
     reportSent: 'Report sent to your coach',
+    calendar: {
+      open: 'Pick a date',
+      months: MONTHS,
+      weekdaysShort: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
+      weekStart: 0,
+      legend: 'has entries',
+    },
     weight: {
       title: 'Morning weight',
       placeholder: '0.00',

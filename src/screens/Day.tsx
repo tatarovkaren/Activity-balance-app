@@ -18,6 +18,7 @@ import { dayPlan, fatTone, kcalTone, proteinTone, type Tone } from '../core/targ
 import { planLine, planNotes, toneColor } from '../ui/targets';
 import { ProposalCards } from './Goal';
 import { useAdvanced } from '../ui/mode';
+import { CalendarIcon, DatePicker } from '../ui/DatePicker';
 
 export function DayScreen({
   sel,
@@ -47,9 +48,15 @@ export function DayScreen({
   const [importMsg, setImportMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [reportMsg, setReportMsg] = useState('');
+  const [calOpen, setCalOpen] = useState(false);
   const adv = useAdvanced();
   const today = todayISO();
   const set = (patch: Parameters<typeof setDay>[1]) => setDay(sel, patch);
+  /** День с записями — точка в календаре. */
+  const hasEntry = (dd: ISODate) => {
+    const x = days[dd];
+    return !!x && !!(x.weight || x.steps || x.kcal || x.protein || x.workoutMin || x.comment || x.photoMeals?.length);
+  };
 
   // ---- вес ----
   const prevW = days[shiftDate(sel, -1)]?.weight;
@@ -131,8 +138,29 @@ export function DayScreen({
           <Btn small title="‹" onPress={() => setSel(shiftDate(sel, -1))} testID="prevDay" />
           {sel !== today ? <Btn small title={tx.common.today} onPress={() => setSel(today)} /> : null}
           <Btn small title="›" onPress={() => setSel(shiftDate(sel, 1))} disabled={sel >= today} testID="nextDay" />
+          <Pressable
+            testID="openCalendar"
+            accessibilityRole="button"
+            accessibilityLabel={D.calendar.open}
+            onPress={() => setCalOpen(true)}
+            hitSlop={4}
+            style={({ pressed }) => ({
+              borderWidth: 1,
+              borderRadius: 12,
+              borderColor: t.line,
+              backgroundColor: t.input,
+              paddingVertical: 7,
+              paddingHorizontal: 11,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed ? 0.75 : 1,
+            })}
+          >
+            <CalendarIcon color={t.text} />
+          </Pressable>
         </Row>
       </Row>
+      <DatePicker visible={calOpen} value={sel} max={today} marked={hasEntry} onPick={setSel} onClose={() => setCalOpen(false)} />
 
       <ProposalCards />
 
