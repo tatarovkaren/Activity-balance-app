@@ -46,7 +46,8 @@ export function planNotes(L: I18n, t: Targets): { text: string; warn: boolean }[
   if (t.pace.clamped) out.push({ text: T.clamped(pctText(L, t.pace.clamped.max), L.f.dmy(t.pace.clamped.realDate)), warn: true });
   else if (t.pace.fromDate) out.push({ text: T.fromDate(pctText(L, t.pct)), warn: false });
   if (t.proteinBasis === 'weight') out.push({ text: T.proteinNoMeasure, warn: false });
-  for (const w of t.warnings) out.push({ text: T.warn[w], warn: true });
+  for (const w of t.warnings)
+    out.push({ text: w === 'floored' ? T.warn.floored(L.f.int(t.floor ?? t.kcal)) : T.warn[w], warn: w !== 'start' });
   return out;
 }
 
