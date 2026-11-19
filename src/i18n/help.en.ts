@@ -241,5 +241,5 @@ export const helpEn: typeof helpRu = {
   ],
 
   moreTitle: 'Did not find an answer?',
-  more: 'Write to your coach in the day comment. Documents on data processing are in the "Account and data" card.',
+  more: 'Write to your coach in the comment in today’s report. Documents on data processing are in the "Account and data" card.',
 };
