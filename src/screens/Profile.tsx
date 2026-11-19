@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { ageAt, isISODate, todayISO } from '../core/dates';
+import { ageAt, isISODate, todayISO, toLocalISO } from '../core/dates';
 import { MEASURE_FREQS } from '../core/body';
 import {
   applyFoodDays,
   applyWeights,
-  makeBackup,
   normDate,
   parseBackup,
   parseWeightHistory,
@@ -15,7 +14,8 @@ import { useStore } from '../data/store';
 import { cloudConfigured } from '../data/cloud';
 import { Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, TextField, DateField, Fields } from '../ui/kit';
 import { useTheme } from '../ui/theme';
-import { downloadText, pickTextFile } from '../ui/files';
+import { pickTextFile } from '../ui/files';
+import { useBackupExport } from '../ui/backup';
 import { importFatSecretFile } from '../ui/fatsecret';
 import { importSummaryText } from '../ui/format';
 import { errorText, useI18n } from '../i18n';
@@ -59,11 +59,8 @@ export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; op
     replaceDays(s.days);
     setMsg({ text: importSummaryText(L, s), ok: true });
   };
-  const exportAll = () => {
-    const b = makeBackup(session.userId, { profile: p, days: data.days, keep: data.keep, hand: data.hand, refs: data.refs, photoEdits: data.photoEdits });
-    downloadText(`${P.backupFile}-${todayISO()}.json`, JSON.stringify(b, null, 1));
-    setMsg({ text: P.backupDone(Object.keys(data.days).length), ok: true });
-  };
+  const saveBackup = useBackupExport();
+  const exportAll = () => setMsg({ text: P.backupDone(saveBackup()), ok: true });
   const importAll = async () => {
     const f = await pickTextFile(['application/json', '*/*']);
     if (!f) return;
@@ -156,6 +153,16 @@ export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; op
           <Btn small title={P.export} onPress={exportAll} />
           <Btn small title={P.importBackup} onPress={importAll} />
         </Row>
+        <Gap h={10} />
+        <T size={13}>{P.backupReminder}</T>
+        <Gap h={6} />
+        <Seg<'on' | 'off'>
+          value={p.backupReminder === false ? 'off' : 'on'}
+          onChange={(v) => set({ backupReminder: v === 'on' })}
+          options={[{ v: 'on', label: P.backupReminderOn }, { v: 'off', label: P.backupReminderOff }]}
+          testID="backupReminder"
+        />
+        <T muted size={12}>{P.backupReminderNote(data.lastBackupAt ? f.dmy(toLocalISO(new Date(data.lastBackupAt))) : null)}</T>
         {msg ? <Note color={msg.ok ? t.green : t.red}>{msg.text}</Note> : null}
       </Card>
 

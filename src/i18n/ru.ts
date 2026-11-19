@@ -162,6 +162,13 @@ export const ru = {
       weekStart: 1 as 0 | 1,
       legend: 'есть записи',
     },
+    backup: {
+      title: 'Резервная копия',
+      never: 'Резервной копии ещё не было. Данные хранятся только на этом устройстве — сохраните файл на всякий случай.',
+      late: (n: number) => `Резервной копии не было ${n} дн. Сохраните свежую на всякий случай.`,
+      save: 'Сохранить',
+      offHint: 'Выключить напоминание — в Профиле',
+    },
     weight: {
       title: 'Утренний вес',
       placeholder: '0,00',
@@ -531,6 +538,10 @@ export const ru = {
     backupDone: (n: number) => `Резервная копия: ${n} дн.`,
     backupImported: (n: number) => `Импортировано: ${n} дн. Ничего не затёрто.`,
     backupFile: 'activity-balance-backup',
+    backupReminder: 'Напоминать о резервной копии',
+    backupReminderOn: 'Раз в неделю',
+    backupReminderOff: 'Не напоминать',
+    backupReminderNote: (last: string | null) => `На экране «День», если копии не было 7 дней. ${last ? `Последняя: ${last}.` : 'Копий ещё не было.'}`,
     handTitle: 'Рука для фото-подсчёта',
     handMeasure: 'Замерить',
     handLine: (pw: string, pl: string, fw: string, fh: string, th: string, card: boolean) =>

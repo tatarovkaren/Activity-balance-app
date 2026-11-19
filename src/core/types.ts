@@ -44,6 +44,8 @@ export interface Profile {
   uiMode: UiMode;
   /** Анкета первого входа пройдена (пол, дата рождения, рост, вес). Нет — показываем анкету. */
   onboarded?: boolean;
+  /** Напоминать на «Дне», если резервной копии не было 7 дней. Нет поля — да. */
+  backupReminder?: boolean;
 }
 
 export const DEFAULT_PROFILE: Profile = {
