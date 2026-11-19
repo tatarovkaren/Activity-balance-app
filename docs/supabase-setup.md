@@ -32,8 +32,8 @@
 
 **Authentication** → **URL Configuration**:
 
-- Site URL: адрес сайта на Vercel, например `https://activity-balance.vercel.app`;
-- Redirect URLs → **Add URL**: тот же адрес со звёздочками на конце, например `https://activity-balance.vercel.app/**`.
+- Site URL: адрес сайта на Vercel: `https://activity-balance-app.vercel.app`;
+- Redirect URLs → **Add URL**: тот же адрес со звёздочками на конце, `https://activity-balance-app.vercel.app/**`.
 
 Без этого после входа через Google браузер вернётся не туда.
 
