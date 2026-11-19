@@ -4,6 +4,7 @@
 import React, { useMemo, useState } from 'react';
 import { isISODate, todayISO } from '../core/dates';
 import { normDate } from '../core/importers';
+import { lastBodyFat } from '../core/body';
 import {
   activeGoal,
   dayPlan,
@@ -12,6 +13,7 @@ import {
   PACE_LIMITS,
   PACE_PRESETS,
   PROTEIN_DEFAULT,
+  PROTEIN_NO_MEASURE,
   validateSetting,
   type GoalMode,
   type GoalSetting,
@@ -30,6 +32,8 @@ const strip = (g: GoalSetting): Omit<GoalSetting, 'start'> => ({
   pacePct: g.pacePct,
   targetDate: g.targetDate,
   proteinPerLean: g.proteinPerLean,
+  proteinPerKg: g.proteinPerKg,
+  kcalManual: g.kcalManual,
 });
 
 export function GoalCard() {
@@ -43,6 +47,8 @@ export function GoalCard() {
   const today = todayISO();
   const cur = activeGoal(profile.goals, today);
   const plan = useMemo(() => dayPlan(profile, days, keep, today), [profile, days, keep, today]);
+  // есть замер % жира — белок от сухой массы, нет — от общего веса
+  const measured = lastBodyFat(days, today, profile.sex, profile.heightCm) != null;
   const [err, setErr] = useState('');
   const [done, setDone] = useState(false);
   const [dateText, setDateText] = useState(cur?.targetDate ? f.dateInput(cur.targetDate) : '');
@@ -93,7 +99,7 @@ export function GoalCard() {
         value={cur?.mode}
         onChange={(m) => {
           setPick(null);
-          apply({ mode: m, proteinPerLean: cur?.proteinPerLean });
+          apply({ mode: m, proteinPerLean: cur?.proteinPerLean, proteinPerKg: cur?.proteinPerKg });
         }}
         options={GOAL_MODES.map((m) => ({ v: m, label: G.mode[m] }))}
       />
@@ -107,15 +113,16 @@ export function GoalCard() {
             onChange={(v) => {
               if (v === 'custom' || v === 'date') {
                 setPick(v);
-                if (v === 'custom' && cur.targetDate) apply({ ...strip(cur), targetDate: undefined });
+                if (v === 'custom' && cur.targetDate) apply({ ...strip(cur), targetDate: undefined, kcalManual: undefined });
                 if (v === 'date') {
                   const iso = normDate(dateText);
-                  if (isISODate(iso)) apply({ ...strip(cur), targetDate: iso, pacePct: undefined });
+                  if (isISODate(iso)) apply({ ...strip(cur), targetDate: iso, pacePct: undefined, kcalManual: undefined });
                 }
                 return;
               }
               setPick(null);
-              apply({ ...strip(cur), pacePct: Number(v), targetDate: undefined });
+              // выбор темпа отменяет свою планку
+              apply({ ...strip(cur), pacePct: Number(v), targetDate: undefined, kcalManual: undefined });
             }}
             options={paceOptions(cur.mode)}
           />
@@ -128,7 +135,7 @@ export function GoalCard() {
                   label={G.customLabel(pctText(L, PACE_LIMITS[cur.mode][0]), pctText(L, PACE_LIMITS[cur.mode][1]))}
                   value={cur.pacePct}
                   digits={2}
-                  onChange={(v) => v != null && apply({ ...strip(cur), pacePct: v, targetDate: undefined })}
+                  onChange={(v) => v != null && apply({ ...strip(cur), pacePct: v, targetDate: undefined, kcalManual: undefined })}
                   testID="goalCustomPace"
                 />
               </Fields>
@@ -144,7 +151,7 @@ export function GoalCard() {
                   onChange={(v) => {
                     setDateText(v);
                     const iso = normDate(v);
-                    if (isISODate(iso)) apply({ ...strip(cur), targetDate: iso, pacePct: undefined });
+                    if (isISODate(iso)) apply({ ...strip(cur), targetDate: iso, pacePct: undefined, kcalManual: undefined });
                   }}
                   testID="goalDate"
                 />
@@ -160,13 +167,34 @@ export function GoalCard() {
         <>
           <Gap h={6} />
           <Fields>
+            {measured ? (
+              <NumField
+                label={G.protein}
+                value={cur.proteinPerLean}
+                digits={1}
+                placeholder={G.proteinPh(f.num(PROTEIN_DEFAULT[cur.mode], 1))}
+                onChange={(v) => apply({ ...strip(cur), proteinPerLean: v })}
+                testID="goalProtein"
+              />
+            ) : (
+              <NumField
+                label={G.proteinWeight}
+                value={cur.proteinPerKg}
+                digits={1}
+                placeholder={G.proteinPh(f.num(PROTEIN_NO_MEASURE, 1))}
+                onChange={(v) => apply({ ...strip(cur), proteinPerKg: v })}
+                testID="goalProteinKg"
+              />
+            )}
+          </Fields>
+          <Fields>
             <NumField
-              label={G.protein}
-              value={cur.proteinPerLean}
-              digits={1}
-              placeholder={G.proteinPh(f.num(PROTEIN_DEFAULT[cur.mode], 1))}
-              onChange={(v) => apply({ ...strip(cur), proteinPerLean: v })}
-              testID="goalProtein"
+              label={G.kcalManual}
+              value={cur.kcalManual}
+              digits={0}
+              placeholder={G.kcalManualPh}
+              onChange={(v) => apply({ ...strip(cur), kcalManual: v == null ? undefined : Math.round(v) })}
+              testID="goalKcal"
             />
           </Fields>
         </>

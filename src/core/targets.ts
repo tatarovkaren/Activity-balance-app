@@ -26,8 +26,11 @@ export const DATE_PACE_MAX: Record<'deficit' | 'surplus', number> = { deficit: 1
 /** Белок, г на кг сухой массы. */
 export const PROTEIN_DEFAULT: Record<GoalMode, number> = { deficit: 2.0, maintain: 1.8, surplus: 1.8 };
 export const PROTEIN_LIMITS: [number, number] = [1.6, 3.0];
-/** Без замеров — г на кг общего веса. */
-export const PROTEIN_NO_MEASURE = 1.6;
+/** Без замеров — г на кг общего веса (по умолчанию и пределы своего коэффициента; минимум 1,8 — решение Карена 19.11.2026). */
+export const PROTEIN_NO_MEASURE = 1.8;
+export const PROTEIN_WEIGHT_LIMITS: [number, number] = [1.8, 3.0];
+/** Своя планка калорий, ккал/день: в этих пределах (ниже всё равно действует безопасный минимум). */
+export const KCAL_MANUAL_LIMITS: [number, number] = [1000, 5000];
 export const FAT_PER_KG = 0.8;
 export const FAT_MIN_PER_KG = 0.6;
 export const CARBS_WARN = 50;
@@ -50,6 +53,10 @@ export interface GoalSetting {
   targetDate?: ISODate;
   /** Белок, г на кг сухой массы. Пусто — по умолчанию режима. */
   proteinPerLean?: number;
+  /** Белок, г на кг общего веса — пока нет замера % жира. Пусто — 1,6. */
+  proteinPerKg?: number;
+  /** Своя планка калорий, ккал/день. Задана — темп не считается, а выводится из неё. */
+  kcalManual?: number;
   /** Кто задал: пользователь или куратор (принято пользователем). */
   by?: 'user' | 'curator';
 }
@@ -67,13 +74,15 @@ export type SettingError =
   | { code: 'paceHigh'; max: number }
   | { code: 'paceLow'; min: number }
   | { code: 'proteinRange'; min: number; max: number }
+  | { code: 'proteinWeightRange'; min: number; max: number }
+  | { code: 'kcalRange'; min: number; max: number }
   | { code: 'needGoalWeight' }
   | { code: 'datePast' }
   | { code: 'dateWrongWay' };
 
 /** Проверка настроек перед сохранением (и предложений куратора). null — всё в порядке. */
 export function validateSetting(s: Omit<GoalSetting, 'start' | 'by'>): SettingError | null {
-  if (s.mode !== 'maintain' && s.pacePct != null && s.targetDate == null) {
+  if (s.mode !== 'maintain' && s.pacePct != null && s.targetDate == null && s.kcalManual == null) {
     const [min, max] = PACE_LIMITS[s.mode];
     if (s.pacePct > max + 1e-9) return { code: 'paceHigh', max };
     if (s.pacePct < min - 1e-9) return { code: 'paceLow', min };
@@ -81,6 +90,14 @@ export function validateSetting(s: Omit<GoalSetting, 'start' | 'by'>): SettingEr
   if (s.proteinPerLean != null) {
     const [min, max] = PROTEIN_LIMITS;
     if (s.proteinPerLean < min - 1e-9 || s.proteinPerLean > max + 1e-9) return { code: 'proteinRange', min, max };
+  }
+  if (s.proteinPerKg != null) {
+    const [min, max] = PROTEIN_WEIGHT_LIMITS;
+    if (s.proteinPerKg < min - 1e-9 || s.proteinPerKg > max + 1e-9) return { code: 'proteinWeightRange', min, max };
+  }
+  if (s.kcalManual != null) {
+    const [min, max] = KCAL_MANUAL_LIMITS;
+    if (s.kcalManual < min || s.kcalManual > max) return { code: 'kcalRange', min, max };
   }
   return null;
 }
@@ -124,12 +141,12 @@ export interface PaceResolved {
 
 /** Темп режима: заданный, по умолчанию или от даты цели. */
 export function resolvePace(
-  g: Pick<GoalSetting, 'mode' | 'pacePct' | 'targetDate'>,
+  g: Pick<GoalSetting, 'mode' | 'pacePct' | 'targetDate' | 'kcalManual'>,
   weight: number,
   goalWeight: number | undefined,
   asOf: ISODate,
 ): PaceResolved {
-  if (g.mode === 'maintain') return { pct: 0 };
+  if (g.mode === 'maintain' || g.kcalManual != null) return { pct: 0 };
   if (g.targetDate) {
     if (!goalWeight) return { pct: 0, fromDate: true, error: { code: 'needGoalWeight' } };
     const days = dayDiff(asOf, g.targetDate);
@@ -191,6 +208,8 @@ export interface Targets {
   weightSource: 'trend' | 'last';
   /** Планка поднята до безопасного минимума (калорий или углеводов): значение минимума. */
   floor?: number;
+  /** Планка задана вручную: темп и кг/нед выведены из неё. */
+  manual?: boolean;
   warnings: TargetWarning[];
 }
 
@@ -203,12 +222,19 @@ export function computeTargets(i: TargetInput): Targets | { error: SettingError 
   const pace = resolvePace(g, i.weight, i.goalWeightKg, i.asOf);
   if (pace.error) return { error: pace.error };
   const sign = g.mode === 'deficit' ? -1 : g.mode === 'surplus' ? 1 : 0;
+  const manual = g.kcalManual != null;
   let kgPerWeek = (sign * pace.pct * i.weight) / 100;
   let kcal = round10(i.E + (kgPerWeek * KCAL_PER_KG) / 7);
+  if (manual) {
+    // своя планка: темп — следствие разницы с расходом
+    kcal = round10(g.kcalManual!);
+    kgPerWeek = ((kcal - i.E) * 7) / KCAL_PER_KG;
+  }
 
-  const coef = g.proteinPerLean ?? PROTEIN_DEFAULT[g.mode];
   const lean = i.bodyFatPct != null && i.bodyFatPct > 0 ? i.weight * (1 - i.bodyFatPct / 100) : undefined;
-  const protein = Math.round(lean != null ? coef * lean : PROTEIN_NO_MEASURE * i.weight);
+  // есть замер — г на кг сухой массы; нет — г на кг веса (свой коэффициент или 1,6)
+  const coef = lean != null ? g.proteinPerLean ?? PROTEIN_DEFAULT[g.mode] : g.proteinPerKg ?? PROTEIN_NO_MEASURE;
+  const protein = Math.round(coef * (lean ?? i.weight));
   const fatMin = Math.round(FAT_MIN_PER_KG * i.weight);
 
   // Безопасный минимум: не ниже 1500 ккал у мужчин / 1200 у женщин и не меньше,
@@ -219,7 +245,8 @@ export function computeTargets(i: TargetInput): Targets | { error: SettingError 
     floored = floor;
     kcal = floor;
     // фактический темп при поднятой планке; в дефиците — не «в плюс»
-    if (g.mode === 'deficit') kgPerWeek = Math.min(0, ((kcal - i.E) * 7) / KCAL_PER_KG);
+    if (manual) kgPerWeek = ((kcal - i.E) * 7) / KCAL_PER_KG;
+    else if (g.mode === 'deficit') kgPerWeek = Math.min(0, ((kcal - i.E) * 7) / KCAL_PER_KG);
   }
 
   let fat = Math.round(FAT_PER_KG * i.weight);
@@ -234,21 +261,22 @@ export function computeTargets(i: TargetInput): Targets | { error: SettingError 
   const warnings: TargetWarning[] = [];
   if (floored != null) warnings.push('floored');
   if (kcal < bmr) warnings.push('belowBmr');
-  if (g.mode === 'deficit' && pace.pct > 1 + 1e-9) warnings.push('paceHigh');
+  const pct = manual ? (Math.abs(kgPerWeek) / i.weight) * 100 : pace.pct;
+  if ((manual ? kgPerWeek < 0 : g.mode === 'deficit') && pct > 1 + 1e-9) warnings.push('paceHigh');
   if (carbs < CARBS_WARN) warnings.push('carbsLow');
   if (i.eStart) warnings.push('start');
   else if (i.reliability === 'low') warnings.push('rough');
 
   return {
     mode: g.mode,
-    pct: pace.pct,
+    pct,
     pace,
     kgPerWeek,
     kcal,
     protein,
     fat,
     carbs,
-    proteinCoef: lean != null ? coef : PROTEIN_NO_MEASURE,
+    proteinCoef: coef,
     proteinBasis: lean != null ? 'lean' : 'weight',
     leanMass: lean,
     bmr,
@@ -256,6 +284,7 @@ export function computeTargets(i: TargetInput): Targets | { error: SettingError 
     weight: i.weight,
     weightSource: i.weightSource,
     floor: floored,
+    manual: manual || undefined,
     warnings,
   };
 }
@@ -357,7 +386,7 @@ export type PlanForecast =
 
 /** Прогноз по выбранному темпу (от текущего веса, темп в кг/нед — по плану). */
 export function planForecast(t: Targets, goalWeight: number | undefined, from: number, asOf: ISODate): PlanForecast {
-  if (!goalWeight || t.mode === 'maintain' || !t.kgPerWeek) return { kind: 'none' };
+  if (!goalWeight || (t.mode === 'maintain' && !t.manual) || !t.kgPerWeek) return { kind: 'none' };
   const need = goalWeight - from;
   if (Math.abs(need) < 0.1) return { kind: 'reached' };
   if (Math.sign(need) !== Math.sign(t.kgPerWeek)) return { kind: 'wrongWay' };

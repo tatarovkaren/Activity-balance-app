@@ -99,10 +99,10 @@ describe('цели КБЖУ: правила', () => {
     expect(m.warnings).toContain('belowBmr');
     expect(f.warnings).not.toContain('belowBmr');
   });
-  it('без замеров белок 1,6 г на кг веса', () => {
+  it('без замеров белок 1,8 г на кг веса', () => {
     const t = calc({}, { bodyFatPct: undefined });
     expect(t.proteinBasis).toBe('weight');
-    expect(t.protein).toBe(115); // 1,6 × 71,8
+    expect(t.protein).toBe(129); // 1,8 × 71,8
   });
   it('свой коэффициент белка 1,6–3,0', () => {
     expect(calc({ proteinPerLean: 2.2 }).protein).toBe(127);
@@ -238,7 +238,7 @@ describe('цели КБЖУ: история режимов и пересчёт �
     // БМР 1537,5 × 1,4 ≈ 2153; −0,75 % от 71 кг ≈ −586 ккал/день
     expect(Math.round(t.E)).toBe(2153);
     expect(t.kcal).toBe(1570);
-    expect(t.protein).toBe(114);
+    expect(t.protein).toBe(128); // 1,8 × 71
     expect(t.fat).toBe(57);
     expect(t.carbs).toBeGreaterThan(130);
     expect(t.warnings).toContain('start');
@@ -255,5 +255,41 @@ describe('цели КБЖУ: история режимов и пересчёт �
   });
   it('без роста — «заполните профиль»', () => {
     expect(dayPlan({ ...prof, heightCm: 0 }, days, {}, '2026-11-17').kind).toBe('noData');
+  });
+
+  it('без замера белок — свой коэффициент на кг веса (жалоба 19.11: коэффициент ничего не менял)', () => {
+    const t = calc({ proteinPerKg: 2.2 }, { bodyFatPct: undefined });
+    expect(t.proteinBasis).toBe('weight');
+    expect(t.proteinCoef).toBe(2.2);
+    expect(t.protein).toBe(158); // 2,2 × 71,8
+    // коэффициент на сухую массу без замера не используется, на кг веса при замере — тоже
+    expect(calc({ proteinPerLean: 2.5 }, { bodyFatPct: undefined }).protein).toBe(129);
+    expect(calc({ proteinPerKg: 2.2 }).protein).toBe(116);
+    expect(validateSetting({ mode: 'deficit', proteinPerKg: 1 })?.code).toBe('proteinWeightRange'); // минимум 1,8
+    expect(validateSetting({ mode: 'deficit', proteinPerKg: 1.8 })).toBeNull();
+  });
+  it('своя планка ккал: БЖУ от неё, темп и дата цели пересчитаны', () => {
+    const t = calc({ kcalManual: 1700, pacePct: 0.25 });
+    expect(t.manual).toBe(true);
+    expect(macros(t)).toEqual([1700, 116, 57, 181]);
+    // (1700 − 2268) × 7 / 7700 ≈ −0,52 кг/нед ≈ 0,72 %
+    expect(t.kgPerWeek.toFixed(2)).toBe('-0.52');
+    expect(t.pct.toFixed(2)).toBe('0.72');
+    const f = planForecast(t, 68, 71.8, '2026-11-17');
+    expect(f.kind).toBe('date');
+    // в поддержании своя планка тоже даёт прогноз
+    const m = calc({ mode: 'maintain', kcalManual: 2000 });
+    expect(planForecast(m, 68, 71.8, '2026-11-17').kind).toBe('date');
+  });
+  it('своя планка не ниже безопасного минимума; вне 1000–5000 — отклонить', () => {
+    const t = calc({ kcalManual: 1100 });
+    expect(t.kcal).toBe(1500);
+    expect(t.warnings).toContain('floored');
+    expect(calc({ kcalManual: 1000 }, { E: 2268 }).warnings).toContain('floored');
+    expect(validateSetting({ mode: 'deficit', kcalManual: 900 })?.code).toBe('kcalRange');
+    expect(calc({ kcalManual: 1100 }, { sex: 'female' }).kcal).toBeGreaterThanOrEqual(1200);
+  });
+  it('своя планка с большим дефицитом — «темп выше 1 %»', () => {
+    expect(calc({ kcalManual: 1500 }, { E: 2600 }).warnings).toContain('paceHigh');
   });
 });
