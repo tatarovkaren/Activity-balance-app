@@ -99,10 +99,10 @@ describe('цели КБЖУ: правила', () => {
     expect(m.warnings).toContain('belowBmr');
     expect(f.warnings).not.toContain('belowBmr');
   });
-  it('без замеров белок 1,8 г на кг веса', () => {
+  it('без замеров белок 1,6 г на кг веса', () => {
     const t = calc({}, { bodyFatPct: undefined });
     expect(t.proteinBasis).toBe('weight');
-    expect(t.protein).toBe(129); // 1,8 × 71,8
+    expect(t.protein).toBe(115); // 1,6 × 71,8
   });
   it('свой коэффициент белка 1,6–3,0', () => {
     expect(calc({ proteinPerLean: 2.2 }).protein).toBe(127);
@@ -238,7 +238,7 @@ describe('цели КБЖУ: история режимов и пересчёт �
     // БМР 1537,5 × 1,4 ≈ 2153; −0,75 % от 71 кг ≈ −586 ккал/день
     expect(Math.round(t.E)).toBe(2153);
     expect(t.kcal).toBe(1570);
-    expect(t.protein).toBe(128); // 1,8 × 71
+    expect(t.protein).toBe(114); // 1,6 × 71
     expect(t.fat).toBe(57);
     expect(t.carbs).toBeGreaterThan(130);
     expect(t.warnings).toContain('start');
@@ -263,10 +263,11 @@ describe('цели КБЖУ: история режимов и пересчёт �
     expect(t.proteinCoef).toBe(2.2);
     expect(t.protein).toBe(158); // 2,2 × 71,8
     // коэффициент на сухую массу без замера не используется, на кг веса при замере — тоже
-    expect(calc({ proteinPerLean: 2.5 }, { bodyFatPct: undefined }).protein).toBe(129);
+    expect(calc({ proteinPerLean: 2.5 }, { bodyFatPct: undefined }).protein).toBe(115);
     expect(calc({ proteinPerKg: 2.2 }).protein).toBe(116);
-    expect(validateSetting({ mode: 'deficit', proteinPerKg: 1 })?.code).toBe('proteinWeightRange'); // минимум 1,8
-    expect(validateSetting({ mode: 'deficit', proteinPerKg: 1.8 })).toBeNull();
+    expect(validateSetting({ mode: 'deficit', proteinPerKg: 1.5 })?.code).toBe('proteinWeightRange'); // минимум 1,6
+    expect(validateSetting({ mode: 'deficit', proteinPerKg: 1.6 })).toBeNull();
+    expect(calc({ proteinPerKg: 1.6 }, { bodyFatPct: undefined }).protein).toBe(115);
   });
   it('своя планка ккал: БЖУ от неё, темп и дата цели пересчитаны', () => {
     const t = calc({ kcalManual: 1700, pacePct: 0.25 });
