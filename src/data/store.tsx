@@ -4,7 +4,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
-import { addMonthsClamped, todayISO, type ISODate } from '../core/dates';
+import { addMonthsClamped, shiftDate, todayISO, type ISODate } from '../core/dates';
 import { compactEntry, mergeDays, mergeEntry } from '../core/merge';
 import { DEFAULT_PROFILE, type DayEntry, type DayMap, type KeepMap, type Plan, type Profile } from '../core/types';
 import type { HandProfile } from '../core/photo/estimate';
@@ -31,6 +31,10 @@ import { load, save, clearAll } from './storage';
 import {
   clientEndLink,
   currentUser,
+  myCuratorLink,
+  myDayComments,
+  setCuratorShare,
+  type DayComment,
   linkCurator,
   myGoalProposals,
   myReferralOffer,
@@ -114,7 +118,12 @@ export interface AppData {
   invite?: string;
   /** Когда последний раз сохраняли резервную копию (мс) — для напоминания на «Дне». */
   lastBackupAt?: number;
+  /** Комментарии куратора к дням (с сервера, последние 60 дней). */
+  curatorComments?: DayComment[];
 }
+
+/** Что запоминаем до входа: галочки, код из приглашения, язык и тема переживают переход на Google и обратно. */
+type PreLogin = Pick<AppData, 'consent' | 'invite'> & { lang?: Profile['lang']; theme?: Profile['theme'] };
 
 const EMPTY: AppData = { profile: DEFAULT_PROFILE, days: {}, keep: {}, refs: [], photoUsage: [], consent: {} };
 
@@ -208,7 +217,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       pendingProfile.current = pend.profile;
       // у тех, кто вёл дневник до появления анкеты, она считается пройденной
       const had = !!d.profile && Object.keys(d.days || {}).length > 0;
-      setData({ ...EMPTY, ...d, profile: { ...DEFAULT_PROFILE, ...(had ? { onboarded: true } : {}), ...d.profile } });
+      const pre = await load<PreLogin | null>('pre', null);
+      const base: AppData = { ...EMPTY, ...d, profile: { ...DEFAULT_PROFILE, ...(had ? { onboarded: true } : {}), ...d.profile } };
+      if (pre && sess.mode === 'none') {
+        base.consent = { ...base.consent, ...pre.consent };
+        if (pre.invite) base.invite = pre.invite;
+        if (pre.lang) base.profile = { ...base.profile, lang: pre.lang };
+        if (pre.theme) base.profile = { ...base.profile, theme: pre.theme };
+      }
+      setData(base);
       // возврат после входа через Google/Apple (веб)
       let s = sess;
       if (supabase()) {
@@ -254,6 +271,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       consentSent.current = ''; // повторим при следующем изменении
     });
   }, [ready, session.mode, session.userId, data.consent]);
+
+  // ---- до входа: галочки и код приглашения, чтобы пережили переход на страницу Google ----
+  useEffect(() => {
+    if (!ready || session.mode !== 'none') return;
+    save('pre', { consent: data.consent, invite: data.invite, lang: data.profile.lang, theme: data.profile.theme } satisfies PreLogin);
+  }, [ready, session.mode, data.consent, data.invite, data.profile.lang, data.profile.theme]);
 
   // ---- сохранение локально ----
   useEffect(() => {
@@ -333,6 +356,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       // предложения куратора по цели (таблица из миграции 0003; нет таблицы — просто пропускаем)
       myGoalProposals()
         .then((goalProposals) => setData((cur) => ({ ...cur, goalProposals })))
+        .catch(() => {});
+      // куратор и что ему видно — по серверу (новый телефон; куратор мог завершить ведение)
+      myCuratorLink()
+        .then((link) =>
+          setData((cur) => {
+            if (!link) return cur.curator ? { ...cur, curator: undefined } : cur;
+            const keep = cur.curator?.code === link.code ? cur.curator : undefined;
+            return { ...cur, curator: { ...keep, name: link.name, code: link.code, linkedAt: link.linkedAt, share: { ...DEFAULT_SHARE, ...link.share }, premium: keep?.premium ?? true } };
+          }),
+        )
+        .catch(() => {});
+      // комментарии куратора к дням (миграция 0006)
+      myDayComments(shiftDate(todayISO(), -60))
+        .then((curatorComments) => setData((cur) => ({ ...cur, curatorComments })))
         .catch(() => {});
       // предложение со скидкой после ведения (миграция 0004; нет таблицы — пропускаем)
       myReferralOffer()
@@ -462,7 +499,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       });
       touchDays([date]);
     },
-    setCurator: (c) => setData((cur) => ({ ...cur, curator: c })),
+    setCurator: (c) => {
+      setData((cur) => ({ ...cur, curator: c }));
+      if (session.mode === 'cloud' && c) setCuratorShare(c.share).catch(() => {});
+    },
     linkByCode: async (input, selfName) => {
       const code = normalizeCode(input);
       const today = todayISO();
@@ -587,10 +627,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         await pushNow();
         await signOut();
       }
-      if (session.mode === 'demo') await clearAll();
+      // после выхода из аккаунта копия на устройстве не нужна (всё на сервере), и следующий вошедший
+      // не получит чужой дневник. Если отправить не удалось — копию оставляем, чтобы ничего не потерять.
+      const wipe = session.mode === 'demo' || (session.mode === 'cloud' && !pendingDays.current.size && !pendingProfile.current);
+      if (wipe) await clearAll();
       pendingDays.current.clear();
       pendingProfile.current = false;
-      if (session.mode === 'demo')
+      if (wipe)
         setData((cur) => ({ ...EMPTY, profile: { ...DEFAULT_PROFILE, lang: cur.profile.lang, theme: cur.profile.theme } }));
       setSession({ mode: 'none', userId: '', role: 'client' });
     },

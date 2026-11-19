@@ -136,6 +136,9 @@ export const ru = {
     startLocal: 'Начать без входа (данные на этом устройстве)',
     demo: 'Посмотреть демо',
     curatorDemo: 'Я куратор → демо кабинета',
+    roleTitle: 'Кто входит',
+    roleClient: 'Я клиент',
+    roleCurator: 'Я куратор',
   },
 
   legal: {
@@ -151,6 +154,7 @@ export const ru = {
 
   day: {
     motto: 'ПРОЦЕСС · ДИСЦИПЛИНА',
+    curatorNotes: 'Комментарий куратора',
     /** relative — вместо даты «Сегодня»/«Вчера». */
     title: (date: string, weekday: string, _relative = false) => `${date}, ${weekday}`,
     reportSent: 'Отчёт куратору отправлен',
@@ -645,6 +649,7 @@ export const ru = {
     menu: ['Клиенты', 'Отчёты дня', 'Чат (скоро)', 'Шаблоны планов (скоро)'],
     invite: 'Код приглашения: ',
     myDiary: 'Мой дневник',
+    refresh: 'Обновить данные клиентов',
     logout: 'Выйти',
     title: 'Клиенты',
     demoData: ' · демо-данные',
@@ -671,6 +676,7 @@ export const ru = {
     autoMark: ' (авто)',
     weight: 'вес',
     you: (text: string) => `Вы: ${text}`,
+    youOn: (date: string, text: string) => `Вы, ${date}: ${text}`,
     commentPh: 'Комментарий к дню',
     send: 'Отправить',
     goalNone: 'Режим цели не задан',

@@ -62,7 +62,7 @@
 
 ## Как включить настоящую оценку (вместо демо)
 
-1. Подключить Supabase (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`) и применить миграции, включая `0004_photo_meals.sql`.
+1. Подключить Supabase (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`) и применить миграции, включая `0005_photo_meals.sql`.
 2. Получить ключ Claude API (console.anthropic.com, оплата картой не из РФ) и положить в секреты функции:
    `supabase secrets set ANTHROPIC_API_KEY=sk-ant-...` (по желанию `PHOTO_MODEL=claude-sonnet-5-5` — точнее, но ≈в 20 раз дороже).
 3. `supabase functions deploy photo-estimate`. Приложение само найдёт функцию по адресу `<SUPABASE_URL>/functions/v1/photo-estimate`; в «Как считать» появится «Оценка по фото».

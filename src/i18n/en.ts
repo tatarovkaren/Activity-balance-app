@@ -128,6 +128,9 @@ export const en: Dict = {
     startLocal: 'Start without an account (data on this device)',
     demo: 'View demo',
     curatorDemo: 'I’m a coach → dashboard demo',
+    roleTitle: 'Who is signing in',
+    roleClient: 'I’m a client',
+    roleCurator: 'I’m a coach',
   },
 
   legal: {
@@ -143,6 +146,7 @@ export const en: Dict = {
 
   day: {
     motto: 'PROCESS · DISCIPLINE',
+    curatorNotes: 'Coach comment',
     title: (date, weekday, relative = false) => (relative ? `${date}, ${weekday}` : `${weekday}, ${date}`),
     reportSent: 'Report sent to your coach',
     calendar: {
@@ -628,6 +632,7 @@ export const en: Dict = {
     menu: ['Clients', 'Daily reports', 'Chat (soon)', 'Plan templates (soon)'],
     invite: 'Invite code: ',
     myDiary: 'My log',
+    refresh: 'Refresh client data',
     logout: 'Sign out',
     title: 'Clients',
     demoData: ' · demo data',
@@ -654,6 +659,7 @@ export const en: Dict = {
     autoMark: ' (auto)',
     weight: 'weight',
     you: (text) => `You: ${text}`,
+    youOn: (date, text) => `You, ${date}: ${text}`,
     commentPh: 'Comment on the day',
     send: 'Send',
     goalNone: 'No target mode set',

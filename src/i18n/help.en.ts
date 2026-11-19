@@ -31,7 +31,7 @@ export const helpEn: typeof helpRu = {
       text: [
         'Choose the language at the top: Russian, English or same as system.',
         'Tick the three required boxes: terms of service, privacy policy and consent to data processing. The newsletter box is optional.',
-        'Sign in with Google, Apple, Yandex ID, VK ID or email to keep your data in the cloud and on all your devices.',
+        'Sign in with Google, Apple, Yandex ID, VK ID or email to keep your data in the cloud and on all your devices. Before signing in, choose "I’m a client" or "I’m a coach": a coach goes straight to the dashboard.',
         'You can start without signing in: your data then stays on this device only. "View demo" opens the app with made-up data.',
       ],
     },
@@ -148,7 +148,8 @@ export const helpEn: typeof helpRu = {
         'Each coach has a personal code: their surname in Latin letters plus a number, e.g. **IVANOV0001**. Enter it in the sign-up questionnaire or later in the "Coach" card in Profile. If your coach sent an invite link, the code fills in by itself.',
         'While your coach works with you, **Premium is free for you**: your coach pays for it with their plan.',
         'Choose what your coach sees: food, workouts, weight and measurements, comments, meal photos. You can change or revoke access at any time.',
-        'Your coach sees your log and reports, can comment on a day and suggest a new target, which you then accept or decline.',
+        'Your coach sees your log and reports, can comment on a day and suggest a new target, which you then accept or decline. A coach comment appears on the Day screen above your own comment.',
+        'For your coach to see your log from their phone, sign in (Google or email). Without signing in, data stays on your device only.',
         'When coaching ends, your log and all your history stay with you, and Profile shows an offer of Premium at a discount.',
       ],
     },
@@ -224,7 +225,7 @@ export const helpEn: typeof helpRu = {
     },
     {
       q: 'I am a coach. Where is my code and how many clients can I have?',
-      a: 'At the bottom of the coach dashboard: enter your surname and the system issues a code with a system-wide number and an invite link. Seats: Trial 2, Start 10, Pro 50. The same place lists everyone who joined with your code: you can end coaching or remove a client, and the seat is freed. For every 3 Premium payments by former clients you get a month of your plan free.',
+      a: 'At the bottom of the coach dashboard: enter your surname and the system issues a code with a system-wide number and an invite link. Seats: Trial 2, Start 10, Pro 50. The same place lists everyone who joined with your code: you can end coaching or remove a client, and the seat is freed. Client logs refresh when you open the dashboard and with the "Refresh client data" button. For every 3 Premium payments by former clients you get a month of your plan free.',
     },
     {
       q: 'Where is my data stored?',
