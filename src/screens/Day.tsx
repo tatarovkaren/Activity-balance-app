@@ -19,6 +19,8 @@ import { planLine, planNotes, toneColor } from '../ui/targets';
 import { ProposalCards } from './Goal';
 import { useAdvanced } from '../ui/mode';
 import { CalendarIcon, DatePicker } from '../ui/DatePicker';
+import { backupDue } from '../core/backup';
+import { useBackupExport } from '../ui/backup';
 
 export function DayScreen({
   sel,
@@ -38,7 +40,7 @@ export function DayScreen({
   const D = tx.day;
   const { dm, int } = f;
   const kg = f.num;
-  const { data, setDay, clearDay, replaceDays, setKeep, removeMeal } = useStore();
+  const { data, session, setDay, clearDay, replaceDays, setKeep, removeMeal } = useStore();
   const [askMeal, setAskMeal] = useState(false);
   const { profile, days, keep } = data;
   const e = days[sel] || {};
@@ -49,6 +51,9 @@ export function DayScreen({
   const [confirmClear, setConfirmClear] = useState(false);
   const [reportMsg, setReportMsg] = useState('');
   const [calOpen, setCalOpen] = useState(false);
+  const saveBackup = useBackupExport();
+  // в облаке данные и так сохраняются на сервере — напоминание только без входа и в демо
+  const due = session.mode === 'cloud' ? null : backupDue(data.lastBackupAt, Object.keys(days), profile.backupReminder);
   const adv = useAdvanced();
   const today = todayISO();
   const set = (patch: Parameters<typeof setDay>[1]) => setDay(sel, patch);
@@ -161,6 +166,19 @@ export function DayScreen({
         </Row>
       </Row>
       <DatePicker visible={calOpen} value={sel} max={today} marked={hasEntry} onPick={setSel} onClose={() => setCalOpen(false)} />
+
+      {due ? (
+        <View testID="backupReminder">
+          <Card title={D.backup.title} accent={t.amber}>
+            <T size={13}>{due.never ? D.backup.never : D.backup.late(due.days)}</T>
+            <Gap h={8} />
+            <Row style={{ alignItems: 'center' }}>
+              <Btn small kind="solid" title={D.backup.save} onPress={() => saveBackup()} testID="backupSave" />
+              <T muted size={12} style={{ flexShrink: 1 }}>{D.backup.offHint}</T>
+            </Row>
+          </Card>
+        </View>
+      ) : null}
 
       <ProposalCards />
 

@@ -5,6 +5,7 @@ import { measureHint, navyBodyFat } from './body';
 import { adaptiveTDEE, goalForecast, wls } from './adaptive';
 import { applyFoodDays, applyWeights, parseBackup, parseFatSecret, parseWeightHistory } from './importers';
 import { mergeEntry } from './merge';
+import { backupDue } from './backup';
 import { buildDraft, handFromCard, handUnitMl, REFERENCE_HAND } from './photo/estimate';
 import { photoQuota } from './photo/provider';
 import { demoDays, demoProfile } from './demo';
@@ -239,5 +240,19 @@ describe('monthCells (календарь дневника)', () => {
   it('с воскресенья: 1 ноября 2026 в первой клетке; февраль високосного года', () => {
     expect(monthCells(2026, 10, 0)[0]).toBe('2026-11-01');
     expect(monthCells(2028, 1, 1).filter(Boolean).length).toBe(29);
+  });
+});
+
+describe('backupDue (напоминание о резервной копии)', () => {
+  const now = new Date(2026, 10, 19, 10);
+  it('копия 7 дней назад — пора, 6 дней — рано', () => {
+    expect(backupDue(new Date(2026, 10, 12, 23).getTime(), ['2026-11-01'], undefined, now)).toEqual({ days: 7, never: false });
+    expect(backupDue(new Date(2026, 10, 13, 8).getTime(), ['2026-11-01'], true, now)).toBeNull();
+  });
+  it('копии не было: считаем от первой записи; без записей и при выключенном — нет', () => {
+    expect(backupDue(undefined, ['2026-11-15', '2026-11-10'], undefined, now)).toEqual({ days: 9, never: true });
+    expect(backupDue(undefined, ['2026-11-15'], undefined, now)).toBeNull();
+    expect(backupDue(undefined, [], undefined, now)).toBeNull();
+    expect(backupDue(undefined, ['2026-01-01'], false, now)).toBeNull();
   });
 });

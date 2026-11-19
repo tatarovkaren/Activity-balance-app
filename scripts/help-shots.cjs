@@ -107,6 +107,11 @@ async function main() {
     await p.waitForSelector('[data-testid=tab-day]');
     await p.waitForTimeout(400);
 
+    // День: напоминание о копии в демо показывается сразу — сохраняем копию, чтобы оно не закрывало дневник
+    if (await p.locator('[data-testid=backupSave]').count()) {
+      await p.click('[data-testid=backupSave]');
+      await p.waitForTimeout(300);
+    }
     // День
     await shot('day', 0, (await card('kcal')).bottom);
     await shot('workout', (await card('workoutType')).top, (await card('openFact')).bottom);

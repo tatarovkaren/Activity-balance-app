@@ -112,6 +112,8 @@ export interface AppData {
   offer?: ReferralOffer;
   /** Код из ссылки-приглашения — подставляется в анкету и профиль. */
   invite?: string;
+  /** Когда последний раз сохраняли резервную копию (мс) — для напоминания на «Дне». */
+  lastBackupAt?: number;
 }
 
 const EMPTY: AppData = { profile: DEFAULT_PROFILE, days: {}, keep: {}, refs: [], photoUsage: [], consent: {} };
@@ -162,6 +164,8 @@ interface StoreApi {
   /** Куратор завершает ведение (ended) или отвязывает клиента (removed). */
   endReferral: (id: string, how: 'ended' | 'removed') => void;
   setConsent: (c: Consent) => void;
+  /** Резервная копия сохранена: запомнить время (напоминание пропадает). */
+  markBackup: () => void;
   /** Новый режим цели с сегодняшнего дня (правка в тот же день заменяет режим дня). */
   setGoal: (g: Omit<GoalSetting, 'start'>) => void;
   /** «Пересчитать сейчас»: планка считается заново по данным на сегодня. */
@@ -531,6 +535,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       });
     },
     setConsent: (c) => setData((cur) => ({ ...cur, consent: { ...cur.consent, ...c } })),
+    markBackup: () => setData((cur) => ({ ...cur, lastBackupAt: Date.now() })),
     setGoal: (g) => {
       const start = todayISO();
       setData((cur) => ({ ...cur, profile: { ...cur.profile, goals: withGoal(cur.profile.goals, { ...g, start }) } }));
