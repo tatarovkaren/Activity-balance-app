@@ -32,7 +32,8 @@
     "legal": "node scripts/build-legal.mjs",
     "help:shots": "node scripts/help-shots.cjs",
     "db:setup": "node scripts/build-db-setup.mjs",
-    "fn:bundle": "node scripts/build-functions.mjs"
+    "fn:bundle": "node scripts/build-functions.mjs",
+    "icons": "node scripts/build-icons.cjs"
   },
   "private": true
 }
