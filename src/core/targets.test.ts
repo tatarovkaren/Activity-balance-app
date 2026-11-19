@@ -108,12 +108,29 @@ describe('цели КБЖУ: правила', () => {
     expect(calc({ proteinPerLean: 2.2 }).protein).toBe(127);
     expect(validateSetting({ mode: 'deficit', proteinPerLean: 3.5 })?.code).toBe('proteinRange');
   });
-  it('углеводы < 50 г — предупреждение; жиры снижаются до 0,6 г/кг, если не хватает калорий', () => {
+  it('безопасный минимум: не ниже 1500 ккал (мужчины) / 1200 (женщины), углеводов не меньше 50 г', () => {
     const t = calc({}, { E: 1100 });
-    expect(t.warnings).toContain('carbsLow');
+    expect(t.kcal).toBe(1500);
+    expect(t.floor).toBe(1500);
+    expect(t.warnings).toContain('floored');
     expect(t.warnings).toContain('belowBmr');
-    expect(t.fat).toBeGreaterThanOrEqual(43);
-    expect(t.carbs).toBeGreaterThanOrEqual(0);
+    expect(t.carbs).toBeGreaterThanOrEqual(50);
+    expect(t.kgPerWeek).toBe(0); // расход ниже минимума — снижения по плану нет
+    const f = calc({}, { E: 900, sex: 'female' });
+    expect(f.kcal).toBe(1200);
+    expect(f.carbs).toBeGreaterThanOrEqual(50);
+    expect(f.fat).toBeGreaterThanOrEqual(43);
+  });
+  it('минимум поднимает планку, если белка и жиров много: углеводы ≥ 50 г', () => {
+    const t = calc({}, { E: 1700, weight: 120, bodyFatPct: undefined });
+    // белок 192, жиры не ниже 72 → минимум 192×4 + 72×9 + 200 = 1616 → 1620
+    expect(t.carbs).toBeGreaterThanOrEqual(50);
+    expect(t.kcal).toBeGreaterThanOrEqual(1620);
+  });
+  it('у мужчины 1500 при расходе 1895 — без подъёма, только «ниже обмена»', () => {
+    const t = calc({}, { E: 1895 });
+    expect(t.floor).toBeUndefined();
+    expect(t.warnings).not.toContain('floored');
   });
   it('низкая надёжность — «цель грубая»', () => {
     expect(calc({}, { reliability: 'low' }).warnings).toContain('rough');
@@ -210,5 +227,33 @@ describe('цели КБЖУ: история режимов и пересчёт �
   it('без режима — нет планки; без данных — «нужны данные»', () => {
     expect(dayPlan({ ...prof, goals: [] }, days, {}, '2026-11-17').kind).toBe('none');
     expect(dayPlan(prof, {}, {}, '2026-11-17').kind).toBe('noData');
+  });
+
+  it('только вес на сегодня (ошибка 19.11.2026: 950 ккал, углеводы 2 г) — стартовая оценка БМР × 1,4', () => {
+    const p: Profile = { ...prof, goals: [goal({ start: '2026-11-19', pacePct: 0.75 })] };
+    const r = dayPlan(p, { '2026-11-19': { weight: 71 } }, {}, '2026-11-19');
+    expect(r.kind).toBe('ok');
+    if (r.kind !== 'ok') return;
+    const t = r.targets;
+    // БМР 1537,5 × 1,4 ≈ 2153; −0,75 % от 71 кг ≈ −586 ккал/день
+    expect(Math.round(t.E)).toBe(2153);
+    expect(t.kcal).toBe(1570);
+    expect(t.protein).toBe(114);
+    expect(t.fat).toBe(57);
+    expect(t.carbs).toBeGreaterThan(130);
+    expect(t.warnings).toContain('start');
+    expect(t.warnings).not.toContain('rough');
+  });
+  it('дневник без шагов занижает расход — не ниже БМР × 1,2', () => {
+    const d: DayMap = {};
+    for (let i = 0; i < 10; i++) d[shiftDate('2026-11-05', i)] = { weight: 71, kcal: 900 };
+    const r = dayPlan({ ...prof, goals: [goal({ start: '2026-11-10' })] }, d, {}, '2026-11-14');
+    expect(r.kind).toBe('ok');
+    if (r.kind !== 'ok') return;
+    expect(r.targets.E).toBeGreaterThanOrEqual(mifflin('male', r.targets.weight, 170, 48) * 1.2 - 1);
+    expect(r.targets.kcal).toBeGreaterThanOrEqual(1500);
+  });
+  it('без роста — «заполните профиль»', () => {
+    expect(dayPlan({ ...prof, heightCm: 0 }, days, {}, '2026-11-17').kind).toBe('noData');
   });
 });

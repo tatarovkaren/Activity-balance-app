@@ -31,6 +31,14 @@ export const PROTEIN_NO_MEASURE = 1.6;
 export const FAT_PER_KG = 0.8;
 export const FAT_MIN_PER_KG = 0.6;
 export const CARBS_WARN = 50;
+/** Углеводов не меньше — при нехватке калорий планка поднимается, а не урезает углеводы до нуля. */
+export const CARBS_MIN = 50;
+/** Безопасный минимум калорий: ниже планка не опускается при любом темпе. */
+export const KCAL_FLOOR: Record<Sex, number> = { male: 1500, female: 1200 };
+/** Стартовый расход без дневника: основной обмен × 1,4 (малоподвижный + бытовая активность). */
+export const START_PAL = 1.4;
+/** Расход ниже основного обмена × 1,2 не бывает у живого человека — значит, дневник неполный. */
+export const MIN_PAL = 1.2;
 
 /** Режим с датой начала. История режимов — массив, отсортированный по start. */
 export interface GoalSetting {
@@ -142,7 +150,7 @@ export function resolvePace(
   return err ? { pct, error: err } : { pct };
 }
 
-export type TargetWarning = 'belowBmr' | 'paceHigh' | 'carbsLow' | 'rough';
+export type TargetWarning = 'floored' | 'belowBmr' | 'paceHigh' | 'carbsLow' | 'rough' | 'start';
 
 export interface TargetInput {
   setting: GoalSetting;
@@ -160,6 +168,8 @@ export interface TargetInput {
   reliability?: Reliability;
   /** Дата, на которую считается планка (для темпа от даты цели). */
   asOf: ISODate;
+  /** Расход — стартовая оценка по формуле (дневника с калориями ещё нет). */
+  eStart?: boolean;
 }
 
 export interface Targets {
@@ -179,10 +189,13 @@ export interface Targets {
   E: number;
   weight: number;
   weightSource: 'trend' | 'last';
+  /** Планка поднята до безопасного минимума (калорий или углеводов): значение минимума. */
+  floor?: number;
   warnings: TargetWarning[];
 }
 
 const round10 = (x: number) => Math.round(x / 10) * 10;
+const round10Up = (x: number) => Math.ceil(x / 10) * 10;
 
 /** Планка дня по заданному расходу и весу. Числа — как в проверке ТЗ (E 2268, 71,8 кг, жир 19,5 %). */
 export function computeTargets(i: TargetInput): Targets | { error: SettingError } {
@@ -190,26 +203,41 @@ export function computeTargets(i: TargetInput): Targets | { error: SettingError 
   const pace = resolvePace(g, i.weight, i.goalWeightKg, i.asOf);
   if (pace.error) return { error: pace.error };
   const sign = g.mode === 'deficit' ? -1 : g.mode === 'surplus' ? 1 : 0;
-  const kgPerWeek = (sign * pace.pct * i.weight) / 100;
-  const kcal = round10(i.E + (kgPerWeek * KCAL_PER_KG) / 7);
+  let kgPerWeek = (sign * pace.pct * i.weight) / 100;
+  let kcal = round10(i.E + (kgPerWeek * KCAL_PER_KG) / 7);
 
   const coef = g.proteinPerLean ?? PROTEIN_DEFAULT[g.mode];
   const lean = i.bodyFatPct != null && i.bodyFatPct > 0 ? i.weight * (1 - i.bodyFatPct / 100) : undefined;
   const protein = Math.round(lean != null ? coef * lean : PROTEIN_NO_MEASURE * i.weight);
+  const fatMin = Math.round(FAT_MIN_PER_KG * i.weight);
+
+  // Безопасный минимум: не ниже 1500 ккал у мужчин / 1200 у женщин и не меньше,
+  // чем нужно на белок, жиры по минимуму (0,6 г/кг) и 50 г углеводов. Лучше медленнее, чем голодовка.
+  const floor = Math.max(KCAL_FLOOR[i.sex], round10Up(protein * 4 + fatMin * 9 + CARBS_MIN * 4));
+  let floored: number | undefined;
+  if (kcal < floor) {
+    floored = floor;
+    kcal = floor;
+    // фактический темп при поднятой планке; в дефиците — не «в плюс»
+    if (g.mode === 'deficit') kgPerWeek = Math.min(0, ((kcal - i.E) * 7) / KCAL_PER_KG);
+  }
+
   let fat = Math.round(FAT_PER_KG * i.weight);
   let carbs = Math.round((kcal - protein * 4 - fat * 9) / 4);
-  if (carbs < 0) {
-    // калорий не хватает и на белок с жирами — жиры снижаются, но не ниже 0,6 г/кг
-    fat = Math.max(Math.round(FAT_MIN_PER_KG * i.weight), Math.floor((kcal - protein * 4) / 9));
+  if (carbs < CARBS_MIN) {
+    // калорий мало — жиры снижаются (не ниже 0,6 г/кг), чтобы углеводов осталось хотя бы 50 г
+    fat = Math.max(fatMin, Math.floor((kcal - protein * 4 - CARBS_MIN * 4) / 9));
     carbs = Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4));
   }
 
   const bmr = mifflin(i.sex, i.weight, i.heightCm, i.age);
   const warnings: TargetWarning[] = [];
+  if (floored != null) warnings.push('floored');
   if (kcal < bmr) warnings.push('belowBmr');
   if (g.mode === 'deficit' && pace.pct > 1 + 1e-9) warnings.push('paceHigh');
   if (carbs < CARBS_WARN) warnings.push('carbsLow');
-  if (i.reliability === 'low') warnings.push('rough');
+  if (i.eStart) warnings.push('start');
+  else if (i.reliability === 'low') warnings.push('rough');
 
   return {
     mode: g.mode,
@@ -227,6 +255,7 @@ export function computeTargets(i: TargetInput): Targets | { error: SettingError 
     E: i.E,
     weight: i.weight,
     weightSource: i.weightSource,
+    floor: floored,
     warnings,
   };
 }
@@ -262,14 +291,20 @@ export function dayPlan(profile: Profile, days: DayMap, keep: KeepMap, sel: ISOD
       .pop();
     weight = last ? days[last].weight : undefined;
   }
-  let E = r?.E ?? r?.formula ?? null;
-  if (E == null && weight) {
-    // ни одного дня с калориями — расход по формуле для дня без еды и тренировки
-    const m = makeDayModel(ctx)(days[base] || {}, base, weight);
-    E = m ? m.total : null;
-  }
   const age = ageAt(profile.birthDate, anchor);
-  if (!weight || E == null || age == null) return { kind: 'noData', setting: g, anchor };
+  if (!weight || age == null || !(profile.heightCm > 0)) return { kind: 'noData', setting: g, anchor };
+  const bmr = mifflin(profile.sex, weight, profile.heightCm, age);
+
+  let E = r?.E ?? r?.formula ?? null;
+  const eStart = E == null;
+  if (E == null) {
+    // ни одного дня с калориями: стартовая оценка. Модель дня без еды даёт почти голый БМР
+    // (нет переваривания, шагов и тренировки), поэтому берём БМР × 1,4 или модель дня, если она больше.
+    const m = makeDayModel(ctx)(days[base] || {}, base, weight);
+    E = Math.max(bmr * START_PAL, m ? m.total / 0.9 : 0);
+  }
+  // неполный дневник (нет шагов, недописанная еда) занижает расход — не ниже БМР × 1,2
+  E = Math.max(E, bmr * MIN_PAL);
 
   const res = computeTargets({
     setting: g,
@@ -283,6 +318,7 @@ export function dayPlan(profile: Profile, days: DayMap, keep: KeepMap, sel: ISOD
     goalWeightKg: profile.goalWeightKg,
     reliability: r ? r.reliability : 'low',
     asOf: anchor,
+    eStart,
   });
   if ('error' in res) return { kind: 'error', setting: g, anchor, error: res.error };
   return { kind: 'ok', setting: g, anchor, targets: res, adaptive: r };
