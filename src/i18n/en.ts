@@ -71,6 +71,7 @@ export const en: Dict = {
   meals: { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snack' },
   tabs: { day: 'Day', fact: 'Burn', charts: 'Charts', photo: 'Photo', profile: 'Profile' },
 
+  update: { text: 'A new version of the app is available', btn: 'Update' },
   sync: {
     local: 'Data is stored on this device',
     demo: 'Demo mode: made-up data in this browser',
@@ -627,8 +628,8 @@ export const en: Dict = {
     customLabel: (min, max) => `Custom pace, ${min}–${max}%`,
     dateLabel: 'Target date',
     dateNote: (goal) => `Pace = (trend weight − ${goal} kg) / weeks to the date / weight`,
-    protein: 'Protein, g per kg of lean mass',
-    proteinWeight: 'Protein, g per kg of body weight (no body fat measurement yet)',
+    protein: 'Protein, g per kg of lean mass (1.6–3.0)',
+    proteinWeight: 'Protein, g per kg of body weight, no body fat measurement yet (1.6–3.0)',
     proteinPh: (def) => `${def} by default`,
     kcalManual: 'Custom calorie target, kcal a day',
     kcalManualPh: 'empty: calculated',

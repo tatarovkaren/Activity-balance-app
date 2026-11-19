@@ -78,6 +78,7 @@ export const ru = {
   meals: { breakfast: 'Завтрак', lunch: 'Обед', dinner: 'Ужин', snack: 'Перекус' } as Record<'breakfast' | 'lunch' | 'dinner' | 'snack', string>,
   tabs: { day: 'День', fact: 'Расход', charts: 'Графики', photo: 'Фото', profile: 'Профиль' },
 
+  update: { text: 'Вышла новая версия приложения', btn: 'Обновить' },
   sync: {
     local: 'Данные хранятся на этом устройстве',
     demo: 'Демо-режим: вымышленные данные в этом браузере',
@@ -643,8 +644,8 @@ export const ru = {
     customLabel: (min: string, max: string) => `Свой темп, ${min}–${max} %`,
     dateLabel: 'Дата цели',
     dateNote: (goal: string) => `Темп = (вес по тренду − ${goal} кг) / недель до даты / вес`,
-    protein: 'Белок, г на кг сухой массы',
-    proteinWeight: 'Белок, г на кг веса (пока нет замера % жира)',
+    protein: 'Белок, г на кг сухой массы (1,6–3,0)',
+    proteinWeight: 'Белок, г на кг веса, пока нет замера % жира (1,6–3,0)',
     proteinPh: (def: string) => `${def} по умолчанию`,
     kcalManual: 'Своя планка, ккал в день',
     kcalManualPh: 'пусто — по расчёту',

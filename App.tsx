@@ -17,6 +17,7 @@ import { CuratorScreen } from './src/screens/Curator';
 import { LegalView, useLegalRoute } from './src/screens/Legal';
 import { HelpScreen } from './src/screens/Help';
 import { OnboardingScreen } from './src/screens/Onboarding';
+import { reloadApp, useUpdateAvailable } from './src/ui/update';
 
 type Tab = 'day' | 'fact' | 'charts' | 'photo' | 'profile' | 'hand' | 'help';
 
@@ -37,6 +38,7 @@ function Shell() {
   const [photoMeal, setPhotoMeal] = useState<MealSlot | undefined>();
   const [legal, closeLegal] = useLegalRoute();
   const scroll = useRef<ScrollViewInstance>(null);
+  const update = useUpdateAvailable();
   // новый экран открывается сверху (иначе «Помощь» из профиля откроется посередине)
   useEffect(() => {
     scroll.current?.scrollTo({ y: 0, animated: false });
@@ -66,6 +68,18 @@ function Shell() {
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <StatusBar style={t.dark ? 'light' : 'dark'} />
+      {update ? (
+        <Pressable
+          onPress={reloadApp}
+          testID="updateBanner"
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 16, backgroundColor: t.blue }}
+        >
+          <T size={14} color="#fff">{tx.update.text}</T>
+          <View style={{ backgroundColor: '#fff', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 12 }}>
+            <T size={14} bold color={t.blue}>{tx.update.btn}</T>
+          </View>
+        </Pressable>
+      ) : null}
       <ScrollView ref={scroll} contentContainerStyle={{ padding: 16, paddingBottom: 112, width: '100%', maxWidth: maxW, alignSelf: 'center' }} keyboardShouldPersistTaps="handled">
         {legal ? (
           <LegalView doc={legal} onClose={closeLegal} />

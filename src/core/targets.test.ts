@@ -265,8 +265,9 @@ describe('цели КБЖУ: история режимов и пересчёт �
     // коэффициент на сухую массу без замера не используется, на кг веса при замере — тоже
     expect(calc({ proteinPerLean: 2.5 }, { bodyFatPct: undefined }).protein).toBe(129);
     expect(calc({ proteinPerKg: 2.2 }).protein).toBe(116);
-    expect(validateSetting({ mode: 'deficit', proteinPerKg: 1 })?.code).toBe('proteinWeightRange'); // минимум 1,8
-    expect(validateSetting({ mode: 'deficit', proteinPerKg: 1.8 })).toBeNull();
+    expect(validateSetting({ mode: 'deficit', proteinPerKg: 1.5 })?.code).toBe('proteinWeightRange'); // минимум 1,6
+    expect(validateSetting({ mode: 'deficit', proteinPerKg: 1.6 })).toBeNull();
+    expect(calc({ proteinPerKg: 1.6 }, { bodyFatPct: undefined }).protein).toBe(115);
   });
   it('своя планка ккал: БЖУ от неё, темп и дата цели пересчитаны', () => {
     const t = calc({ kcalManual: 1700, pacePct: 0.25 });
