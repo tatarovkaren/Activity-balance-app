@@ -26,8 +26,8 @@ export const DATE_PACE_MAX: Record<'deficit' | 'surplus', number> = { deficit: 1
 /** Белок, г на кг сухой массы. */
 export const PROTEIN_DEFAULT: Record<GoalMode, number> = { deficit: 2.0, maintain: 1.8, surplus: 1.8 };
 export const PROTEIN_LIMITS: [number, number] = [1.6, 3.0];
-/** Без замеров — г на кг общего веса (по умолчанию 1,8; свой коэффициент 1,6–3,0, как и на сухую массу — решение Карена 19.11.2026). */
-export const PROTEIN_NO_MEASURE = 1.8;
+/** Без замеров — г на кг общего веса (по умолчанию 1,6; свой коэффициент 1,6–3,0, как и на сухую массу — решение Карена 19.11.2026). */
+export const PROTEIN_NO_MEASURE = 1.6;
 export const PROTEIN_WEIGHT_LIMITS: [number, number] = [1.6, 3.0];
 /** Своя планка калорий, ккал/день: в этих пределах (ниже всё равно действует безопасный минимум). */
 export const KCAL_MANUAL_LIMITS: [number, number] = [1000, 5000];
