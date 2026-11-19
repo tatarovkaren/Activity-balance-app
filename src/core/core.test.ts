@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addMonthsClamped, ageAt, shiftDate, toLocalISO } from './dates';
+import { addMonthsClamped, ageAt, monthCells, shiftDate, toLocalISO } from './dates';
 import { energyModel, PaceIndex } from './energy';
 import { measureHint, navyBodyFat } from './body';
 import { adaptiveTDEE, goalForecast, wls } from './adaptive';
@@ -225,5 +225,19 @@ describe('режим интерфейса', () => {
   it('новый клиент — базовый, демо — продвинутый', () => {
     expect(DEFAULT_PROFILE.uiMode).toBe('basic');
     expect(demoProfile().uiMode).toBe('advanced');
+  });
+});
+
+describe('monthCells (календарь дневника)', () => {
+  it('ноябрь 2026 с понедельника: 1-е — воскресенье, 6 пустых клеток', () => {
+    const c = monthCells(2026, 10, 1);
+    expect(c.slice(0, 7)).toEqual([null, null, null, null, null, null, '2026-11-01']);
+    expect(c.filter(Boolean).length).toBe(30);
+    expect(c.length % 7).toBe(0);
+    expect(c.filter(Boolean).at(-1)).toBe('2026-11-30');
+  });
+  it('с воскресенья: 1 ноября 2026 в первой клетке; февраль високосного года', () => {
+    expect(monthCells(2026, 10, 0)[0]).toBe('2026-11-01');
+    expect(monthCells(2028, 1, 1).filter(Boolean).length).toBe(29);
   });
 });

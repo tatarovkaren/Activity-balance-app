@@ -58,4 +58,15 @@ export function dateRange(from: ISODate, to: ISODate): ISODate[] {
   return out;
 }
 
+/** Ячейки месяца: null — пустые клетки до первого числа. weekStart: 1 — с понедельника, 0 — с воскресенья. */
+export function monthCells(year: number, month0: number, weekStart: 0 | 1): (ISODate | null)[] {
+  const first = new Date(year, month0, 1, 12);
+  const lead = (first.getDay() - weekStart + 7) % 7;
+  const n = new Date(year, month0 + 1, 0, 12).getDate();
+  const out: (ISODate | null)[] = Array(lead).fill(null);
+  for (let d = 1; d <= n; d++) out.push(toLocalISO(new Date(year, month0, d, 12)));
+  while (out.length % 7) out.push(null);
+  return out;
+}
+
 // Форматирование дат для интерфейса (по языку) — в src/i18n/format.ts.

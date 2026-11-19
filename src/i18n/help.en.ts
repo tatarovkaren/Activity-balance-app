@@ -71,7 +71,7 @@ export const helpEn: typeof helpRu = {
       id: 'day',
       title: 'Daily log: weight, steps, food',
       text: [
-        'The ‹ › arrows at the top switch days. You can fill in past days too.',
+        'The ‹ › arrows at the top switch days, and the calendar button lets you jump to any date (days with entries are marked with a dot). You can fill in past days too.',
         '**Morning weight**: fasted, after the toilet. Below it you see the change since yesterday and the weekly average.',
         '**Steps**: from your phone or tracker, for the whole day.',
         '**Food**: enter calories and macros by hand, tap "Import FatSecret", or tap "📷 Snap a meal" and pick the meal. If calories are empty, they are calculated from macros.',
