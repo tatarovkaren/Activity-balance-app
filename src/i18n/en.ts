@@ -531,6 +531,8 @@ export const en: Dict = {
     weightsDone: (added, kept) => `Weight history: ${pl(added, 'day')} added${kept ? `, ${kept} already present (left untouched)` : ''}`,
     backupDone: (n) => `Backup: ${pl(n, 'day')}.`,
     backupImported: (n) => `Imported: ${pl(n, 'day')}. Nothing overwritten.`,
+    reportImported: (n, added, filled, from, to) =>
+      `“Daily report”: ${pl(n, 'day')} (${from}–${to}), ${added} new, ${filled} completed. Data already in the app was kept.`,
     backupFile: 'activity-balance-backup',
     backupReminder: 'Backup reminder',
     backupReminderOn: 'Weekly',

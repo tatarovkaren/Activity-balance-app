@@ -544,6 +544,8 @@ export const ru = {
     weightsDone: (added: number, kept: number) => `История веса: добавлено ${added} дн.${kept ? `, уже было ${kept} (не тронуты)` : ''}`,
     backupDone: (n: number) => `Резервная копия: ${n} дн.`,
     backupImported: (n: number) => `Импортировано: ${n} дн. Ничего не затёрто.`,
+    reportImported: (n: number, added: number, filled: number, from: string, to: string) =>
+      `«Ежедневный отчёт»: ${n} дн. (${from}–${to}), новых ${added}, дополнено ${filled}. Уже заполненное в приложении не тронуто.`,
     backupFile: 'activity-balance-backup',
     backupReminder: 'Напоминать о резервной копии',
     backupReminderOn: 'Раз в неделю',

@@ -187,6 +187,8 @@ interface StoreApi {
   setRole: (r: Role) => void;
   logout: () => Promise<void>;
   importBackup: (incoming: Partial<AppData>) => void;
+  /** Перенос из прототипа «Ежедневный отчёт»: дни уже слиты (core/import-report.ts), плюс отметки и цели. */
+  importReport: (r: { days: DayMap; keep: KeepMap; profile: Partial<Profile> }) => void;
 }
 
 const Ctx = createContext<StoreApi | null>(null);
@@ -659,6 +661,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           photoEdits: [...(cur.photoEdits || []), ...(inc.photoEdits || []).filter((e) => !(cur.photoEdits || []).some((x) => x.at === e.at && x.name === e.name))].slice(-300),
         };
       });
+      touchProfile();
+    },
+    importReport: (r) => {
+      const changed = Object.keys(r.days).filter((d) => r.days[d] !== dataRef.current.days[d]);
+      setData((cur) => ({ ...cur, days: r.days, keep: r.keep, profile: { ...cur.profile, ...r.profile } }));
+      touchDays(changed);
       touchProfile();
     },
   };

@@ -9,7 +9,8 @@ import {
   parseBackup,
   parseWeightHistory,
 } from '../core/importers';
-import { UI_MODES, type MeasureFreq, type Profile, type Sex, type ThemePref, type UiMode } from '../core/types';
+import { applyReport, isReportBackup, parseReportBackup } from '../core/import-report';
+import { DEFAULT_PROFILE, UI_MODES, type MeasureFreq, type Profile, type Sex, type ThemePref, type UiMode } from '../core/types';
 import { useStore } from '../data/store';
 import { cloudConfigured } from '../data/cloud';
 import { Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, TextField, DateField, Fields } from '../ui/kit';
@@ -34,7 +35,7 @@ export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; op
   const P = tx.profile;
   const kg = f.num;
   const st = useStore();
-  const { data, session, setProfile, replaceDays, importBackup, setCurator, unlinkCurator, logout, setRole, setConsent } = st;
+  const { data, session, setProfile, replaceDays, importBackup, importReport, setCurator, unlinkCurator, logout, setRole, setConsent } = st;
   const p = data.profile;
   const [birth, setBirth] = useState(f.dateInput(p.birthDate));
   // смена языка — показать дату рождения в формате нового языка
@@ -65,6 +66,18 @@ export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; op
   const importAll = async () => {
     const f = await pickTextFile(['application/json', '*/*']);
     if (!f) return;
+    // резервная копия прототипа «Ежедневный отчёт» — перенос истории без затирания
+    let report = false;
+    try {
+      report = isReportBackup(JSON.parse(f.text));
+    } catch {}
+    if (report) {
+      const rr = parseReportBackup(f.text);
+      if (!rr.ok) return setMsg({ text: errorText(L, rr.error), ok: false });
+      const a = applyReport(data.days, data.keep, p, rr.report, DEFAULT_PROFILE.stepGoal);
+      importReport(a);
+      return setMsg({ text: P.reportImported(a.total, a.added, a.filled, a.from ? L.f.dmy(a.from) : '', a.to ? L.f.dmy(a.to) : ''), ok: true });
+    }
     const r = parseBackup(f.text, session.userId);
     if (!r.ok) return setMsg({ text: errorText(L, r.error), ok: false });
     importBackup(r.backup.data as never);
@@ -152,7 +165,7 @@ export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; op
         <Gap h={6} />
         <Row>
           <Btn small title={P.export} onPress={exportAll} />
-          <Btn small title={P.importBackup} onPress={importAll} />
+          <Btn small title={P.importBackup} onPress={importAll} testID="importBackup" />
         </Row>
         <Gap h={10} />
         <T size={13}>{P.backupReminder}</T>
