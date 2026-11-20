@@ -5,6 +5,8 @@
 //     взвеситься утром, дневник не заполнен, новый комментарий куратора, резервная копия;
 //   • отдаёт приложению открытый ключ VAPID (ключи создаются сами и хранятся в базе);
 //   • выдаёт ссылку привязки Telegram и отвечает боту (вебхук тоже ставится сам);
+//   • бот принимает быстрый ввод: вес числом, шаги и самочувствие кнопками — и пишет их в дневник;
+//   • по понедельникам присылает в Telegram сводку за прошлую неделю (по кнопке «📊 Неделя» — за 7 дней);
 //   • присылает тестовое уведомление по кнопке в Профиле.
 //
 // Настройка (docs/notifications.md): развернуть функцию с выключенной проверкой JWT
@@ -28,6 +30,19 @@ import {
   type Prefs,
 } from './logic.ts';
 import { generateVapidKeys, sendWebPush, type VapidKeys } from './webpush.ts';
+import {
+  applyQuick,
+  callbackDateOk,
+  parseCallback,
+  parseQuick,
+  QUICK_REPLIES,
+  replyKeyboard,
+  weekSummary,
+  weekSummaryText,
+  wellbeingKeyboard,
+  type BotField,
+} from './bot.ts';
+import { PARAMS, shiftDate, type DayMap, type ISODate } from './core.gen.ts';
 
 declare const Deno: { env: { get(k: string): string | undefined }; serve(h: (r: Request) => Promise<Response>): void };
 
@@ -91,8 +106,10 @@ async function ensureTelegram() {
   const me = await tg('getMe');
   if (me.ok) botName = me.result.username;
   const info = await tg('getWebhookInfo');
-  if (!info.ok || info.result?.url !== FN_URL) {
-    const r = await tg('setWebhook', { url: FN_URL, secret_token: await webhookSecret(BOT), allowed_updates: ['message'] });
+  const updates = ['message', 'callback_query'];
+  const have: string[] = info.result?.allowed_updates || ['message'];
+  if (!info.ok || info.result?.url !== FN_URL || updates.some((u) => !have.includes(u))) {
+    const r = await tg('setWebhook', { url: FN_URL, secret_token: await webhookSecret(BOT), allowed_updates: updates });
     if (!r.ok) return console.warn('setWebhook failed', r.status);
   }
   hookDone = !!botName;
@@ -163,7 +180,12 @@ async function tick() {
     const { data } = await admin.from('day_entries').select('user_id, date, data').in('user_id', users).in('date', dates);
     for (const r of data || []) if (r.date === localDate.get(r.user_id)) days.set(r.user_id, r.data);
   }
-  const due = users.flatMap((u) => dueReminders(prefs.get(u)!, now, days.get(u)).map((d) => ({ user_id: u, ...d })));
+  // сводка за неделю — только в Telegram (длинная и с цифрами дневника, пушу не подходит)
+  const due = users.flatMap((u) =>
+    dueReminders(prefs.get(u)!, now, days.get(u))
+      .filter((d) => d.kind !== 'weekly' || (BOT && ch.get(u)!.chat))
+      .map((d) => ({ user_id: u, ...d })),
+  );
   let sent = 0;
   if (due.length) {
     // журнал: ушедшее не уходит ещё раз, даже если функцию вызвали дважды
@@ -175,7 +197,11 @@ async function tick() {
     for (const d of due) {
       if (!ok.has(d.user_id + '|' + d.ref)) continue;
       const p = prefs.get(d.user_id)!;
-      await deliver(d.user_id, ch.get(d.user_id)!, message(d.kind, p), p.lang);
+      if (d.kind === 'weekly') {
+        // прошлая неделя: пн–вс, воскресенье — вчера по местному времени
+        const to = shiftDate(localDate.get(d.user_id)!, -1);
+        await sendSummary(d.user_id, ch.get(d.user_id)!.chat!, p, to, 'weekly').catch((e) => console.warn('weekly', e));
+      } else await deliver(d.user_id, ch.get(d.user_id)!, message(d.kind, p), p.lang);
       sent++;
     }
   }
@@ -212,29 +238,100 @@ async function tick() {
   return { users: users.length, sent };
 }
 
+// ---- Telegram: сводка и запись в дневник ----
+
+async function sendSummary(userId: string, chatId: number, p: Prefs, to: ISODate, title: 'weekly' | 'last7') {
+  const since = shiftDate(to, -PARAMS.MAX_DAYS);
+  const [prof, rows] = await Promise.all([
+    admin.from('profiles').select('data, anomaly_keep').eq('id', userId).maybeSingle(),
+    admin.from('day_entries').select('date, data').eq('user_id', userId).gte('date', since).lte('date', to),
+  ]);
+  const days: DayMap = {};
+  for (const r of rows.data || []) days[r.date as string] = r.data;
+  const text = weekSummaryText(weekSummary(prof.data?.data, days, prof.data?.anomaly_keep, to), p.lang, title);
+  return tg('sendMessage', telegramPayload(chatId, message('weekly', p), p.lang, text));
+}
+
+/** Записать поле дня. Остальные поля дня остаются как были (пустое не затирает заполненное). */
+async function saveField(userId: string, date: ISODate, field: BotField, value: number) {
+  const { data: row, error } = await admin.from('day_entries').select('data').eq('user_id', userId).eq('date', date).maybeSingle();
+  if (error) throw error;
+  const r = applyQuick(row?.data || undefined, field, value, Date.now());
+  const up = await admin.from('day_entries').upsert({ user_id: userId, date, data: r.entry, updated_at: new Date().toISOString() }, { onConflict: 'user_id,date' });
+  if (up.error) throw up.error;
+  return r.prev;
+}
+
+async function linkedUser(chatId: number): Promise<{ userId: string; p: Prefs } | null> {
+  const { data } = await admin.from('telegram_links').select('user_id').eq('chat_id', chatId).maybeSingle();
+  if (!data?.user_id) return null;
+  return { userId: data.user_id, p: (await profiles([data.user_id])).get(data.user_id)! };
+}
+
 // ---- Telegram: входящие сообщения ----
 
 async function onTelegram(update: any) {
+  if (update?.callback_query) return onButton(update.callback_query);
   const msg = update?.message;
   if (!msg?.chat?.id || msg.chat.type !== 'private') return;
   const chatId = Number(msg.chat.id);
   let lang = tgLang(msg.from?.language_code);
-  const reply = (text: string) => tg('sendMessage', { chat_id: chatId, text });
+  const reply = (text: string, extra: Record<string, unknown> = {}) => tg('sendMessage', { chat_id: chatId, text, ...extra });
   const c = parseCommand(msg.text);
-  if (c.cmd === 'start') {
-    if (!c.code) return reply(BOT_REPLIES[lang].noCode);
+  if (c.cmd === 'start' && c.code) {
     const { data: row } = await admin.from('telegram_link_codes').select('user_id, expires_at').eq('code', c.code).maybeSingle();
     if (!row || new Date(row.expires_at) < new Date()) return reply(BOT_REPLIES[lang].badCode);
     await admin.from('telegram_links').upsert({ user_id: row.user_id, chat_id: chatId, username: msg.from?.username || null, linked_at: new Date().toISOString() });
     await admin.from('telegram_link_codes').delete().eq('user_id', row.user_id);
     lang = (await profiles([row.user_id])).get(row.user_id)!.lang;
-    return reply(BOT_REPLIES[lang].linked);
+    return reply(BOT_REPLIES[lang].linked + '\n\n' + QUICK_REPLIES[lang].linkedHint, { reply_markup: replyKeyboard(lang) });
   }
   if (c.cmd === 'stop') {
     await admin.from('telegram_links').delete().eq('chat_id', chatId);
-    return reply(BOT_REPLIES[lang].stopped);
+    return reply(BOT_REPLIES[lang].stopped, { reply_markup: { remove_keyboard: true } });
   }
-  return reply(BOT_REPLIES[lang].help);
+
+  const me = await linkedUser(chatId);
+  if (!me) return reply(c.cmd === 'start' ? BOT_REPLIES[lang].noCode : BOT_REPLIES[lang].help);
+  const { userId, p } = me;
+  lang = p.lang;
+  const R = QUICK_REPLIES[lang];
+  const kb = { reply_markup: replyKeyboard(lang) };
+  const today = localParts(new Date(), p.tz).date;
+
+  const q = c.cmd === 'start' ? null : parseQuick(msg.text, msg.reply_to_message?.from?.is_bot ? msg.reply_to_message?.text : undefined);
+  if (!q) return reply(R.help, kb);
+  switch (q.kind) {
+    case 'set': {
+      const date = q.day === 'today' ? today : shiftDate(today, -1);
+      const prev = await saveField(userId, date, q.field, q.value);
+      return reply(R.saved(q.field, q.value, date, q.day === 'today', prev), kb);
+    }
+    case 'askSteps':
+      return reply(R.askSteps, { reply_markup: { force_reply: true, input_field_placeholder: '9500' } });
+    case 'askWellbeing':
+      return reply(R.askWellbeing(today), { reply_markup: wellbeingKeyboard(today) });
+    case 'week':
+      return sendSummary(userId, chatId, p, today, 'last7');
+    case 'bad':
+      return reply(R[q.reason], kb);
+  }
+}
+
+/** Нажатие кнопки самочувствия 1–10. */
+async function onButton(cb: any) {
+  const chatId = Number(cb?.message?.chat?.id);
+  const done = (text?: string) => tg('answerCallbackQuery', { callback_query_id: cb.id, ...(text ? { text } : {}) });
+  const me = chatId ? await linkedUser(chatId) : null;
+  const b = parseCallback(cb?.data);
+  if (!me || !b) return done();
+  const R = QUICK_REPLIES[me.p.lang];
+  const today = localParts(new Date(), me.p.tz).date;
+  if (!callbackDateOk(b.date, today)) return done(R.old);
+  const prev = await saveField(me.userId, b.date, b.field, b.value);
+  const text = R.saved(b.field, b.value, b.date, b.date === today, prev);
+  await tg('editMessageText', { chat_id: chatId, message_id: cb.message.message_id, text });
+  return done();
 }
 
 // ---- вход пользователя ----

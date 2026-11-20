@@ -2,14 +2,17 @@
 // тексты сообщений, разбор команд Telegram. Проверяется тестами src/core/notify.test.ts.
 // Настройки пишет приложение в profiles.data.notify (тип NotifyPrefs в src/core/notify.ts — те же поля).
 
-export type Lang = 'ru' | 'en';
-export type Kind = 'weigh' | 'diary' | 'comment' | 'backup' | 'test';
+import type { Lang } from './core.gen.ts';
+
+export type Kind = 'weigh' | 'diary' | 'comment' | 'backup' | 'weekly' | 'test';
 
 export interface Prefs {
   weigh: { on: boolean; time: string };
   diary: { on: boolean; time: string };
   comment: { on: boolean };
   backup: { on: boolean };
+  /** Сводка за неделю в Telegram по понедельникам. */
+  weekly: { on: boolean };
   tz: string;
   lang: Lang;
   /** Адрес приложения (https) — для кнопки «Открыть» в Telegram и перехода из пуша. */
@@ -48,6 +51,7 @@ export function normPrefs(raw: unknown, profileLang?: unknown): Prefs {
     diary: { on: on(r.diary, true), time: time(r.diary, '21:00') },
     comment: { on: on(r.comment, true) },
     backup: { on: on(r.backup, true) },
+    weekly: { on: on(r.weekly, true) },
     tz: validTz(r.tz) ? r.tz : DEFAULT_TZ,
     lang,
     appUrl,
@@ -83,6 +87,8 @@ export function weekKey(date: string, weekday: number): string {
 export const WINDOW_MIN = 180;
 /** Напоминание о копии — в полдень, раз в неделю, если копии не было 7 дней. */
 export const BACKUP_TIME = 12 * 60;
+/** Сводка за прошлую неделю (пн–вс) — в понедельник в 10:00 по местному времени, только в Telegram. */
+export const WEEKLY_TIME = 10 * 60;
 
 export interface DayFacts {
   weight?: unknown;
@@ -112,6 +118,8 @@ export function dueReminders(p: Prefs, now: Date, today: DayFacts | undefined): 
   const stale = !p.backupAt || now.getTime() - p.backupAt >= 7 * 86400_000;
   if (p.backup.on && stale && l.minutes >= BACKUP_TIME && l.minutes < BACKUP_TIME + WINDOW_MIN)
     out.push({ kind: 'backup', ref: 'backup:' + weekKey(l.date, l.weekday) });
+  if (p.weekly.on && l.weekday === 1 && l.minutes >= WEEKLY_TIME && l.minutes < WEEKLY_TIME + WINDOW_MIN)
+    out.push({ kind: 'weekly', ref: 'weekly:' + l.date });
   return out;
 }
 
@@ -128,6 +136,8 @@ const TEXTS: Record<Lang, Record<Kind, (x: { curator?: string; date?: string }) 
     diary: () => ({ title: 'Дневник за сегодня пустой', body: 'Добавьте калории и БЖУ, пока помните, что ели.' }),
     comment: (x) => ({ title: 'Комментарий куратора', body: `${x.curator || 'Куратор'}: новый комментарий к дню ${x.date ? dm(x.date, 'ru') : ''}. Откройте приложение, чтобы прочитать.` }),
     backup: () => ({ title: 'Сохраните резервную копию', body: 'Копии не было больше 7 дней. Профиль → «Экспорт данных».' }),
+    // текст сводки собирает weekSummaryText (bot.ts); здесь — заголовок на случай, если сводку не посчитать
+    weekly: () => ({ title: 'Сводка за неделю', body: 'Откройте приложение, чтобы посмотреть итоги недели.' }),
     test: () => ({ title: 'Проверка уведомлений', body: 'Если вы видите это сообщение, уведомления работают.' }),
   },
   en: {
@@ -135,6 +145,7 @@ const TEXTS: Record<Lang, Record<Kind, (x: { curator?: string; date?: string }) 
     diary: () => ({ title: "Today's diary is empty", body: 'Add calories and macros while you still remember what you ate.' }),
     comment: (x) => ({ title: 'Coach comment', body: `${x.curator || 'Your coach'}: new comment on ${x.date ? dm(x.date, 'en') : 'a day'}. Open the app to read it.` }),
     backup: () => ({ title: 'Save a backup', body: 'No backup for more than 7 days. Profile → “Export data”.' }),
+    weekly: () => ({ title: 'Weekly summary', body: 'Open the app to see how your week went.' }),
     test: () => ({ title: 'Notification test', body: 'If you can see this, notifications work.' }),
   },
 };
@@ -157,11 +168,11 @@ export function message(kind: Kind, p: Pick<Prefs, 'lang' | 'appUrl'>, x: { cura
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-/** Сообщение Telegram (parse_mode HTML) с кнопкой «Открыть приложение». */
-export function telegramPayload(chatId: number | string, m: Message, lang: Lang) {
+/** Сообщение Telegram (parse_mode HTML) с кнопкой «Открыть приложение». html — готовый текст вместо заголовка и текста. */
+export function telegramPayload(chatId: number | string, m: Message, lang: Lang, html?: string) {
   return {
     chat_id: chatId,
-    text: `<b>${esc(m.title)}</b>\n${esc(m.body)}`,
+    text: html ?? `<b>${esc(m.title)}</b>\n${esc(m.body)}`,
     parse_mode: 'HTML',
     disable_web_page_preview: true,
     ...(m.url ? { reply_markup: { inline_keyboard: [[{ text: lang === 'en' ? 'Open the app' : 'Открыть приложение', url: m.url }]] } } : {}),
@@ -194,14 +205,14 @@ export const BOT_REPLIES: Record<Lang, Record<'linked' | 'badCode' | 'noCode' | 
     badCode: 'Ссылка устарела. Откройте приложение: Профиль → «Уведомления» → «Подключить Telegram» и нажмите кнопку ещё раз.',
     noCode: 'Чтобы получать напоминания, откройте приложение Activity Balance: Профиль → «Уведомления» → «Подключить Telegram».',
     stopped: 'Напоминания в Telegram отключены. Подключить снова можно в приложении: Профиль → «Уведомления».',
-    help: 'Я присылаю напоминания Activity Balance. Настройки — в приложении: Профиль → «Уведомления». Отключить: /stop.',
+    help: 'Я присылаю напоминания Activity Balance и принимаю вес, шаги и самочувствие. Подключение — в приложении: Профиль → «Уведомления» → «Подключить Telegram».',
   },
   en: {
     linked: 'Done! Activity Balance reminders will arrive here. Choose what to receive in the app: Profile → “Notifications”. To turn off, send /stop.',
     badCode: 'This link has expired. Open the app: Profile → “Notifications” → “Connect Telegram” and tap the button again.',
     noCode: 'To get reminders, open the Activity Balance app: Profile → “Notifications” → “Connect Telegram”.',
     stopped: 'Telegram reminders are off. You can reconnect in the app: Profile → “Notifications”.',
-    help: 'I send Activity Balance reminders. Settings are in the app: Profile → “Notifications”. To turn off, send /stop.',
+    help: 'I send Activity Balance reminders and take your weight, steps and wellbeing. Connect in the app: Profile → “Notifications” → “Connect Telegram”.',
   },
 };
 

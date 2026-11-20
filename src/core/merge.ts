@@ -39,3 +39,23 @@ export function compactEntry(e: DayEntry): DayEntry {
   }
   return out;
 }
+
+/**
+ * Перед отправкой дня на сервер: сохранить то, что туда записал Telegram-бот, а это устройство ещё не видело.
+ * Бот ставит botAt[поле] = время записи. Если у локальной копии дня то же время (день уже подтянут с сервера) —
+ * побеждает локальная правка (в том числе стирание). Если другое — значение бота остаётся.
+ * Возвращает запись для отправки; null — день можно удалять (на сервере нет невиданных записей бота).
+ */
+export function keepBotWrites(local: DayEntry | null | undefined, server: DayEntry | null | undefined): DayEntry | null {
+  const bot = server?.botAt;
+  if (!bot) return local || null;
+  let out: DayEntry | null = local ? { ...local } : null;
+  for (const k of Object.keys(bot) as (keyof NonNullable<DayEntry['botAt']>)[]) {
+    const at = bot[k];
+    if (at == null || local?.botAt?.[k] === at || isBlank(server![k])) continue;
+    out = out || {};
+    (out as Record<string, unknown>)[k] = server![k];
+    out.botAt = { ...out.botAt, [k]: at };
+  }
+  return out;
+}
