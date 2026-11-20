@@ -244,6 +244,7 @@ export const en: Dict = {
       hips: 'Hips, cm',
       fat: 'BODY FAT % (US NAVY)',
       ageNorm: 'AGE · NORM',
+      carried: (date) => `measured ${date}`,
     },
     comment: {
       title: 'Comment and wellbeing',
@@ -824,6 +825,7 @@ export const en: Dict = {
     foodTarget: (kcal, kcalT, p, pT, f, fT, c, cT) => `${kcal}/${kcalT} kcal · P ${p}/${pT} · F ${f}/${fT} · C ${c}/${cT}`,
     body: 'Measurements',
     bodyLine: (neck, waist, hips, fat) => `neck ${neck} · waist ${waist}${hips != null ? ' · hips ' + hips : ''}${fat ? ' · fat ' + fat + '%' : ''}`,
+    carried: (date) => `measured ${date}`,
     unusual: 'Unusual day',
     wellbeing: 'Wellbeing',
     wellbeingLine: (n) => `${n} of 10`,

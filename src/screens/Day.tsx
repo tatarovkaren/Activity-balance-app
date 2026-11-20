@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
 import { dayDiff, shiftDate, todayISO, ageAt, type ISODate } from '../core/dates';
-import { bodyFatNorm, measureHint, navyBodyFat } from '../core/body';
+import { bodyFatNorm, carriedMeasure, hasMeasurement, measureHint, navyBodyFat } from '../core/body';
 import { classifyWorkout, KCAL_PER_KG, macroKcal } from '../core/energy';
 import { applyFoodDays } from '../core/importers';
 import { ANOMALY_REASONS, MEAL_SLOTS, type AnomalyReason, type MealSlot } from '../core/types';
@@ -97,6 +97,8 @@ export function DayScreen({
   // ---- замеры ----
   const mh = measureHint(days, sel, profile.measureFreq);
   const bf = navyBodyFat(profile.sex, e, profile.heightCm);
+  // нет замера за день — показываем последние значения серым (как подсказки), в день не пишем
+  const carried = hasMeasurement(e) ? null : carriedMeasure(days, sel, profile.sex, profile.heightCm);
   const age = ageAt(profile.birthDate, sel);
   const norm = age != null ? bodyFatNorm(profile.sex, age) : null;
 
@@ -117,7 +119,7 @@ export function DayScreen({
   };
 
   const makeReport = async (send: boolean) => {
-    const rep = reportSvg(L, { date: sel, name: profile.name || D.report.clientFallback, profile, e, energy: en, adaptive: r, prevWeight: prevW, plan });
+    const rep = reportSvg(L, { date: sel, name: profile.name || D.report.clientFallback, profile, e, energy: en, adaptive: r, prevWeight: prevW, plan, days });
     if (Platform.OS === 'web' && !send) {
       const b = await svgToPng(rep.svg, rep.w, rep.h);
       if (b) downloadBlob(`${tx.report.file}-${sel}.png`, b);
@@ -396,15 +398,24 @@ export function DayScreen({
         {mh.kind === 'first' ? <Note>{D.body.first(profile.sex === 'female')}</Note> : null}
         <Gap h={6} />
         <Fields>
-          <NumField label={D.body.neck} value={e.neck} onChange={(v) => set({ neck: v })} digits={1} />
-          <NumField label={D.body.waist} value={e.waist} onChange={(v) => set({ waist: v })} digits={1} />
-          {profile.sex === 'female' ? <NumField label={D.body.hips} value={e.hips} onChange={(v) => set({ hips: v })} digits={1} /> : null}
+          <NumField label={D.body.neck} value={e.neck} onChange={(v) => set({ neck: v })} digits={1} placeholder={carried?.neck != null ? f.input(carried.neck) : undefined} testID="neck" />
+          <NumField label={D.body.waist} value={e.waist} onChange={(v) => set({ waist: v })} digits={1} placeholder={carried?.waist != null ? f.input(carried.waist) : undefined} testID="waist" />
+          {profile.sex === 'female' ? (
+            <NumField label={D.body.hips} value={e.hips} onChange={(v) => set({ hips: v })} digits={1} placeholder={carried?.hips != null ? f.input(carried.hips) : undefined} testID="hips" />
+          ) : null}
         </Fields>
         <Gap h={8} />
         <Row style={{ justifyContent: 'space-between' }}>
           <View>
             <T muted size={11}>{D.body.fat}</T>
-            <T bold mono size={20}>{bf != null ? kg(bf) + '%' : '—'}</T>
+            {bf == null && carried?.bf ? (
+              <>
+                <T bold mono size={20} color={t.muted}>{kg(carried.bf.v) + '%'}</T>
+                <T muted size={11}>{D.body.carried(f.dmy(carried.bf.date))}</T>
+              </>
+            ) : (
+              <T bold mono size={20}>{bf != null ? kg(bf) + '%' : '—'}</T>
+            )}
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <T muted size={11}>{D.body.ageNorm}</T>

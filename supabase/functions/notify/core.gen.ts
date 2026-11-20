@@ -320,6 +320,40 @@ export function lastBodyFat(days: DayMap, sel: ISODate, sex: Sex, heightCm: numb
   return undefined;
 }
 
+/**
+ * Последние замеры до даты (строго раньше sel) — чтобы показывать их серым,
+ * пока за выбранный день не введены новые. В день ничего не записывается.
+ * Каждое поле — своё последнее значение; % жира — последний день, где он считается.
+ */
+export type CarriedMeasure = {
+  neck?: number;
+  waist?: number;
+  hips?: number;
+  /** % жира по ВМС США и дата замера, по которому он посчитан */
+  bf?: { v: number; date: ISODate };
+};
+
+export function carriedMeasure(days: DayMap, sel: ISODate, sex: Sex, heightCm: number): CarriedMeasure | null {
+  const ds = Object.keys(days)
+    .filter((d) => d < sel && hasMeasurement(days[d]))
+    .sort()
+    .reverse();
+  if (!ds.length) return null;
+  const out: CarriedMeasure = {};
+  for (const d of ds) {
+    const e = days[d];
+    if (out.neck == null && e.neck) out.neck = e.neck;
+    if (out.waist == null && e.waist) out.waist = e.waist;
+    if (out.hips == null && e.hips) out.hips = e.hips;
+    if (!out.bf) {
+      const v = navyBodyFat(sex, e, heightCm);
+      if (v != null) out.bf = { v, date: d };
+    }
+    if (out.neck != null && out.waist != null && (sex === 'male' || out.hips != null) && out.bf) break;
+  }
+  return out;
+}
+
 // ======== src/core/energy.ts ========
 // Формулы расхода энергии (ТЗ v35, раздел 5) с режимом мужчина / женщина.
 // Итог = БМР + шаги + тренировка + переваривание. Всё, кроме БМР, — «сверх покоя».
