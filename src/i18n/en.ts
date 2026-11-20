@@ -350,6 +350,7 @@ export const en: Dict = {
     fatTitle: 'Body fat % (US Navy)',
     fat: 'body fat %',
     noFat: 'No measurements in this period.',
+    scrubHint: 'Drag your finger or mouse along the chart to see the values for a day',
     unusualDay: 'unusual day',
     files: { weight: 'weight', kcal: 'kcal', deficit: 'deficit', fat: 'body-fat' },
   },

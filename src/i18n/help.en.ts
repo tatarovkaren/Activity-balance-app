@@ -118,6 +118,7 @@ export const helpEn: typeof helpRu = {
         'Choose a period: week, month, 3 months, all time or custom dates.',
         'Weight and trend: dots are your weigh-ins, the line is the trend without unusual days.',
         'Eaten and burned, expected versus actual weight change, and body fat: every chart can be saved as PNG or PDF.',
+        'Drag your finger (or mouse) along any chart: a vertical line marks the day, and the date and the value of every line on that day appear above the chart. The cross hides the line.',
         'If the actual weight line runs well above the expected one, your log is probably incomplete or the formula overestimates your burn.',
       ],
     },
