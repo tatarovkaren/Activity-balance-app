@@ -140,6 +140,7 @@ export const helpEn: typeof helpRu = {
         '**FatSecret**: export your food diary as CSV or a PDF report and tap "Import FatSecret". You can load one day or a whole period. Empty days are skipped, and days you filled in by hand are not overwritten. PDF is read in the web version for now.',
         '**Weight history**: a CSV with "date; weight" rows from smart scales, Google Fit or Excel. Days already logged stay as they are.',
         '**Export data** saves all your records to a file, and "Import backup" brings them back without overwriting anything. If there was no backup for 7 days, the Day screen shows a reminder with a "Save" button; you can turn it off here, in "Data sources".',
+        '**From the “Daily report” prototype**: save a backup (JSON) there and pick it in "Import backup". Days (weight, steps, macros, workouts, heart rate, comments, wellbeing), weight and step history, neck and waist measurements, and weight and step goals are carried over. Workouts named “strength” become strength, “cardio”, “elliptical” and similar become cardio, “rest” means no workout. Anything already filled in the app is kept.',
         'Health Connect, Apple Health, Garmin and Huawei will arrive with the mobile app.',
       ],
     },
