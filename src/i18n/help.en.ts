@@ -88,6 +88,7 @@ export const helpEn: typeof helpRu = {
         'Enter the duration and average heart rate. Strength is counted by load and time, cardio by heart rate.',
         '"Workout steps" is for on-foot cardio only. The app subtracts them from your daily steps so the same effort is not counted twice. If the field is empty, steps are estimated from your usual pace.',
         'The **Energy balance** card shows what you ate and burned today and over 7 days, and the expected weight change per week.',
+        '**Body measurements** are taken once a week (frequency is set in the profile). On other days the fields show your latest measurements in grey, and body fat % in grey with the measurement date. Nothing is saved for those days: new numbers are stored only on the day you enter them.',
       ],
     },
     {

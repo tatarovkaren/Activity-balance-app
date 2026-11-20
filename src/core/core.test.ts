@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { addMonthsClamped, ageAt, monthCells, shiftDate, toLocalISO } from './dates';
 import { energyModel, PaceIndex } from './energy';
-import { measureHint, navyBodyFat } from './body';
+import { carriedMeasure, measureHint, navyBodyFat } from './body';
 import { adaptiveTDEE, goalForecast, wls } from './adaptive';
 import { applyFoodDays, applyWeights, parseBackup, parseFatSecret, parseWeightHistory } from './importers';
 import { mergeEntry } from './merge';
@@ -87,6 +87,22 @@ describe('% жира и замеры', () => {
     expect(addMonthsClamped('2027-01-31', 1)).toBe('2027-02-28');
     expect(addMonthsClamped('2028-01-31', 1)).toBe('2028-02-29');
     expect(measureHint({}, '2026-11-12', 'month')).toEqual({ kind: 'first' });
+  });
+  it('последние замеры до даты — серым, в день не пишутся', () => {
+    const days: DayMap = {
+      '2026-11-02': { neck: 40, waist: 92 },
+      '2026-11-09': { waist: 90 },
+      '2026-11-12': { weight: 80 },
+    };
+    const c = carriedMeasure(days, '2026-11-12', 'male', 178)!;
+    expect(c.neck).toBe(40);
+    expect(c.waist).toBe(90);
+    // % жира — по последнему полному замеру (02.11), неполный 09.11 не считается
+    expect(c.bf!.date).toBe('2026-11-02');
+    expect(c.bf!.v).toBeCloseTo(navyBodyFat('male', { neck: 40, waist: 92 }, 178)!, 6);
+    expect(days['2026-11-12'].neck).toBeUndefined();
+    // замер в сам день не считается перенесённым; до первого замера — ничего
+    expect(carriedMeasure(days, '2026-11-02', 'male', 178)).toBeNull();
   });
 });
 

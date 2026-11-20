@@ -255,6 +255,7 @@ export const ru = {
       hips: 'Бёдра, см',
       fat: '% ЖИРА (ВМС США)',
       ageNorm: 'ВОЗРАСТ · НОРМА',
+      carried: (date: string) => `замер ${date}`,
     },
     comment: {
       title: 'Комментарий и самочувствие',
@@ -847,6 +848,7 @@ export const ru = {
     foodTarget: (kcal: string, kcalT: string, p: string, pT: string, f: string, fT: string, c: string, cT: string) =>
       `${kcal}/${kcalT} ккал · Б ${p}/${pT} · Ж ${f}/${fT} · У ${c}/${cT}`,
     body: 'Замеры',
+    carried: (date: string) => `замер ${date}`,
     bodyLine: (neck: string, waist: string, hips: string | null, fat: string | null) =>
       `шея ${neck} · талия ${waist}${hips != null ? ' · бёдра ' + hips : ''}${fat ? ' · жир ' + fat + '%' : ''}`,
     unusual: 'Необычный день',
