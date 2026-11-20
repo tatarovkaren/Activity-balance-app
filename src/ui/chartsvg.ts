@@ -34,6 +34,8 @@ export interface ChartSpec {
   yStep?: number;
   zeroLine?: boolean;
   legend?: boolean;
+  /** Ползунок: вертикальная линия и точки серий в этот день (только на экране, в выгрузку не идёт). */
+  cursor?: ISODate;
   /** Форматы дат и чисел по языку интерфейса (подписи осей). */
   fmt: Pick<Fmt, 'dm' | 'num'>;
 }
@@ -57,8 +59,8 @@ function niceRange(vals: number[], step?: number): [number, number] {
 
 const fmtY = (v: number, f: ChartSpec['fmt']) => (Math.abs(v) >= 100 ? f.num(v, 0) : f.num(v, 1));
 
-export function chartSvg(spec: ChartSpec, t: Palette): string {
-  const { width: W, height: H } = spec;
+/** Поля области построения — общие для рисования и для ползунка. */
+function frame(spec: Pick<ChartSpec, 'width' | 'height' | 'from' | 'to' | 'series' | 'legend'>) {
   const legendH = spec.legend === false ? 0 : 18;
   const pL = 40;
   const hasRight = spec.series.some((s) => s.axis === 'right' && s.points.length);
@@ -66,7 +68,64 @@ export function chartSvg(spec: ChartSpec, t: Palette): string {
   const pT = 10;
   const pB = 20 + legendH;
   const span = Math.max(1, dayDiff(spec.from, spec.to));
-  const x = (d: ISODate) => pL + (dayDiff(spec.from, d) / span) * (W - pL - pR);
+  const x = (d: ISODate) => pL + (dayDiff(spec.from, d) / span) * (spec.width - pL - pR);
+  return { legendH, pL, pR, pT, pB, hasRight, span, x };
+}
+
+/** Число для подписи ползунка: крупные — целыми, вес и % — с десятыми, малые изменения — с сотыми. */
+export const fmtValue = (v: number, f: Pick<Fmt, 'num'>) =>
+  f.num(v, Math.abs(v) >= 100 ? 0 : Math.abs(v) >= 10 ? 1 : 2);
+
+/** Ближайший к точке касания день, в который есть хотя бы одно значение. */
+export function nearestDate(
+  spec: Pick<ChartSpec, 'width' | 'height' | 'from' | 'to' | 'series' | 'legend'>,
+  px: number,
+): ISODate | null {
+  const { x } = frame(spec);
+  let best: ISODate | null = null;
+  let bestDist = Infinity;
+  for (const s of spec.series)
+    for (const p of s.points) {
+      const dist = Math.abs(x(p.d) - px);
+      if (dist < bestDist || (dist === bestDist && best != null && p.d < best)) {
+        best = p.d;
+        bestDist = dist;
+      }
+    }
+  return best;
+}
+
+/**
+ * Значение серии в день d: точное, а для сплошной линии без точек (тренд, формула) — по линии между соседними точками.
+ * Замеры (точки) и столбики берутся только точно: выдумывать взвешивание нельзя.
+ */
+export function seriesAt(s: Series, d: ISODate): number | null {
+  const exact = s.points.find((q) => q.d === d);
+  if (exact) return exact.v;
+  if (s.bars || s.dots || s.points.length < 2) return null;
+  let a: Series['points'][number] | null = null;
+  let b: Series['points'][number] | null = null;
+  for (const p of s.points) {
+    if (p.d < d && (!a || p.d > a.d)) a = p;
+    if (p.d > d && (!b || p.d < b.d)) b = p;
+  }
+  if (!a || !b || dayDiff(a.d, b.d) > (s.gapDays ?? 7)) return null;
+  return a.v + ((b.v - a.v) * dayDiff(a.d, d)) / dayDiff(a.d, b.d);
+}
+
+/** Значения всех серий в выбранный день (серии без значения в этот день пропускаются). */
+export function valuesAt(spec: Pick<ChartSpec, 'series'>, d: ISODate) {
+  const out: { label: string; color: string; v: number }[] = [];
+  for (const s of spec.series) {
+    const v = seriesAt(s, d);
+    if (v != null) out.push({ label: s.label, color: s.color, v });
+  }
+  return out;
+}
+
+export function chartSvg(spec: ChartSpec, t: Palette): string {
+  const { width: W, height: H } = spec;
+  const { legendH, pL, pR, pT, pB, hasRight, span, x } = frame(spec);
   const leftVals = spec.series.filter((s) => s.axis !== 'right').flatMap((s) => s.points.map((p) => p.v));
   const rightVals = spec.series.filter((s) => s.axis === 'right').flatMap((s) => s.points.map((p) => p.v));
   if (spec.zeroLine) leftVals.push(0);
@@ -113,6 +172,16 @@ export function chartSvg(spec: ChartSpec, t: Palette): string {
     g += `<path d="${dPath}" fill="none" stroke="${s.color}" stroke-width="${s.width || 2}" ${s.dash ? 'stroke-dasharray="4 3"' : ''} stroke-linejoin="round"/>`;
     if (s.dots)
       for (const p of pts) g += `<circle cx="${x(p.d).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="2.2" fill="${s.color}"/>`;
+  }
+  if (spec.cursor) {
+    const cx = x(spec.cursor).toFixed(1);
+    g += `<line x1="${cx}" y1="${pT - 6}" x2="${cx}" y2="${H - pB}" stroke="${t.text}" stroke-width="1.5"/>`;
+    for (const s of spec.series) {
+      const v = seriesAt(s, spec.cursor);
+      if (v == null) continue;
+      const cy = (s.axis === 'right' ? yR : yL)(v).toFixed(1);
+      g += `<circle cx="${cx}" cy="${cy}" r="4.5" fill="${t.card}" stroke="${s.color}" stroke-width="2.2"/>`;
+    }
   }
   g += `<text x="${pL}" y="${H - pB + 13}" fill="${t.muted}" font-size="9" ${FONT}>${esc(spec.fmt.dm(spec.from))}</text>`;
   g += `<text x="${W - pR}" y="${H - pB + 13}" fill="${t.muted}" font-size="9" text-anchor="end" ${FONT}>${esc(spec.fmt.dm(spec.to))}</text>`;

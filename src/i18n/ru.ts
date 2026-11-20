@@ -363,6 +363,7 @@ export const ru = {
     fatTitle: '% жира (ВМС США)',
     fat: '% жира',
     noFat: 'Нет замеров за период.',
+    scrubHint: 'Проведите пальцем или мышью по графику — покажу значения за день',
     unusualDay: 'необычный день',
     files: { weight: 'ves', kcal: 'kkal', deficit: 'deficit', fat: 'zhir' },
   },
