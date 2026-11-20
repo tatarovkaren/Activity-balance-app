@@ -570,7 +570,7 @@ export const en: Dict = {
 
   notify: {
     title: 'Notifications',
-    intro: 'Reminders arrive as browser push notifications and/or in Telegram. Messages contain none of your numbers or comment texts, only a reason to open the app.',
+    intro: 'Reminders arrive as browser push notifications and/or in Telegram. Reminders contain none of your numbers or comment texts, only a reason to open the app. The weekly summary with numbers comes to Telegram only.',
     on: 'On',
     off: 'Off',
     kind: {
@@ -578,12 +578,14 @@ export const en: Dict = {
       diary: 'Diary not filled in',
       comment: 'Coach comment',
       backup: 'Backup',
+      weekly: 'Weekly summary',
     },
     kindNote: {
       weigh: "If today's weight is not entered yet.",
       diary: 'If the day has no calories and is not marked as unusual.',
       comment: 'A few minutes after your coach leaves a comment.',
       backup: 'At 12:00, at most once a week, if there was no backup for 7 days.',
+      weekly: 'Telegram only, on Mondays at 10:00: weight and trend, average calories and macros, steps, actual burn, goal date forecast.',
     },
     time: 'Time',
     timeBad: 'Use HH:MM, for example 08:30',
@@ -604,6 +606,7 @@ export const en: Dict = {
     tgNone: 'Not connected. Tap “Connect”: our bot opens in Telegram, tap “Start” there.',
     tgConnect: 'Connect',
     tgCheck: 'Check',
+    tgQuick: 'You can send your weight to the bot as a plain number, for example 71.3, and steps and wellbeing with the buttons under the input field. Entries go straight into the diary.',
     tgUnlink: 'Disconnect',
     tgOpened: 'Tap “Start” in Telegram, then come back and tap “Check”.',
     tgNotYet: 'Not connected yet. Tap “Start” in the bot and check again.',

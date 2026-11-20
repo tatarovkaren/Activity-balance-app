@@ -17,7 +17,7 @@ export const HELP_SHOTS: Record<string, Record<string, HelpShot>> = {
     goal: { src: require('../../assets/help/ru/goal.png'), w: 780, h: 1198 },
     import: { src: require('../../assets/help/ru/import.png'), w: 780, h: 898 },
     curator: { src: require('../../assets/help/ru/curator.png'), w: 780, h: 408 },
-    notify: { src: require('../../assets/help/ru/notify.png'), w: 780, h: 1250 },
+    notify: { src: require('../../assets/help/ru/notify.png'), w: 780, h: 1496 },
     settings: { src: require('../../assets/help/ru/settings.png'), w: 780, h: 442 },
   },
   en: {
@@ -33,7 +33,7 @@ export const HELP_SHOTS: Record<string, Record<string, HelpShot>> = {
     goal: { src: require('../../assets/help/en/goal.png'), w: 780, h: 1198 },
     import: { src: require('../../assets/help/en/import.png'), w: 780, h: 782 },
     curator: { src: require('../../assets/help/en/curator.png'), w: 780, h: 408 },
-    notify: { src: require('../../assets/help/en/notify.png'), w: 780, h: 1174 },
+    notify: { src: require('../../assets/help/en/notify.png'), w: 780, h: 1386 },
     settings: { src: require('../../assets/help/en/settings.png'), w: 780, h: 476 },
   },
 };

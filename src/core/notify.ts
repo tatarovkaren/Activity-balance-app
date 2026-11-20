@@ -3,8 +3,8 @@
 
 import type { Lang } from './types';
 
-export type NotifyKind = 'weigh' | 'diary' | 'comment' | 'backup';
-export const NOTIFY_KINDS: NotifyKind[] = ['weigh', 'diary', 'comment', 'backup'];
+export type NotifyKind = 'weigh' | 'diary' | 'comment' | 'backup' | 'weekly';
+export const NOTIFY_KINDS: NotifyKind[] = ['weigh', 'diary', 'comment', 'backup', 'weekly'];
 /** У каких напоминаний пользователь выбирает время. */
 export const TIMED: NotifyKind[] = ['weigh', 'diary'];
 
@@ -13,6 +13,8 @@ export interface NotifyPrefs {
   diary: { on: boolean; time: string };
   comment: { on: boolean };
   backup: { on: boolean };
+  /** Сводка за прошлую неделю в Telegram, по понедельникам в 10:00. */
+  weekly: { on: boolean };
   /** Часовой пояс устройства (IANA, например Europe/Moscow): время напоминаний — местное. */
   tz?: string;
   /** Язык сообщений (выбранный язык интерфейса). */
@@ -28,6 +30,7 @@ export const DEFAULT_NOTIFY: NotifyPrefs = {
   diary: { on: true, time: '21:00' },
   comment: { on: true },
   backup: { on: true },
+  weekly: { on: true },
 };
 
 export function withDefaults(p: Partial<NotifyPrefs> | undefined): NotifyPrefs {
@@ -38,6 +41,7 @@ export function withDefaults(p: Partial<NotifyPrefs> | undefined): NotifyPrefs {
     diary: { ...DEFAULT_NOTIFY.diary, ...p?.diary },
     comment: { ...DEFAULT_NOTIFY.comment, ...p?.comment },
     backup: { ...DEFAULT_NOTIFY.backup, ...p?.backup },
+    weekly: { ...DEFAULT_NOTIFY.weekly, ...p?.weekly },
   };
 }
 

@@ -6,6 +6,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 import type { ISODate } from '../core/dates';
 import { AppError } from '../core/errors';
+import { keepBotWrites } from '../core/merge';
 import type { DayEntry, DayMap, KeepMap, PhotoMeal, Profile } from '../core/types';
 import type { GoalProposal, GoalSetting } from '../core/targets';
 import { latinSurname, type CuratorPlan, type Referral, type ReferralOffer } from '../core/promo';
@@ -89,7 +90,15 @@ export function supabaseRepo(userId: string): CloudRepo {
       for (const r of days.data || []) map[r.date as string] = r.data as DayEntry;
       return { profile: (prof.data?.data as Profile) || undefined, keep: (prof.data?.anomaly_keep as KeepMap) || undefined, days: map };
     },
-    async pushDays(changes) {
+    async pushDays(input) {
+      // записанное Telegram-ботом, пока это устройство было открыто, не затираем старой копией дня
+      const changes = { ...input };
+      const dates = Object.keys(changes);
+      for (let i = 0; i < dates.length; i += 200) {
+        const { data: srv, error } = await sb.from('day_entries').select('date, data').eq('user_id', userId).in('date', dates.slice(i, i + 200));
+        if (error) throw error;
+        for (const r of srv || []) changes[r.date as string] = keepBotWrites(changes[r.date as string], r.data as DayEntry);
+      }
       const up = Object.entries(changes)
         .filter(([, e]) => e)
         .map(([date, e]) => ({ user_id: userId, date, data: e }));

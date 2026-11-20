@@ -12,7 +12,7 @@ const P = (over: Partial<Prefs> = {}): Prefs => ({ ...normPrefs({ tz: 'Europe/Mo
 describe('настройки уведомлений', () => {
   it('значения по умолчанию в приложении и на сервере совпадают', () => {
     const s = normPrefs(undefined);
-    expect({ weigh: s.weigh, diary: s.diary, comment: s.comment, backup: s.backup }).toEqual(DEFAULT_NOTIFY);
+    expect({ weigh: s.weigh, diary: s.diary, comment: s.comment, backup: s.backup, weekly: s.weekly }).toEqual(DEFAULT_NOTIFY);
     expect(withDefaults({ weigh: { on: false, time: '07:30' } }).diary).toEqual(DEFAULT_NOTIFY.diary);
   });
   it('мусор в настройках заменяется значениями по умолчанию', () => {

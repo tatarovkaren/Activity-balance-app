@@ -104,6 +104,11 @@ export interface DayEntry {
   /** Отчёт дня отправлен куратору (время, мс). */
   reportSentAt?: number;
   updatedAt?: number;
+  /**
+   * Когда поле записал Telegram-бот (мс). Приложение не затирает такое поле своей старой копией дня,
+   * пока не увидит эту запись с сервера (keepBotWrites в core/merge.ts).
+   */
+  botAt?: Partial<Record<'weight' | 'steps' | 'wellbeing', number>>;
 }
 
 /** Приём пищи в дневнике. */

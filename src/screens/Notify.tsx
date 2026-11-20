@@ -180,6 +180,7 @@ export function NotifyCard() {
         )}
       </Row>
       <T muted size={12}>{tgLink ? N.tgLinked(tgLink.username) : ready && !server?.telegram ? N.tgOff : N.tgNone}</T>
+      {tgLink ? <T muted size={12}>{N.tgQuick}</T> : null}
 
       {ready && (push === 'on' || tgLink) ? (
         <>

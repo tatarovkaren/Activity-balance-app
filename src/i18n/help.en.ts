@@ -160,10 +160,12 @@ export const helpEn: typeof helpRu = {
       id: 'notify',
       title: 'Notifications: push and Telegram',
       text: [
-        'Profile → **Notifications**: choose what to be reminded about: morning weigh-in, diary not filled in, coach comment, backup. You can change the time of the morning and evening reminders; it is your local time.',
+        'Profile → **Notifications**: choose what to be reminded about: morning weigh-in, diary not filled in, coach comment, backup, weekly summary. You can change the time of the morning and evening reminders; it is your local time.',
         '**Browser push**: tap “Turn on” and allow notifications. On Android and computers it works right away. On iPhone and iPad it works only in the app added to the Home Screen (Safari → Share → “Add to Home Screen”), iOS 16.4 or later: open Activity Balance from the icon and turn push on there.',
         '**Telegram**: tap “Connect”, our bot opens in Telegram, tap “Start” there. Come back to the app and tap “Check”. You can disconnect here or by sending /stop to the bot.',
-        '“Send a test” checks that everything arrives. Notifications contain none of your numbers or comment texts, only a reason to open the app.',
+        '**Entering data through the bot**: send your weight as a plain number, for example 71.3 (for yesterday: “yesterday 71.3”). Steps and wellbeing: the “👣 Steps” and “🙂 Wellbeing” buttons under the input field. Entries go straight into the diary; other fields of the day stay as they are.',
+        'The **weekly summary** comes to Telegram on Mondays at 10:00: weight and trend, average calories and macros, steps, actual burn and the goal date forecast. The “📊 Week” button in the bot sends a summary of the last 7 days at any time.',
+        '“Send a test” checks that everything arrives. Reminders contain none of your numbers or comment texts, only a reason to open the app. Numbers appear only in the weekly summary in Telegram.',
         'Notifications work once you sign in. Push is turned on separately on each device, Telegram once per account.',
       ],
     },
@@ -248,6 +250,10 @@ export const helpEn: typeof helpRu = {
     {
       q: 'Why do notifications not arrive on my iPhone?',
       a: 'On iPhone and iPad, push arrives only in the app added to the Home Screen and only on iOS 16.4 or later. Open the site in Safari → Share → “Add to Home Screen”, launch Activity Balance from the icon and turn push on in Profile → “Notifications”. If that does not work, connect Telegram: it works on any phone.',
+    },
+    {
+      q: 'I sent my weight to the Telegram bot, but the app does not show it. What now?',
+      a: 'The app fetches data from the server when it opens and when you switch back to it from another window. If it stayed open the whole time, reload the page. What the bot saved is not lost, even if you then change other fields of that day in the app.',
     },
     {
       q: 'A reminder came at the wrong time. Why?',
