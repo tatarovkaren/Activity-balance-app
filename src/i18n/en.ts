@@ -3,6 +3,7 @@
 import { pad2, type FmtSpec } from './format';
 import type { Dict } from './ru';
 import { helpEn } from './help.en';
+import { wikiEn } from './wiki.en';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -852,6 +853,7 @@ export const en: Dict = {
   },
 
   help: helpEn,
+  wiki: wikiEn,
 
   demo: {
     strength: 'Strength',

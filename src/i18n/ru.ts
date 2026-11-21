@@ -5,6 +5,7 @@
 import { FOODS } from '../core/photo/foods';
 import { pad2, type FmtSpec } from './format';
 import { helpRu } from './help.ru';
+import { wikiRu } from './wiki.ru';
 
 /** «год / года / лет» для числа. */
 const ruYears = (n: number) => {
@@ -878,6 +879,9 @@ export const ru = {
 
   /** Раздел «Помощь и ЧаВо» — src/i18n/help.*.ts. */
   help: helpRu,
+
+  /** Раздел «Wiki: баланс энергии» — src/i18n/wiki.*.ts, источники — src/wiki/refs.ts. */
+  wiki: wikiRu,
 
   /** Тексты демо-данных. */
   demo: {
