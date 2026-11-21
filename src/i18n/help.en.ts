@@ -75,6 +75,7 @@ export const helpEn: typeof helpRu = {
       id: 'day',
       title: 'Daily log: weight, steps, food',
       text: [
+        'At the top you get a greeting with the name from Profile (the “Name” field; a nickname is fine). If no name is set, there is no greeting.',
         'The ‹ › arrows at the top switch days, and the calendar button lets you jump to any date (days with entries are marked with a dot). You can fill in past days too.',
         '**Morning weight**: fasted, after the toilet. Below it you see the change since yesterday and the weekly average.',
         '**Steps**: from your phone or tracker, for the whole day.',

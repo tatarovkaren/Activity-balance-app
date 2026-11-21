@@ -150,6 +150,7 @@ export const en: Dict = {
 
   day: {
     motto: 'PROCESS · DISCIPLINE',
+    greet: (part, name) => `${{ morning: 'Good morning', day: 'Good afternoon', evening: 'Good evening', night: 'Good night' }[part]}, ${name}`,
     curatorNotes: 'Coach comment',
     title: (date, weekday, relative = false) => (relative ? `${date}, ${weekday}` : `${weekday}, ${date}`),
     reportSent: 'Report sent to your coach',
@@ -858,7 +859,7 @@ export const en: Dict = {
   demo: {
     strength: 'Strength',
     elliptical: 'Elliptical',
-    me: 'Demo',
+    me: 'Alex',
     clients: ['Anna K.', 'Dmitry S.', 'Olga P.', 'Sergey V.', 'Maria L.', 'Alexey N.', 'Elena R.'],
     curatorName: 'Irina Smirnova',
     curatorSurname: 'Smirnova',
