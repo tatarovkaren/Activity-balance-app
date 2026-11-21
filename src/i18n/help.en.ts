@@ -88,7 +88,7 @@ export const helpEn: typeof helpRu = {
       title: 'Food list',
       text: [
         'In the food card tap **"＋ Food"** and pick the meal. Start typing a name, in Russian or English, with fat content if you like: "buckwheat", "kefir 2.5", "pancakes".',
-        'The list has about 350 foods and dishes: grains, meat, fish, dairy, vegetables, fruit, bakery, sweets, drinks and common Russian dishes. Each has calories and macros per 100 g, a typical portion and a source: USDA, Russian composition tables, a typical label or a recipe calculation.',
+        'The list has about 350 core foods and dishes (grains, meat, fish, dairy, vegetables, fruit, bakery, sweets, drinks, common Russian dishes) plus about 6,400 foods from the USDA database. Each has calories and macros per 100 g, a typical portion and a source: USDA, Russian composition tables, a typical label or a recipe calculation.',
         'Tap a food to add it to the meal with a typical portion. Change the weight or tap "portion", "1 pc" or "100 g". You can collect several foods and add them as one entry marked **"from food list"**: it adds to the day\'s totals, just like a photo entry.',
         '**Your own food or dish**: if something is missing, tap "＋ My own food" and enter calories and macros per 100 g from the package or the recipe, a typical portion and the weight of one piece. It is saved and shows up in search; you can edit or delete it. If calories do not match the macros, the app warns that these may be per-portion numbers.',
         '**Store products**: if the food list does not have the product, tap "🛒 Search store products" and the app searches by name in the open Open Food Facts database. The product you pick is saved to your foods.',

@@ -44,6 +44,8 @@ export interface Food {
   barcode?: string;
   brand?: string;
   author?: 'client' | 'curator';
+  /** Номер в USDA FoodData Central — у продуктов большой базы USDA (usda.ts). */
+  fdcId?: number;
   createdAt?: number;
   updatedAt?: number;
 }

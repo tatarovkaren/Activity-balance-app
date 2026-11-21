@@ -1,12 +1,13 @@
 // Подсчёт калорий по фото (бета). Интерфейс не привязан к ИИ: провайдер выбирается в настройках
 // (ручной ввод порций, демо, или серверный сервис с любой моделью — см. core/photo/provider.ts).
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { todayISO, type ISODate } from '../core/dates';
 import { FOOD_BY_ID, FOODS, type Food } from '../core/photo/foods';
 import { searchFoods } from '../core/photo/search';
+import { loadUsda, usdaFoods } from '../core/photo/usda';
 import { displayName } from './Food';
 import {
   buildDraft,
@@ -49,7 +50,7 @@ type Step = 'capture' | 'draft' | 'done';
 /** Поиск по справочнику и своим продуктам (RU и EN сразу); без запроса — продукты фото-подсчёта. */
 function findFoodL(query: string, mine: Food[]): Food[] {
   if (!query.trim()) return FOODS;
-  return searchFoods(query, [...mine, ...FOODS], 12).map((h) => h.food);
+  return searchFoods(query, [...mine, ...FOODS, ...usdaFoods()], 12).map((h) => h.food);
 }
 
 export function PhotoScreen({ sel, meal: mealProp, onBack }: { sel: ISODate; meal?: MealSlot; onBack?: () => void }) {
@@ -356,6 +357,10 @@ function ComponentEditor({
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const mine = useStore().data.customFoods || [];
+  // база USDA для поиска продукта: подгружается один раз
+  useEffect(() => {
+    loadUsda();
+  }, []);
   // меры руки — запасной способ, по умолчанию свёрнуты (главное поле — граммы)
   const [handOpen, setHandOpen] = useState(value.amount.kind === 'hand' && estGrams == null);
   const food = value.foodId ? FOOD_BY_ID[value.foodId] : undefined;

@@ -103,10 +103,15 @@ export const CATALOG_PROVIDER = 'catalog';
  * Приём пищи из справочника — та же запись, что и по фото (прибавляется к КБЖУ дня, не затирается импортом FatSecret),
  * но цифры точные по весу: диапазон равен самому значению.
  */
-export function mealFromFoods(items: PickedFood[], meta: { id: string; meal: PhotoMeal['meal']; at: number }): PhotoMeal {
+export function mealFromFoods(
+  items: PickedFood[],
+  meta: { id: string; meal: PhotoMeal['meal']; at: number },
+  /** Название в записи — на языке интерфейса (по умолчанию русское). */
+  nameOf: (f: Food) => string = (f) => f.name,
+): PhotoMeal {
   const rows = items
     .filter((x) => x.grams > 0)
-    .map(({ food, grams }) => ({ name: food.name, foodId: food.id, grams: Math.round(grams), ...foodTotals(food, grams) }));
+    .map(({ food, grams }) => ({ name: nameOf(food), foodId: food.id, grams: Math.round(grams), ...foodTotals(food, grams) }));
   const sum = (k: 'kcal' | 'p' | 'f' | 'c') => rows.reduce((a, x) => a + x[k], 0);
   const kcal = Math.round(sum('kcal'));
   return {

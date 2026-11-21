@@ -24,6 +24,17 @@ function tokenScore(q: string, w: string): number {
 /** Надбавка только к совпавшему слову. */
 const bonus = (score: number, add: number) => (score > 0 ? score + add : 0);
 
+/** Слова продукта для поиска — считаются один раз (в базе USDA тысячи продуктов). */
+const INDEX = new WeakMap<Food, { name: string[]; en: string[]; other: string[] }>();
+function indexOf(food: Food) {
+  let x = INDEX.get(food);
+  if (!x) {
+    x = { name: searchWords(food.name), en: searchWords(food.nameEn || ''), other: [...(food.aliases || []), food.brand || ''].flatMap(searchWords) };
+    INDEX.set(food, x);
+  }
+  return x;
+}
+
 export interface FoodHit {
   food: Food;
   score: number;
@@ -41,9 +52,7 @@ export function searchFoods(query: string, foods: Food[], limit = 30): FoodHit[]
   const qNorm = normalizeWord(query.trim());
   const hits: FoodHit[] = [];
   for (const food of foods) {
-    const name = searchWords(food.name);
-    const en = searchWords(food.nameEn || '');
-    const other = [...(food.aliases || []), food.brand || ''].flatMap(searchWords);
+    const { name, en, other } = indexOf(food);
     let score = 0;
     let ok = true;
     for (const q of qs) {
@@ -62,6 +71,8 @@ export function searchFoods(query: string, foods: Food[], limit = 30): FoodHit[]
     if (!ok) continue;
     if (normalizeWord(food.name).startsWith(qNorm) || normalizeWord(food.nameEn || '').startsWith(qNorm)) score += 3;
     if (food.source === 'user' || food.source === 'off') score += 0.5;
+    // большая база USDA — ниже ядра при равном совпадении: в ядре порции и названия под русскую кухню
+    if (food.fdcId) score -= 0.75;
     // короче название — точнее совпадение: «Молоко 2,5%» выше «Молочного коктейля»
     score -= Math.min(1, name.length / 20);
     hits.push({ food, score });
