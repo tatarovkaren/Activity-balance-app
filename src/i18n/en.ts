@@ -150,6 +150,7 @@ export const en: Dict = {
 
   day: {
     motto: 'PROCESS · DISCIPLINE',
+    greet: (part, name) => `${{ morning: 'Good morning', day: 'Good afternoon', evening: 'Good evening', night: 'Good night' }[part]}, ${name}`,
     curatorNotes: 'Coach comment',
     title: (date, weekday, relative = false) => (relative ? `${date}, ${weekday}` : `${weekday}, ${date}`),
     reportSent: 'Report sent to your coach',
@@ -844,6 +845,8 @@ export const en: Dict = {
     title: 'About',
     slogan: 'Activity Balance is your personal energy balance dashboard: workouts, daily activity, nutrition and weight in a single view.',
     version: (v: string, date: string) => `Version ${v}, released ${date}`,
+    whatsNew: (v: string) => `What's new in ${v}`,
+    earlier: 'Earlier',
     build: (b: string) => `Build ${b}`,
     more: 'More',
     less: 'Less',
@@ -861,7 +864,7 @@ export const en: Dict = {
   demo: {
     strength: 'Strength',
     elliptical: 'Elliptical',
-    me: 'Demo',
+    me: 'Alex',
     clients: ['Anna K.', 'Dmitry S.', 'Olga P.', 'Sergey V.', 'Maria L.', 'Alexey N.', 'Elena R.'],
     curatorName: 'Irina Smirnova',
     curatorSurname: 'Smirnova',

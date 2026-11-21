@@ -7,8 +7,8 @@ export const HELP_SHOTS: Record<string, Record<string, HelpShot>> = {
   ru: {
     start: { src: require('../../assets/help/ru/start.png'), w: 780, h: 1646 },
     onboard: { src: require('../../assets/help/ru/onboard.png'), w: 780, h: 1216 },
-    day: { src: require('../../assets/help/ru/day.png'), w: 780, h: 1118 },
-    workout: { src: require('../../assets/help/ru/workout.png'), w: 780, h: 1416 },
+    day: { src: require('../../assets/help/ru/day.png'), w: 780, h: 1236 },
+    workout: { src: require('../../assets/help/ru/workout.png'), w: 780, h: 1402 },
     comment: { src: require('../../assets/help/ru/comment.png'), w: 780, h: 840 },
     fact: { src: require('../../assets/help/ru/fact.png'), w: 780, h: 1776 },
     charts: { src: require('../../assets/help/ru/charts.png'), w: 780, h: 1676 },
@@ -23,8 +23,8 @@ export const HELP_SHOTS: Record<string, Record<string, HelpShot>> = {
   en: {
     start: { src: require('../../assets/help/en/start.png'), w: 780, h: 1534 },
     onboard: { src: require('../../assets/help/en/onboard.png'), w: 780, h: 1216 },
-    day: { src: require('../../assets/help/en/day.png'), w: 780, h: 1148 },
-    workout: { src: require('../../assets/help/en/workout.png'), w: 780, h: 1416 },
+    day: { src: require('../../assets/help/en/day.png'), w: 780, h: 1266 },
+    workout: { src: require('../../assets/help/en/workout.png'), w: 780, h: 1402 },
     comment: { src: require('../../assets/help/en/comment.png'), w: 780, h: 840 },
     fact: { src: require('../../assets/help/en/fact.png'), w: 780, h: 1736 },
     charts: { src: require('../../assets/help/en/charts.png'), w: 780, h: 1568 },
