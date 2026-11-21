@@ -11,7 +11,7 @@ import { useI18n } from '../i18n';
 import { APP_VERSION, RELEASE } from '../about';
 
 /** Текст с **жирными** частями. */
-function Rich({ text, size = 14, color }: { text: string; size?: number; color?: string }) {
+export function Rich({ text, size = 14, color }: { text: string; size?: number; color?: string }) {
   const t = useTheme();
   return (
     <Text style={{ color: color || t.text, fontSize: size, lineHeight: Math.round(size * 1.5) }}>
@@ -20,7 +20,7 @@ function Rich({ text, size = 14, color }: { text: string; size?: number; color?:
   );
 }
 
-function Bullet({ mark, text }: { mark: string; text: string }) {
+export function Bullet({ mark, text }: { mark: string; text: string }) {
   const t = useTheme();
   return (
     <View style={{ flexDirection: 'row', gap: 8, marginBottom: 6 }}>
@@ -33,7 +33,7 @@ function Bullet({ mark, text }: { mark: string; text: string }) {
 }
 
 /** Заголовок раскрывающегося блока. */
-function Toggle({ open, title, onPress, testID }: { open: boolean; title: string; onPress: () => void; testID?: string }) {
+export function Toggle({ open, title, onPress, testID }: { open: boolean; title: string; onPress: () => void; testID?: string }) {
   const t = useTheme();
   return (
     <Pressable

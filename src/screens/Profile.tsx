@@ -26,10 +26,11 @@ import { ConsentCheck, openLegal } from './Legal';
 import { LEGAL_DOCS } from '../legal';
 import { HelpCard } from './Help';
 import { AboutCard } from './About';
+import { WikiCard } from './Wiki';
 import { CodeEntry, OfferCard } from './Promo';
 import { NotifyCard } from './Notify';
 
-export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; openHelp: () => void }) {
+export function ProfileScreen({ openHand, openHelp, openWiki }: { openHand: () => void; openHelp: () => void; openWiki: () => void }) {
   const t = useTheme();
   const L = useI18n();
   const { tx, f } = L;
@@ -92,6 +93,7 @@ export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; op
       <Gap h={12} />
 
       <HelpCard onOpen={openHelp} />
+      <WikiCard onOpen={openWiki} />
       <AboutCard />
       <OfferCard />
 
