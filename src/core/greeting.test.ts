@@ -8,7 +8,7 @@ describe('приветствие на «Дне»', () => {
     ]);
   });
   it('имя без лишних пробелов, пустое — пусто', () => {
-    expect(greetName('  Карен  ')).toBe('Карен');
+    expect(greetName('  Карэн  ')).toBe('Карэн');
     expect(greetName('Анна   Мария')).toBe('Анна Мария');
     expect(greetName('   ')).toBe('');
     expect(greetName(undefined)).toBe('');
