@@ -9,6 +9,11 @@ export type ChangelogEntry = { v: string } & Record<Lang, string[]>;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: '0.32.0',
+    ru: ['Профиль → «Обратная связь»: выберите «ошибка», «идея» или «вопрос», и приложение подготовит сообщение с версией и устройством для отправки в Telegram.'],
+    en: ['Profile → "Feedback": pick "bug", "idea" or "question" and the app prepares a message with the version and device to send in Telegram.'],
+  },
+  {
     v: '0.31.0',
     ru: [
       'Фото: демо-оценка собирает черновик по названию блюда. Продукт из справочника получает своё КБЖУ и обычную порцию, незнакомое блюдо — примерные значения с пометкой «проверьте».',

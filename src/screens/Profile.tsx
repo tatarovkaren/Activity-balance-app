@@ -26,6 +26,7 @@ import { ConsentCheck, openLegal } from './Legal';
 import { LEGAL_DOCS } from '../legal';
 import { HelpCard } from './Help';
 import { AboutCard } from './About';
+import { FeedbackCard } from './Feedback';
 import { WikiCard } from './Wiki';
 import { CodeEntry, OfferCard } from './Promo';
 import { NotifyCard } from './Notify';
@@ -94,6 +95,7 @@ export function ProfileScreen({ openHand, openHelp, openWiki }: { openHand: () =
 
       <HelpCard onOpen={openHelp} />
       <WikiCard onOpen={openWiki} />
+      <FeedbackCard />
       <AboutCard />
       <OfferCard />
 

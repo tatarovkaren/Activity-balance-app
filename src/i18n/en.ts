@@ -841,6 +841,33 @@ export const en: Dict = {
   },
 
   /** "About" section in the profile — src/screens/About.tsx. */
+  feedback: {
+    title: 'Feedback',
+    intro: 'Found a bug, have an idea or a question? Pick what it is about and tap the button: the app prepares a message with the version and device, you just add what happened. A screenshot helps a lot.',
+    kinds: { bug: 'Bug', idea: 'Idea', question: 'Question' },
+    send: 'Write in Telegram',
+    copy: 'Copy the message',
+    copiedChat: 'Message copied. Paste it into the chat that opened, add details and attach a screenshot.',
+    copiedNoChat: 'Message copied. Send it in Telegram to whoever shared the app with you and add details.',
+    notCopied: 'Copy the text below and send it in Telegram to whoever shared the app with you.',
+    openAgain: 'Open the chat again',
+    privacy: 'The message has none of your numbers, name or email: only the app version, device, browser, language and mode.',
+    head: (kind: string) => `Activity Balance · ${kind}`,
+    version: 'Version',
+    device: 'Device',
+    screenSize: 'Screen',
+    installed: 'installed to home screen',
+    lang: 'Language',
+    mode: 'Mode',
+    date: 'Date',
+    modes: { none: 'not signed in', local: 'on this device', demo: 'demo', cloud: 'with account' },
+    body: {
+      bug: 'What happened:\n\nWhat I did before that:\n\nWhich screen:',
+      idea: 'Idea:\n\nWhy it would help:',
+      question: 'Question:',
+    },
+  },
+
   about: {
     title: 'About',
     slogan: 'Activity Balance is your personal energy balance dashboard: workouts, daily activity, nutrition and weight in a single view.',
