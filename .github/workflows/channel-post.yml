@@ -1,0 +1,71 @@
+# Публикация постов информационного Telegram-канала из очереди channel/posts/.
+# Раз в день около 9:00 МСК отправляет один созревший пост и отмечает его в channel/published.json.
+# Подробно и как включить — docs/channel.md.
+name: Пост в Telegram-канал
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # 06:00 UTC = 09:00 МСК (GitHub может запустить с задержкой)
+  workflow_dispatch:
+    inputs:
+      send:
+        description: 'Отправить созревший пост (без галочки — только показать очередь)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: channel-post
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Отправлять ли
+        id: check
+        env:
+          EVENT: ${{ github.event_name }}
+          SEND_INPUT: ${{ inputs.send }}
+          HAS_SECRETS: ${{ secrets.TESTERS_BOT_TOKEN != '' && secrets.CHANNEL_CHAT_ID != '' }}
+        run: |
+          if [ "$EVENT" = "schedule" ]; then send=true; else send="$SEND_INPUT"; fi
+          if [ "$send" = "true" ] && [ "$HAS_SECRETS" != "true" ]; then
+            echo "::warning::Секреты TESTERS_BOT_TOKEN / CHANNEL_CHAT_ID не заданы — пост не отправлен (см. docs/channel.md)."
+            send=false
+          fi
+          echo "send=$send" >> "$GITHUB_OUTPUT"
+
+      - name: Очередь (без отправки)
+        if: steps.check.outputs.send != 'true'
+        run: node --experimental-strip-types --no-warnings scripts/channel-post.mjs
+
+      - name: Отправить в канал
+        if: steps.check.outputs.send == 'true'
+        env:
+          CHANNEL_BOT_TOKEN: ${{ secrets.TESTERS_BOT_TOKEN }}
+          CHANNEL_CHAT_ID: ${{ secrets.CHANNEL_CHAT_ID }}
+        run: node --experimental-strip-types --no-warnings scripts/channel-post.mjs --send
+
+      - name: Отметить отправленный пост
+        if: steps.check.outputs.send == 'true'
+        run: |
+          if git diff --quiet channel/published.json; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add channel/published.json
+          git commit -m "Канал: отмечен отправленный пост"
+          for i in 1 2 3; do
+            git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && exit 0
+            sleep $((i * 5))
+          done
+          echo "::error::Пост отправлен, но отметку не удалось сохранить — допишите его в channel/published.json вручную, иначе он уйдёт повторно."
+          exit 1
