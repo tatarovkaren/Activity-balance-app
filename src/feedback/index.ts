@@ -3,7 +3,7 @@
 // В заготовке нет данных пользователя: ни цифр, ни имени, ни почты.
 
 /** Ссылка на Telegram-чат для отзывов, например https://t.me/+AbCdEf… Пусто = чата ещё нет. */
-export const FEEDBACK_CHAT = '';
+export const FEEDBACK_CHAT = 'https://t.me/+onLrh98CPi9hMTA6';
 
 export function feedbackChat(): string {
   const env = (process.env.EXPO_PUBLIC_FEEDBACK_CHAT || '').trim();
