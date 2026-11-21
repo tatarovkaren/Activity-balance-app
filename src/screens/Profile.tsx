@@ -25,6 +25,7 @@ import { GoalCard, ProposalCards } from './Goal';
 import { ConsentCheck, openLegal } from './Legal';
 import { LEGAL_DOCS } from '../legal';
 import { HelpCard } from './Help';
+import { AboutCard } from './About';
 import { CodeEntry, OfferCard } from './Promo';
 import { NotifyCard } from './Notify';
 
@@ -91,6 +92,7 @@ export function ProfileScreen({ openHand, openHelp }: { openHand: () => void; op
       <Gap h={12} />
 
       <HelpCard onOpen={openHelp} />
+      <AboutCard />
       <OfferCard />
 
       <Card title={P.uiMode.title} accent={t.violet}>

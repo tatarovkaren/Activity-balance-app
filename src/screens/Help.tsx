@@ -8,6 +8,7 @@ import { HELP_SHOTS, type HelpShot } from '../help/shots.gen';
 import { Btn, Card, Gap, T } from '../ui/kit';
 import { useTheme } from '../ui/theme';
 import { useI18n } from '../i18n';
+import { APP_VERSION, RELEASE } from '../about';
 
 /** Текст с **жирными** частями. */
 function Rich({ text, size = 14, color }: { text: string; size?: number; color?: string }) {
@@ -69,7 +70,7 @@ function Shot({ src, w, h, label, testID }: { src: HelpShot['src']; w: number; h
 
 export function HelpScreen({ onClose }: { onClose: () => void }) {
   const t = useTheme();
-  const { lang, tx } = useI18n();
+  const { lang, tx, f } = useI18n();
   const H = tx.help;
   const shots = HELP_SHOTS[lang] || HELP_SHOTS.en;
   const [open, setOpen] = useState<string | null>(null);
@@ -140,6 +141,12 @@ export function HelpScreen({ onClose }: { onClose: () => void }) {
         <Rich text={H.more} color={t.muted} size={13} />
       </Card>
       <Btn small title={'← ' + H.back} onPress={onClose} />
+      <Gap h={12} />
+      <View testID="helpVersion">
+        <T muted size={11} style={{ textAlign: 'center' }}>
+          {tx.app.name + ' · ' + tx.about.version(APP_VERSION, f.dmy(RELEASE))}
+        </T>
+      </View>
     </View>
   );
 }
