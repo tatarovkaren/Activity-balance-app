@@ -5,7 +5,7 @@
 
 import { FOOD_BY_ID, type Food } from './foods';
 
-/** Размеры руки, см. По умолчанию — замеры Карена из метода. */
+/** Размеры руки, см. По умолчанию — замеры Карэна из метода. */
 export interface HandProfile {
   palmWidth: number; // ширина ладони без большого пальца
   palmLength: number; // длина ладони без пальцев

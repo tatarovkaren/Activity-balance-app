@@ -158,6 +158,9 @@ export const ru = {
 
   day: {
     motto: 'ПРОЦЕСС · ДИСЦИПЛИНА',
+    /** Приветствие вверху «Дня» по имени из профиля и части суток. */
+    greet: (part: 'morning' | 'day' | 'evening' | 'night', name: string) =>
+      `${{ morning: 'Доброе утро', day: 'Добрый день', evening: 'Добрый вечер', night: 'Доброй ночи' }[part]}, ${name}`,
     curatorNotes: 'Комментарий куратора',
     /** relative — вместо даты «Сегодня»/«Вчера». */
     title: (date: string, weekday: string, _relative = false) => `${date}, ${weekday}`,
@@ -887,7 +890,7 @@ export const ru = {
   demo: {
     strength: 'Силовая',
     elliptical: 'Орбитрек',
-    me: 'Демо',
+    me: 'Алекс',
     clients: ['Анна К.', 'Дмитрий С.', 'Ольга П.', 'Сергей В.', 'Мария Л.', 'Алексей Н.', 'Елена Р.'],
     curatorName: 'Ирина Смирнова',
     curatorSurname: 'Смирнова',
