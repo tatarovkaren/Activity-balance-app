@@ -869,6 +869,8 @@ export const ru = {
     title: 'О приложении',
     slogan: 'Activity Balance — ваш персональный дашборд баланса энергии: тренировки, повседневная активность, питание и вес в одном визуале.',
     version: (v: string, date: string) => `Версия ${v} от ${date}`,
+    whatsNew: (v: string) => `Что нового в ${v}`,
+    earlier: 'Ранее',
     build: (b: string) => `Сборка ${b}`,
     more: 'Подробнее',
     less: 'Свернуть',
