@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CHANGELOG } from './changelog';
-import { releaseMessage } from './releaseMessage';
+import { releaseDigest, releaseMessage } from './releaseMessage';
 
 describe('сообщение о новой версии', () => {
   it('берёт номер и пункты верхней записи «Что нового»', () => {
@@ -15,5 +15,11 @@ describe('сообщение о новой версии', () => {
   it('экранирует < > & для разметки HTML', () => {
     const msg = releaseMessage({ v: '1.0.0', ru: ['a < b & c > d'], en: ['x'] });
     expect(msg).toContain('a &lt; b &amp; c &gt; d');
+  });
+
+  it('сводка последних 6 версий укладывается в одно сообщение', () => {
+    const msg = releaseDigest(CHANGELOG.slice(0, 6));
+    for (const e of CHANGELOG.slice(0, 6)) expect(msg).toContain(`<b>${e.v}</b>`);
+    expect(msg.length).toBeLessThan(4096);
   });
 });

@@ -12,6 +12,10 @@ on:
         description: 'Отправить в группу (без галочки — только показать текст)'
         type: boolean
         default: false
+      count:
+        description: 'Сколько последних версий включить в сообщение'
+        type: number
+        default: 1
 
 permissions:
   contents: read
@@ -52,11 +56,14 @@ jobs:
 
       - name: Текст сообщения
         if: steps.check.outputs.send != 'true'
-        run: node --experimental-strip-types --no-warnings scripts/release-notify.mjs
+        env:
+          COUNT: ${{ inputs.count || 1 }}
+        run: node --experimental-strip-types --no-warnings scripts/release-notify.mjs --count "$COUNT"
 
       - name: Отправить в Telegram
         if: steps.check.outputs.send == 'true'
         env:
           TESTERS_BOT_TOKEN: ${{ secrets.TESTERS_BOT_TOKEN }}
           TESTERS_CHAT_ID: ${{ secrets.TESTERS_CHAT_ID }}
-        run: node --experimental-strip-types --no-warnings scripts/release-notify.mjs --send
+          COUNT: ${{ inputs.count || 1 }}
+        run: node --experimental-strip-types --no-warnings scripts/release-notify.mjs --send --count "$COUNT"

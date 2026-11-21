@@ -1,6 +1,7 @@
 // Сообщение тестерам в Telegram о новой версии (см. docs/release-notify.md).
 //   node --experimental-strip-types scripts/release-notify.mjs            — только показать текст
 //   node --experimental-strip-types scripts/release-notify.mjs --send     — отправить в группу
+//   … --count 6                                                          — последние 6 версий одним сообщением
 // Для --send нужны переменные окружения TESTERS_BOT_TOKEN и TESTERS_CHAT_ID (секреты GitHub).
 // Номер версии в package.json и верхняя запись changelog обязаны совпадать — иначе ничего не шлём.
 
@@ -8,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CHANGELOG } from '../src/about/changelog.ts';
-import { releaseMessage } from '../src/about/releaseMessage.ts';
+import { releaseDigest } from '../src/about/releaseMessage.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
@@ -19,7 +20,9 @@ if (top.v !== version) {
   process.exit(1);
 }
 
-const text = releaseMessage(top);
+const i = process.argv.indexOf('--count');
+const count = i > 0 ? Math.max(1, Math.min(20, parseInt(process.argv[i + 1], 10) || 1)) : 1;
+const text = releaseDigest(CHANGELOG.slice(0, count));
 console.log(text);
 
 if (process.argv.includes('--send')) {
