@@ -1,6 +1,6 @@
 {
   "name": "balans",
-  "version": "0.33.0",
+  "version": "0.34.0",
   "main": "index.ts",
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -35,6 +35,7 @@
     "db:setup": "node scripts/build-db-setup.mjs",
     "fn:bundle": "node scripts/build-functions.mjs",
     "icons": "node scripts/build-icons.cjs",
+    "usda": "node scripts/build-usda.mjs",
     "postinstall": "node scripts/build-version.mjs"
   },
   "private": true

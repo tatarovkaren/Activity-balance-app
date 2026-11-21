@@ -9,6 +9,11 @@ export type ChangelogEntry = { v: string } & Record<Lang, string[]>;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: '0.34.0',
+    ru: ['Справочник продуктов дополнен базой USDA: ещё около 6 400 продуктов (мясо по отрубам, рыба, овощи, фрукты, крупы, молочное), ищутся по-русски и по-английски.'],
+    en: ['The food list now includes the USDA database: about 6,400 more foods (meat cuts, fish, vegetables, fruit, grains, dairy), searchable in Russian and English.'],
+  },
+  {
     v: '0.33.0',
     ru: [
       'Справочник продуктов: кнопка «＋ Продукт» на «Дне» — около 350 продуктов и блюд с КБЖУ на 100 г, обычной порцией и источником, поиск по-русски и по-английски.',

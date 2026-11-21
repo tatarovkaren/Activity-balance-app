@@ -2,12 +2,13 @@
 // и поиск по штрихкоду (Open Food Facts). Несколько продуктов — один приём пищи; он прибавляется к КБЖУ дня
 // так же, как приём по фото (core/photo/meals.ts), но цифры точные по весу.
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import type { ISODate } from '../core/dates';
 import { FOOD_BY_ID, FOODS, typicalPortion, type Food } from '../core/photo/foods';
 import { searchFoods } from '../core/photo/search';
+import { loadUsda, usdaFoods } from '../core/photo/usda';
 import { customFoodError, foodTotals, kcalMismatch, makeCustomFood, mealFromFoods, type CustomFoodInput, type PickedFood } from '../core/photo/custom';
 import { cleanBarcode, fetchOffProduct, OffError, searchOffProducts } from '../core/photo/off';
 import { MEAL_SLOTS, type MealSlot } from '../core/types';
@@ -23,7 +24,9 @@ const POPULAR = ['buckwheat', 'rice', 'oats', 'chicken_breast', 'egg', 'cottage'
 
 /** Название продукта на языке интерфейса: встроенный — из словаря, свой — как вписал пользователь. */
 export function displayName(L: I18n, f: Food): string {
-  return FOOD_BY_ID[f.id] ? foodName(L, f.id) : f.name;
+  if (FOOD_BY_ID[f.id]) return foodName(L, f.id);
+  // база USDA: русское название собрано из английского описания, в английском интерфейсе — оригинал
+  return f.fdcId && L.lang !== 'ru' ? f.nameEn || f.name : f.name;
 }
 
 export function FoodScreen({ sel, meal: mealProp, onBack }: { sel: ISODate; meal?: MealSlot; onBack?: () => void }) {
@@ -42,7 +45,16 @@ export function FoodScreen({ sel, meal: mealProp, onBack }: { sel: ISODate; meal
   // магазинные товары из Open Food Facts: ищем только по кнопке (лимит запросов у базы)
   const [shop, setShop] = useState<{ q: string; items: Food[]; busy: boolean; err: string } | null>(null);
 
-  const all = useMemo(() => [...mine, ...FOODS], [mine]);
+  // большая база USDA подгружается отдельным куском при открытии экрана
+  const [usda, setUsda] = useState<Food[]>(usdaFoods());
+  useEffect(() => {
+    let on = true;
+    loadUsda().then((x) => on && setUsda(x));
+    return () => {
+      on = false;
+    };
+  }, []);
+  const all = useMemo(() => [...mine, ...FOODS, ...usda], [mine, usda]);
   const hits = useMemo(() => searchFoods(query, all, 25).map((h) => h.food), [query, all]);
   const shown = query.trim() ? hits : [...mine.slice(0, 10), ...POPULAR.map((id) => FOOD_BY_ID[id]).filter(Boolean)];
 
@@ -74,7 +86,7 @@ export function FoodScreen({ sel, meal: mealProp, onBack }: { sel: ISODate; meal
 
   const confirm = () => {
     const at = Date.now();
-    const m = mealFromFoods(items, { id: 'c' + at, meal, at });
+    const m = mealFromFoods(items, { id: 'c' + at, meal, at }, (x) => displayName(L, x));
     addMeal(sel, m);
     setDone(m.kcal);
     setItems([]);
@@ -235,6 +247,7 @@ function FoodRow({ food, onPick, onEdit, onRemove }: { food: Food; onPick: () =>
           {displayName(L, food)}
           {food.brand && !food.name.includes(food.brand) ? <T muted size={12}>{' · ' + food.brand}</T> : null}
         </T>
+        {food.fdcId && L.lang === 'ru' && food.nameEn !== food.name ? <T muted size={11}>{food.nameEn}</T> : null}
         <T muted size={12}>
           {C.per100(L.f.int(food.kcal), n(food.p), n(food.f), n(food.c))}
           <T size={11} color={food.source === 'user' || food.source === 'off' ? t.teal : t.muted}>{'  ' + (C.sources[food.source] || food.source)}</T>
