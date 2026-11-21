@@ -4,7 +4,8 @@
 
 import { shiftDate, type ISODate } from '../dates';
 import type { Lang, Plan } from '../types';
-import { FOODS } from './foods';
+import { FOOD_BY_ID } from './foods';
+import { componentsFromName, oilyHint } from './match';
 import type { ComponentInput, HandProfile, PhotoQuality } from './estimate';
 
 export interface PhotoInput {
@@ -70,30 +71,34 @@ export const manualProvider: FoodPhotoProvider = {
   },
 };
 
+/** Пример черновика демо-оценки, когда название блюда не введено. */
+export const DEMO_EXAMPLE: ComponentInput[] = [
+  { foodId: 'buckwheat', amount: { kind: 'hand', unit: 'fist', count: 0.7 }, confidence: 0.7 },
+  { foodId: 'chicken_cutlet', amount: { kind: 'hand', unit: 'palm', count: 0.8 }, confidence: 0.6 },
+  { foodId: 'veg_fresh', amount: { kind: 'hand', unit: 'fist', count: 0.6 }, confidence: 0.8 },
+];
+
 /**
- * Демо-провайдер: имитирует ответ модели на типовую тарелку, чтобы показать весь путь
+ * Демо-провайдер: имитирует ответ модели, чтобы показать весь путь
  * (черновик → правка → подтверждение) до подключения настоящей модели. Не смотрит на снимок.
+ * Если введено название блюда — черновик из него: продукты справочника с типичной порцией,
+ * иначе одна строка с этим названием и пометкой «проверьте». Без названия — пример (DEMO_EXAMPLE).
  */
 export const demoProvider: FoodPhotoProvider = {
   id: 'demo',
   automatic: true,
   async estimate(req) {
     await new Promise((r) => setTimeout(r, 700));
-    const note = (req.note || '').toLowerCase();
-    // слова из русского названия и из id (английские: buckwheat, chicken_cutlet…)
-    const words = (f: (typeof FOODS)[number]) => [...f.name.toLowerCase().split(' '), ...f.id.split('_')];
-    const pick = FOODS.filter((f) => note && words(f).some((w) => w.length > 3 && note.includes(w.slice(0, 5))));
-    const components: ComponentInput[] = pick.length
-      ? pick.slice(0, 3).map((f, i) => ({ foodId: f.id, amount: { kind: 'hand', unit: i === 0 ? 'fist' : 'palm', count: 1 }, confidence: 0.5 }))
-      : [
-          { foodId: 'buckwheat', amount: { kind: 'hand', unit: 'fist', count: 0.7 }, confidence: 0.7 },
-          { foodId: 'chicken_cutlet', amount: { kind: 'hand', unit: 'palm', count: 0.8 }, confidence: 0.6 },
-          { foodId: 'veg_fresh', amount: { kind: 'hand', unit: 'fist', count: 0.6 }, confidence: 0.8 },
-        ];
+    const note = (req.note || '').trim();
+    const fromName = note ? componentsFromName(note) : [];
+    const components = fromName.length ? fromName : DEMO_EXAMPLE;
+    const oilyGuess = fromName.length
+      ? oilyHint(note) || fromName.some((c) => !!c.foodId && !!FOOD_BY_ID[c.foodId]?.oily)
+      : true;
     return {
       components,
       quality: req.photos.side ? 'good' : 'topOnly',
-      oilyGuess: true,
+      oilyGuess,
       retake: req.photos.side ? undefined : ['addSide'],
     };
   },

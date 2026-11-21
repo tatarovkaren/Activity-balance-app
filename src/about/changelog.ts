@@ -9,6 +9,17 @@ export type ChangelogEntry = { v: string } & Record<Lang, string[]>;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: '0.31.0',
+    ru: [
+      'Фото: демо-оценка собирает черновик по названию блюда. Продукт из справочника получает своё КБЖУ и обычную порцию, незнакомое блюдо — примерные значения с пометкой «проверьте».',
+      'В справочник продуктов добавлены блины и панкейки.',
+    ],
+    en: [
+      'Photo: the demo estimate builds the draft from the dish name. A food from the list gets its own calories, macros and a typical portion; an unknown dish gets rough values marked "check".',
+      'Pancakes and crepes added to the food list.',
+    ],
+  },
+  {
     v: '0.30.0',
     ru: ['В «О приложении» появился список «Что нового»: коротко о последних изменениях.'],
     en: ['"About" now has a "What\'s new" list with a short summary of recent changes.'],

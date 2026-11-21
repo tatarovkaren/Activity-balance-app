@@ -1,6 +1,6 @@
 {
   "name": "balans",
-  "version": "0.30.0",
+  "version": "0.31.0",
   "main": "index.ts",
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
