@@ -10,7 +10,9 @@ import { useDerived } from '../data/derived';
 import { Bar, Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, TextField, Fields } from '../ui/kit';
 import { useTheme } from '../ui/theme';
 import { calibLine, detailText, importSummaryText } from '../ui/format';
-import { errorText, useI18n } from '../i18n';
+import { errorText, foodName, useI18n } from '../i18n';
+import { FOOD_BY_ID } from '../core/photo/foods';
+import { CATALOG_PROVIDER } from '../core/photo/custom';
 import { downloadBlob, svgToPng } from '../ui/files';
 import { importFatSecretFile } from '../ui/fatsecret';
 import { reportSvg } from '../ui/reportsvg';
@@ -28,12 +30,15 @@ export function DayScreen({
   setSel,
   openFact,
   openPhoto,
+  openFood,
 }: {
   sel: ISODate;
   setSel: (d: ISODate) => void;
   openFact: () => void;
   /** «Сфотографировать» в приёме пищи: экран фото с выбранным приёмом. */
   openPhoto?: (meal?: MealSlot) => void;
+  /** Добавить продукт из справочника (ручной ввод). */
+  openFood?: () => void;
 }) {
   const t = useTheme();
   const L = useI18n();
@@ -220,6 +225,7 @@ export function DayScreen({
         accent={t.amber}
       >
         <Row gap={6} style={{ marginBottom: 10 }}>
+          {openFood ? <Btn small kind="solid" title={D.food.addFood} onPress={openFood} testID="addFood" /> : null}
           {openPhoto ? <Btn small kind="solid" title={D.food.photo} onPress={() => setAskMeal(!askMeal)} testID="photoMeal" /> : null}
           <Btn small title={D.food.importFs} onPress={importCsv} testID="importCsv" />
         </Row>
@@ -267,13 +273,13 @@ export function DayScreen({
                   <Row style={{ justifyContent: 'space-between' }}>
                     <T size={13} style={{ flexShrink: 1 }}>
                       <T bold size={13}>{tx.meals[m.meal]}</T>
-                      <T size={11} color={t.amber}>{'  ' + D.food.byPhoto}</T>
-                      {' · ' + m.items.map((it) => `${it.name} ${it.grams} ${tx.common.g}`).join(', ')}
+                      <T size={11} color={m.provider === CATALOG_PROVIDER ? t.green : t.amber}>{'  ' + (m.provider === CATALOG_PROVIDER ? D.food.byCatalog : D.food.byPhoto)}</T>
+                      {' · ' + m.items.map((it) => `${it.foodId && FOOD_BY_ID[it.foodId] ? foodName(L, it.foodId) : it.name} ${it.grams} ${tx.common.g}`).join(', ')}
                     </T>
                     <Btn small kind="link" title={tx.common.remove} color={t.muted} onPress={() => removeMeal(sel, m.id)} />
                   </Row>
                   <T muted mono size={12}>
-                    {D.food.photoLine(int(m.kcal), int(m.kcalMin), int(m.kcalMax), kg(m.p), kg(m.f), kg(m.c))}
+                    {m.provider === CATALOG_PROVIDER ? D.food.exactLine(int(m.kcal), kg(m.p), kg(m.f), kg(m.c)) : D.food.photoLine(int(m.kcal), int(m.kcalMin), int(m.kcalMax), kg(m.p), kg(m.f), kg(m.c))}
                   </T>
                 </View>
               ))}

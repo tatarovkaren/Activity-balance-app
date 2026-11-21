@@ -11,7 +11,7 @@ export function useBackupExport(): () => number {
   const { data, session, markBackup } = useStore();
   const { tx } = useI18n();
   return () => {
-    const b = makeBackup(session.userId, { profile: data.profile, days: data.days, keep: data.keep, hand: data.hand, refs: data.refs, photoEdits: data.photoEdits });
+    const b = makeBackup(session.userId, { profile: data.profile, days: data.days, keep: data.keep, hand: data.hand, refs: data.refs, photoEdits: data.photoEdits, customFoods: data.customFoods });
     downloadText(`${tx.profile.backupFile}-${todayISO()}.json`, JSON.stringify(b, null, 1));
     markBackup();
     return Object.keys(data.days).length;

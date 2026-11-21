@@ -436,7 +436,7 @@ export interface Backup {
   version: 1;
   exportedAt: string;
   owner: string;
-  data: { profile: unknown; days: DayMap; keep: unknown; hand?: unknown; refs?: unknown; photoEdits?: unknown };
+  data: { profile: unknown; days: DayMap; keep: unknown; hand?: unknown; refs?: unknown; photoEdits?: unknown; customFoods?: unknown };
 }
 
 export function makeBackup(owner: string, data: Backup['data'], now = new Date()): Backup {

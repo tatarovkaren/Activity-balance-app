@@ -5,7 +5,9 @@ import React, { useMemo, useState } from 'react';
 import { Image, Pressable, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { todayISO, type ISODate } from '../core/dates';
-import { FOOD_BY_ID, FOODS } from '../core/photo/foods';
+import { FOOD_BY_ID, FOODS, type Food } from '../core/photo/foods';
+import { searchFoods } from '../core/photo/search';
+import { displayName } from './Food';
 import {
   buildDraft,
   biasFactor,
@@ -44,11 +46,10 @@ export function mealByTime(d = new Date()): MealSlot {
 
 type Step = 'capture' | 'draft' | 'done';
 
-/** Поиск по справочнику на языке интерфейса (и по русскому названию — для смешанного ввода). */
-function findFoodL(L: I18n, query: string) {
-  const q = query.trim().toLowerCase();
-  if (!q) return FOODS;
-  return FOODS.filter((x) => foodName(L, x.id).toLowerCase().includes(q) || x.name.toLowerCase().includes(q));
+/** Поиск по справочнику и своим продуктам (RU и EN сразу); без запроса — продукты фото-подсчёта. */
+function findFoodL(query: string, mine: Food[]): Food[] {
+  if (!query.trim()) return FOODS;
+  return searchFoods(query, [...mine, ...FOODS], 12).map((h) => h.food);
 }
 
 export function PhotoScreen({ sel, meal: mealProp, onBack }: { sel: ISODate; meal?: MealSlot; onBack?: () => void }) {
@@ -354,6 +355,7 @@ function ComponentEditor({
   const Ph = L.tx.photo;
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
+  const mine = useStore().data.customFoods || [];
   // меры руки — запасной способ, по умолчанию свёрнуты (главное поле — граммы)
   const [handOpen, setHandOpen] = useState(value.amount.kind === 'hand' && estGrams == null);
   const food = value.foodId ? FOOD_BY_ID[value.foodId] : undefined;
@@ -388,17 +390,19 @@ function ComponentEditor({
         <View style={{ gap: 4 }}>
           <TextField value={search} onChange={setSearch} placeholder={Ph.findFood} />
           <Row gap={6}>
-            {findFoodL(L, search)
+            {findFoodL(search, mine)
               .slice(0, 12)
               .map((f) => (
                 <Pressable
                   key={f.id}
                   onPress={() => {
-                    onChange({ ...value, foodId: f.id, name: undefined, per100: undefined, unverified: undefined });
+                    // свой продукт — своими цифрами на 100 г (его нет во встроенном справочнике)
+                    if (FOOD_BY_ID[f.id]) onChange({ ...value, foodId: f.id, name: undefined, per100: undefined, unverified: undefined });
+                    else onChange({ ...value, foodId: undefined, name: f.name, per100: { kcal: f.kcal, p: f.p, f: f.f, c: f.c, density: f.density }, unverified: undefined });
                     setOpen(false);
                   }}
                 >
-                  <T size={12} color={f.id === value.foodId ? t.amber : t.muted}>{foodName(L, f.id)}</T>
+                  <T size={12} color={f.id === value.foodId ? t.amber : t.muted}>{displayName(L, f)}</T>
                 </Pressable>
               ))}
           </Row>

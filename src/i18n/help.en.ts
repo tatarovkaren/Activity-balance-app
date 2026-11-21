@@ -79,8 +79,20 @@ export const helpEn: typeof helpRu = {
         'The ‹ › arrows at the top switch days, and the calendar button lets you jump to any date (days with entries are marked with a dot). You can fill in past days too.',
         '**Morning weight**: fasted, after the toilet. Below it you see the change since yesterday and the weekly average.',
         '**Steps**: from your phone or tracker, for the whole day.',
-        '**Food**: enter calories and macros by hand, tap "Import FatSecret", or tap "📷 Snap a meal" and pick the meal. If calories are empty, they are calculated from macros.',
+        '**Food**: enter calories and macros by hand, add foods with "＋ Food", tap "Import FatSecret", or tap "📷 Snap a meal" and pick the meal. If calories are empty, they are calculated from macros.',
         'The fields show "actual / target": the colour tells you whether you are within your target.',
+      ],
+    },
+    {
+      id: 'food',
+      title: 'Food list',
+      text: [
+        'In the food card tap **"＋ Food"** and pick the meal. Start typing a name, in Russian or English, with fat content if you like: "buckwheat", "kefir 2.5", "pancakes".',
+        'The list has about 350 foods and dishes: grains, meat, fish, dairy, vegetables, fruit, bakery, sweets, drinks and common Russian dishes. Each has calories and macros per 100 g, a typical portion and a source: USDA, Russian composition tables, a typical label or a recipe calculation.',
+        'Tap a food to add it to the meal with a typical portion. Change the weight or tap "portion", "1 pc" or "100 g". You can collect several foods and add them as one entry marked **"from food list"**: it adds to the day\'s totals, just like a photo entry.',
+        '**Your own food or dish**: if something is missing, tap "＋ My own food" and enter calories and macros per 100 g from the package or the recipe, a typical portion and the weight of one piece. It is saved and shows up in search; you can edit or delete it. If calories do not match the macros, the app warns that these may be per-portion numbers.',
+        '**Barcode**: scan it with the camera or type the digits under it. The app finds the product in the open Open Food Facts database and saves it to your foods, so next time it is found offline. People enter these numbers, so check them against the label. Safari on iPhone cannot read barcodes from photos; type the digits there.',
+        'Your own foods are kept on the device and in the backup for now. Shared foods from your curator will come with the server.',
       ],
     },
     {
@@ -267,6 +279,10 @@ export const helpEn: typeof helpRu = {
     {
       q: 'Where is my data stored?',
       a: 'Without signing in, data is stored on this device only: clearing the browser deletes it, so use "Export data" from time to time. After you sign in, data is kept in the cloud and available on all your devices.',
+    },
+    {
+      q: 'Where do the food list numbers come from, and how far can I trust them?',
+      a: 'Basic foods come from USDA FoodData Central and Russian food composition tables, dairy and bread from typical labels, and dishes are calculated from home recipes (±15%, because everyone cooks differently). If a product has a label, its numbers are more precise: add it as your own food or find it by barcode.',
     },
     {
       q: 'How accurate are photo estimates?',

@@ -17,7 +17,10 @@ describe('демо-оценка по названию блюда', () => {
     expect(ids('Pancakes')).toEqual(['pancakes']);
     expect(ids('rice with salmon')).toEqual(['rice', 'salmon']);
     expect(ids('pastry')).toEqual(['cake']);
-    expect(ids('бургер')).toEqual([]);
+    expect(ids('бургер')).toEqual(['burger']);
+    expect(ids('вареники с картошкой')).toEqual(['vareniki_potato']);
+    expect(ids('картофель фри')).toEqual(['french_fries']);
+    expect(ids('рататуй')).toEqual([]);
   });
 
   it('из справочника — КБЖУ продукта и типичная порция в граммах', () => {
@@ -28,11 +31,11 @@ describe('демо-оценка по названию блюда', () => {
   });
 
   it('нет в справочнике — одна строка с этим названием и пометкой «проверьте»', () => {
-    const c = componentsFromName('  бургер   с беконом ');
+    const c = componentsFromName('  рататуй   по-провански ');
     expect(c).toHaveLength(1);
-    expect(c[0]).toMatchObject({ name: 'Бургер с беконом', unverified: true, amount: { kind: 'grams', grams: UNKNOWN_DISH.grams } });
+    expect(c[0]).toMatchObject({ name: 'Рататуй по-провански', unverified: true, amount: { kind: 'grams', grams: UNKNOWN_DISH.grams } });
     const d = buildDraft(c, opts);
-    expect(d.components[0]).toMatchObject({ name: 'Бургер с беконом', grams: 250, kcal: 425 });
+    expect(d.components[0]).toMatchObject({ name: 'Рататуй по-провански', grams: 250, kcal: 425 });
   });
 
   it('найдено не всё — ненайденные части тоже строками с пометкой, «ресторан» не блюдо', () => {
@@ -42,7 +45,7 @@ describe('демо-оценка по названию блюда', () => {
       expect.objectContaining({ foodId: 'bread', amount: { kind: 'grams', grams: 50 } }),
     ]);
     expect(componentsFromName('гречка с котлетой, ресторан').map((x) => x.foodId)).toEqual(['buckwheat', 'chicken_cutlet']);
-    expect(componentsFromName('Бургер с беконом')).toHaveLength(1);
+    expect(componentsFromName('Рататуй по-провански')).toHaveLength(1);
   });
 
   it('масло: по слову «ресторан» или жареному продукту', () => {
