@@ -55,7 +55,7 @@ export const helpEn: typeof helpRu = {
         '"How I log food": if you weigh grains dry and meat raw, photo estimates convert portions to raw weight.',
         'At the top of Profile is the **app mode**: basic shows only the essentials, advanced shows every metric and fine-tuning.',
         'The **Wiki: energy balance** card has key studies on losing fat and gaining mass: short summaries, limitations and links to the original papers.',
-      'The **About** card shows the version and release date. "More" opens the tagline, documents and contacts. Mention the version when you report a problem.',
+      'The **About** card shows the version, release date and what’s new in it. "More" opens earlier changes, the tagline, documents and contacts. Mention the version when you report a problem.',
       ],
     },
     {

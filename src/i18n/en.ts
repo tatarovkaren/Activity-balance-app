@@ -841,6 +841,8 @@ export const en: Dict = {
     title: 'About',
     slogan: 'Activity Balance is your personal energy balance dashboard: workouts, daily activity, nutrition and weight in a single view.',
     version: (v: string, date: string) => `Version ${v}, released ${date}`,
+    whatsNew: (v: string) => `What's new in ${v}`,
+    earlier: 'Earlier',
     build: (b: string) => `Build ${b}`,
     more: 'More',
     less: 'Less',
