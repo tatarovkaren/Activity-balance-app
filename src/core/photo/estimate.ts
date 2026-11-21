@@ -79,6 +79,8 @@ export interface ComponentInput {
   amount: Amount;
   /** Уверенность провайдера 0–1 (для ИИ); у ручного ввода не задаётся. */
   confidence?: number;
+  /** Продукта нет в справочнике, КБЖУ и вес примерные — в черновике пометка «проверьте». */
+  unverified?: boolean;
 }
 
 export interface DraftComponent {

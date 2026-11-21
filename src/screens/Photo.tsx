@@ -212,6 +212,7 @@ export function PhotoScreen({ sel, meal: mealProp, onBack }: { sel: ISODate; mea
             <Note key={x}>📷 {Ph.retake[x] || x}</Note>
           ))}
           {comment ? <T muted size={12}>{comment}</T> : null}
+          {provider.id === 'demo' ? <T muted size={12}>{note.trim() ? Ph.demoByName : Ph.demoExample}</T> : null}
           {items.map((it, i) => (
             <ComponentEditor
               key={i}
@@ -366,6 +367,7 @@ function ComponentEditor({
         </Pressable>
         <T mono size={13} color={t.amber}>{computed ? `${computed.kcal} ${L.tx.common.kcal}` : '—'}</T>
       </Row>
+      {value.unverified && !food ? <Note>{Ph.unverified}</Note> : null}
       {/* граммы — главное поле правки: ИИ предлагает, пользователь поправляет */}
       <Row gap={6} style={{ alignItems: 'flex-end' }}>
         <NumField
@@ -392,7 +394,7 @@ function ComponentEditor({
                 <Pressable
                   key={f.id}
                   onPress={() => {
-                    onChange({ ...value, foodId: f.id, name: undefined });
+                    onChange({ ...value, foodId: f.id, name: undefined, per100: undefined, unverified: undefined });
                     setOpen(false);
                   }}
                 >

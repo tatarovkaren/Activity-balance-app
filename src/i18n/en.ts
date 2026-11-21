@@ -377,14 +377,17 @@ export const en: Dict = {
     twoShotsHint: 'Hand at the same level as the plate. First shot from above, second from the side at 30–45°. Show fillings (pie, roll) in cross-section.',
     top: 'From above',
     side: 'Side 30–45°',
-    notePlaceholder: 'Hint: “buckwheat with a cutlet, restaurant”',
+    notePlaceholder: 'Dish name: “buckwheat with a cutlet, restaurant”',
     howToCount: 'How to count',
     quota: (used, limit, fairUse) =>
       fairUse
         ? `Premium: no limit (estimates today: ${used}). One meal = one estimate, however many dishes are on the table.`
         : `Free plan: ${used} of ${limit} photo meals today. One meal = one estimate, however many dishes are on the table.`,
     manualHint: 'No AI: you describe portions in palms and fists — the app converts them to grams using your hand size.',
-    demoHint: ' The demo does not look at the photo; it shows what a draft looks like.',
+    demoHint: ' The demo does not look at the photo: the draft is built from the dish name in the field above, or shows an example if there is no name.',
+    demoByName: 'Demo: the photo is not analysed, the draft is built from the name. Check the grams and foods.',
+    demoExample: 'Demo: the photo is not analysed, this is a sample draft. Type the dish name and the draft will be built from it.',
+    unverified: 'This dish is not in the food list: calories, macros and weight are rough. Check them or pick a similar food from the list (tap the name).',
     busy: 'Estimating…',
     estimate: 'Estimate from photo',
     toPortions: 'Go to portions',
@@ -900,6 +903,7 @@ export const en: Dict = {
     butter: 'Butter',
     sauce_mayo: 'Mayonnaise / cream sauce',
     chocolate: 'Chocolate',
+    pancakes: 'Pancakes / crepes',
     cake: 'Cake / pastry',
   },
 };

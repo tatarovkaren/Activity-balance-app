@@ -134,7 +134,7 @@ export const helpEn: typeof helpRu = {
         'The app shows a draft: foods, **weight in grams**, kcal and macros with an honest range (±15–20%, ±30% for a poor photo). Fried and restaurant food gets +50–100 kcal of hidden oil.',
         'Correct the grams if you know better and tap "Save". The entry is marked **"from photo"**, adds to what is already logged for the day without overwriting anything, and goes straight into actual expenditure and macro targets. No need to copy it into FatSecret.',
         'Your gram corrections are saved: they show whether estimates run high or low, and later drive a personal adjustment. If you weighed the portion, enter the real weight to save a personal reference.',
-        'Free plan: 2 photo meals a day; Premium: no limit. Without a connected server the demo estimate runs: it shows the whole flow but does not analyse the photo.',
+        'Free plan: 2 photo meals a day; Premium: no limit. Without a connected server the demo estimate runs: it shows the whole flow but does not analyse the photo. The demo builds the draft from the dish name: a food from the list gets its own calories, macros and a typical portion, an unknown dish gets rough values marked “check”. Without a name you see a sample.',
       ],
     },
     {

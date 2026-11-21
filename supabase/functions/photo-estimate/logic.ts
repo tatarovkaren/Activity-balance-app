@@ -22,7 +22,7 @@ export const FOOD_IDS = [
   'buckwheat', 'rice', 'pasta', 'oats', 'potato_boiled', 'potato_mash', 'potato_fried', 'chicken_breast',
   'chicken_cutlet', 'beef_cutlet', 'beef', 'pork', 'fish_white', 'salmon', 'egg', 'omelet', 'cottage', 'cheese',
   'veg_fresh', 'veg_salad_oil', 'veg_stew', 'bread', 'apple', 'banana', 'soup', 'borscht', 'plov', 'pelmeni',
-  'pizza', 'nuts', 'oil', 'butter', 'sauce_mayo', 'chocolate', 'cake',
+  'pizza', 'nuts', 'oil', 'butter', 'sauce_mayo', 'chocolate', 'pancakes', 'cake',
 ] as const;
 
 export interface HandIn {
