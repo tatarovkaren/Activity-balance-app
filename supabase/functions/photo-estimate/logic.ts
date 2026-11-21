@@ -17,7 +17,7 @@ export function quotaCheck(plan: ServerPlan, usedInWindow: number) {
   return { ok: usedInWindow < lim.count, limit: lim.count, used: usedInWindow, per: 'day' as const };
 }
 
-/** id справочника приложения (src/core/photo/foods.ts). Синхронность проверяет тест. */
+/** id справочника фото-подсчёта (PHOTO_FOOD_IDS в src/core/photo/foods.ts; ядро справочника модели не нужно — она даёт per100). Синхронность проверяет тест. */
 export const FOOD_IDS = [
   'buckwheat', 'rice', 'pasta', 'oats', 'potato_boiled', 'potato_mash', 'potato_fried', 'chicken_breast',
   'chicken_cutlet', 'beef_cutlet', 'beef', 'pork', 'fish_white', 'salmon', 'egg', 'omelet', 'cottage', 'cheese',

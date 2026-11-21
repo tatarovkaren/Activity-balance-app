@@ -1,14 +1,15 @@
 // Логика серверной функции оценки (supabase/functions/photo-estimate/logic.ts).
 import { describe, expect, it } from 'vitest';
 import { FOOD_IDS, imageBlock, quotaCheck, SYSTEM_PROMPT, toAppResponse, userText } from '../../../supabase/functions/photo-estimate/logic';
-import { FOODS } from './foods';
+import { FOODS, PHOTO_FOOD_IDS } from './foods';
 import { buildDraft, REFERENCE_HAND, type ComponentInput } from './estimate';
 
 const nul = { unit: null, count: null, ml: null, grams: null, lengthCm: null, widthCm: null, heightCm: null, shape: null };
 
 describe('сервер оценки по фото', () => {
-  it('справочник на сервере совпадает со справочником приложения', () => {
-    expect([...FOOD_IDS].sort()).toEqual(FOODS.map((f) => f.id).sort());
+  it('короткий справочник на сервере совпадает со справочником фото-подсчёта', () => {
+    expect([...FOOD_IDS].sort()).toEqual([...PHOTO_FOOD_IDS].sort());
+    for (const id of FOOD_IDS) expect(FOODS.some((f) => f.id === id), id).toBe(true);
     expect(SYSTEM_PROMPT).toContain('buckwheat');
   });
 

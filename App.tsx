@@ -13,6 +13,7 @@ import { FactScreen } from './src/screens/Fact';
 import { ChartsScreen } from './src/screens/Charts';
 import { HandSetup, PhotoScreen } from './src/screens/Photo';
 import { ProfileScreen } from './src/screens/Profile';
+import { FoodScreen } from './src/screens/Food';
 import { CuratorScreen } from './src/screens/Curator';
 import { LegalView, useLegalRoute } from './src/screens/Legal';
 import { HelpScreen } from './src/screens/Help';
@@ -20,9 +21,9 @@ import { WikiScreen } from './src/screens/Wiki';
 import { OnboardingScreen } from './src/screens/Onboarding';
 import { reloadApp, useUpdateAvailable } from './src/ui/update';
 
-type Tab = 'day' | 'fact' | 'charts' | 'photo' | 'profile' | 'hand' | 'help' | 'wiki';
+type Tab = 'day' | 'fact' | 'charts' | 'photo' | 'profile' | 'hand' | 'help' | 'wiki' | 'food';
 
-const TABS: { id: Exclude<Tab, 'hand' | 'help' | 'wiki'>; icon: string }[] = [
+const TABS: { id: Exclude<Tab, 'hand' | 'help' | 'wiki' | 'food'>; icon: string }[] = [
   { id: 'day', icon: '◉' },
   { id: 'fact', icon: '⚖' },
   { id: 'charts', icon: '📈' },
@@ -92,7 +93,8 @@ function Shell() {
           <OnboardingScreen />
         ) : (
           <>
-            {tab === 'day' ? <DayScreen sel={sel} setSel={setSel} openFact={() => setTab('fact')} openPhoto={(m) => { setPhotoMeal(m); setTab('photo'); }} /> : null}
+            {tab === 'day' ? <DayScreen sel={sel} setSel={setSel} openFact={() => setTab('fact')} openPhoto={(m) => { setPhotoMeal(m); setTab('photo'); }} openFood={() => setTab('food')} /> : null}
+            {tab === 'food' ? <FoodScreen sel={sel} onBack={() => setTab('day')} /> : null}
             {tab === 'fact' ? <FactScreen sel={sel} /> : null}
             {tab === 'charts' ? <ChartsScreen sel={sel} /> : null}
             {tab === 'photo' ? <PhotoScreen key={photoMeal || 'any'} sel={sel} meal={photoMeal} onBack={() => setTab('day')} /> : null}
@@ -110,7 +112,7 @@ function Shell() {
         <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: t.card, borderTopWidth: 1, borderColor: t.line }}>
           <View style={{ flexDirection: 'row', maxWidth: 640, width: '100%', alignSelf: 'center' }}>
             {TABS.map((x) => {
-              const on = tab === x.id || (x.id === 'profile' && (tab === 'hand' || tab === 'help' || tab === 'wiki'));
+              const on = tab === x.id || (x.id === 'day' && tab === 'food') || (x.id === 'profile' && (tab === 'hand' || tab === 'help' || tab === 'wiki'));
               return (
                 <Pressable
                   key={x.id}

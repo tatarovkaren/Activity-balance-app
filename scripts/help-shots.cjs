@@ -144,6 +144,18 @@ async function main() {
     await p.click('[data-testid=confirmPhoto]');
     await p.click('[data-testid=photoToDiary]');
     await p.waitForTimeout(300);
+    // Справочник: «＋ Продукт» → поиск «кефир» → продукт в приёме
+    await p.click('[data-testid=addFood]');
+    await p.waitForTimeout(300);
+    await p.fill('[data-testid=foodSearch]', lang === 'ru' ? 'кефир' : 'kefir');
+    await p.waitForTimeout(200);
+    await p.locator('[data-testid=foodHit]').first().click();
+    await p.fill('[data-testid=foodSearch]', lang === 'ru' ? 'сырн' : 'syrn');
+    await p.waitForTimeout(300);
+    await shot('food', 0, (await card('addFoods')).bottom);
+    await p.click('[data-testid=addFoods]');
+    await p.click('[data-testid=foodToDiary]');
+    await p.waitForTimeout(300);
     // Профиль
     await screen('profile', 0);
     await shot('profile', (await card('uiMode')).top, (await card('sex')).bottom);

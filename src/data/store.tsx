@@ -10,6 +10,8 @@ import { DEFAULT_PROFILE, type DayEntry, type DayMap, type KeepMap, type Plan, t
 import type { HandProfile } from '../core/photo/estimate';
 import { addPhotoMeal, editsFromMeal, removePhotoMeal, type PhotoEdit } from '../core/photo/meals';
 import type { PhotoMeal } from '../core/types';
+import type { Food } from '../core/photo/foods';
+import { CATALOG_PROVIDER, mergeCustomFoods, upsertCustomFood } from '../core/photo/custom';
 import { withGoal, type GoalProposal, type GoalSetting } from '../core/targets';
 import { demoCuratorAccount, demoDays, demoProfile, type DemoLabels } from '../core/demo';
 import {
@@ -105,6 +107,8 @@ export interface AppData {
   photoUsage: ISODate[];
   /** Правки граммов после оценки ИИ (последние 300) — для будущей калибровки оценки. */
   photoEdits?: PhotoEdit[];
+  /** Свои продукты и блюда (и найденные по штрихкоду) — в поиске справочника. Пока только на устройстве и в резервной копии. */
+  customFoods?: Food[];
   curator?: CuratorAccess;
   consent: Consent;
   /** Предложения куратора по режиму цели, ждущие подтверждения. */
@@ -159,6 +163,9 @@ interface StoreApi {
   /** Подтвердить приём по фото: прибавить к дню и сохранить правки граммов. */
   addMeal: (date: ISODate, m: PhotoMeal) => void;
   removeMeal: (date: ISODate, id: string) => void;
+  /** Свой продукт: добавить или заменить (тот же id или штрихкод). */
+  saveFood: (f: Food) => void;
+  removeFood: (id: string) => void;
   setCurator: (c: CuratorAccess | undefined) => void;
   /** Клиент вводит код куратора. Возвращает ошибку или null, если привязка прошла. */
   linkByCode: (code: string, selfName: string) => Promise<CodeError | null>;
@@ -490,7 +497,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         };
       });
       touchDays([date]);
-      if (session.mode === 'cloud') savePhotoEstimate(date, m).catch(() => {});
+      // в таблицу оценок по фото уходят только приёмы по фото, не из справочника
+      if (session.mode === 'cloud' && m.provider !== CATALOG_PROVIDER) savePhotoEstimate(date, m).catch(() => {});
     },
     removeMeal: (date, id) => {
       setData((cur) => {
@@ -502,6 +510,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       });
       touchDays([date]);
     },
+    saveFood: (f) => setData((cur) => ({ ...cur, customFoods: upsertCustomFood(cur.customFoods, { ...f, updatedAt: Date.now() }) })),
+    removeFood: (id) => setData((cur) => ({ ...cur, customFoods: (cur.customFoods || []).filter((x) => x.id !== id) })),
     setCurator: (c) => {
       setData((cur) => ({ ...cur, curator: c }));
       if (session.mode === 'cloud' && c) setCuratorShare(c.share).catch(() => {});
@@ -659,6 +669,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           hand: cur.hand || inc.hand,
           refs: [...cur.refs, ...(inc.refs || []).filter((r) => !cur.refs.some((x) => x.id === r.id))],
           photoEdits: [...(cur.photoEdits || []), ...(inc.photoEdits || []).filter((e) => !(cur.photoEdits || []).some((x) => x.at === e.at && x.name === e.name))].slice(-300),
+          customFoods: inc.customFoods ? mergeCustomFoods(cur.customFoods, inc.customFoods) : cur.customFoods,
         };
       });
       touchProfile();

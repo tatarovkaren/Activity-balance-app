@@ -9,6 +9,19 @@ export type ChangelogEntry = { v: string } & Record<Lang, string[]>;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: '0.33.0',
+    ru: [
+      'Справочник продуктов: кнопка «＋ Продукт» на «Дне» — около 350 продуктов и блюд с КБЖУ на 100 г, обычной порцией и источником, поиск по-русски и по-английски.',
+      'Свои продукты и блюда со своими порциями: сохраняются и находятся в поиске, в том числе при подсчёте по фото.',
+      'Магазинные товары из открытой базы Open Food Facts: поиск по названию или по штрихкоду (снимок или цифры).',
+    ],
+    en: [
+      'Food list: the "＋ Food" button on the Day screen, about 350 foods and dishes with calories and macros per 100 g, a typical portion and a source, searchable in Russian and English.',
+      'Your own foods and dishes with your own portions: saved and found in search, including in photo estimates.',
+      'Store products from the open Open Food Facts database: search by name or by barcode (a photo or the digits).',
+    ],
+  },
+  {
     v: '0.32.1',
     ru: ['«Обратная связь» теперь открывает группу отзывов в Telegram.'],
     en: ['"Feedback" now opens the feedback group in Telegram.'],
