@@ -9,9 +9,14 @@ export type ChangelogEntry = { v: string } & Record<Lang, string[]>;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    v: '0.28.1',
+    v: '0.30.0',
     ru: ['В «О приложении» появился список «Что нового»: коротко о последних изменениях.'],
     en: ['"About" now has a "What\'s new" list with a short summary of recent changes.'],
+  },
+  {
+    v: '0.29.0',
+    ru: ['Приветствие по имени вверху экрана «День» с учётом времени суток.'],
+    en: ['A greeting with your name at the top of the Day screen, based on the time of day.'],
   },
   {
     v: '0.28.0',

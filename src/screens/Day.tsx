@@ -20,6 +20,7 @@ import { ProposalCards } from './Goal';
 import { useAdvanced } from '../ui/mode';
 import { CalendarIcon, DatePicker } from '../ui/DatePicker';
 import { backupDue } from '../core/backup';
+import { dayPart, greetName } from '../core/greeting';
 import { useBackupExport } from '../ui/backup';
 
 export function DayScreen({
@@ -136,6 +137,11 @@ export function DayScreen({
       <Row style={{ justifyContent: 'space-between', marginBottom: 12 }}>
         <View style={{ flexShrink: 1 }}>
           <T muted size={11} style={{ letterSpacing: 1.5 }}>{D.motto}</T>
+          {greetName(profile.name) ? (
+            <T size={15} color={t.amber} numberOfLines={1} style={{ marginTop: 2 }}>
+              {D.greet(dayPart(new Date().getHours()), greetName(profile.name))}
+            </T>
+          ) : null}
           <T size={22} bold>
             {D.title(sel === today ? tx.common.today : sel === shiftDate(today, -1) ? tx.common.yesterday : f.longDate(sel), f.weekday(sel), sel >= shiftDate(today, -1))}
           </T>
