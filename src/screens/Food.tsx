@@ -9,7 +9,7 @@ import type { ISODate } from '../core/dates';
 import { FOOD_BY_ID, FOODS, typicalPortion, type Food } from '../core/photo/foods';
 import { searchFoods } from '../core/photo/search';
 import { customFoodError, foodTotals, kcalMismatch, makeCustomFood, mealFromFoods, type CustomFoodInput, type PickedFood } from '../core/photo/custom';
-import { cleanBarcode, fetchOffProduct, OffError } from '../core/photo/off';
+import { cleanBarcode, fetchOffProduct, OffError, searchOffProducts } from '../core/photo/off';
 import { MEAL_SLOTS, type MealSlot } from '../core/types';
 import { useStore } from '../data/store';
 import { Btn, Card, Fields, Gap, Note, NumField, Row, Seg, T, TextField } from '../ui/kit';
@@ -39,12 +39,27 @@ export function FoodScreen({ sel, meal: mealProp, onBack }: { sel: ISODate; meal
   const [done, setDone] = useState<number | null>(null);
   const [own, setOwn] = useState<OwnDraft | null>(null);
   const [info, setInfo] = useState('');
+  // магазинные товары из Open Food Facts: ищем только по кнопке (лимит запросов у базы)
+  const [shop, setShop] = useState<{ q: string; items: Food[]; busy: boolean; err: string } | null>(null);
 
   const all = useMemo(() => [...mine, ...FOODS], [mine]);
   const hits = useMemo(() => searchFoods(query, all, 25).map((h) => h.food), [query, all]);
   const shown = query.trim() ? hits : [...mine.slice(0, 10), ...POPULAR.map((id) => FOOD_BY_ID[id]).filter(Boolean)];
 
+  const searchShop = async () => {
+    const q = query.trim();
+    setShop({ q, items: [], busy: true, err: '' });
+    try {
+      setShop({ q, items: await searchOffProducts(q, L.lang), busy: false, err: '' });
+    } catch (e) {
+      setShop({ q, items: [], busy: false, err: C[e instanceof OffError ? e.code : 'network'] });
+    }
+  };
+
   const pick = (food: Food) => {
+    // товар из магазинной базы сохраняется в свои продукты: второй раз найдётся без сети
+    if (food.source === 'off' && !mine.some((x) => x.id === food.id)) saveFood(food);
+    setShop(null);
     setItems([...items, { food, grams: typicalPortion(food) }]);
     setQuery('');
     setInfo('');
@@ -102,8 +117,20 @@ export function FoodScreen({ sel, meal: mealProp, onBack }: { sel: ISODate; meal
         ))}
         {query.trim() && !hits.length ? <Note>{C.nothing}</Note> : null}
         {info ? <Note color={t.green}>{info}</Note> : null}
+        {shop && shop.q === query.trim() && !shop.busy ? (
+          <>
+            <Gap h={6} />
+            <T muted size={12}>{shop.err || (shop.items.length ? C.shopFound : C.shopNothing)}</T>
+            {shop.items.map((food) => (
+              <FoodRow key={food.id} food={food} onPick={() => pick(food)} />
+            ))}
+          </>
+        ) : null}
         <Gap h={6} />
         <Row>
+          {query.trim().length >= 2 ? (
+            <Btn small title={shop?.busy ? C.finding : C.shopSearch} onPress={searchShop} disabled={!!shop?.busy} testID="shopSearch" />
+          ) : null}
           <Btn small title={C.own} onPress={() => setOwn({ name: query.trim() })} testID="ownFood" />
         </Row>
       </Card>

@@ -3,7 +3,7 @@ import { CATALOG } from './catalog';
 import { CORE, FOOD_BY_ID, FOODS, PHOTO_FOOD_IDS } from './foods';
 import { searchFoods, searchWords } from './search';
 import { customFoodError, foodTotals, kcalMismatch, makeCustomFood, mealFromFoods, mergeCustomFoods, upsertCustomFood } from './custom';
-import { fetchOffProduct, isValidBarcode, OffError, productFromOff } from './off';
+import { fetchOffProduct, isValidBarcode, OffError, productFromOff, searchOffProducts } from './off';
 import { addPhotoMeal } from './meals';
 
 const ids = (q: string, foods = FOODS) => searchFoods(q, foods).map((h) => h.food.id);
@@ -147,5 +147,20 @@ describe('штрихкод: Open Food Facts', () => {
       throw new Error('offline');
     }) as unknown as typeof fetch;
     await expect(fetchOffProduct('4006381333931', 'ru', down)).rejects.toMatchObject({ code: 'network' });
+  });
+
+  it('магазинные товары по названию: только с названием и ккал, без повторов', async () => {
+    let url = '';
+    const fetchFn = (async (u: string) => {
+      url = u;
+      return new Response(JSON.stringify({ products: [{ code: '4006381333931', ...product }, { code: '4006381333931', ...product }, { code: '96385074', product_name: 'Без ккал', nutriments: {} }] }));
+    }) as unknown as typeof fetch;
+    const r = await searchOffProducts('кефир', 'ru', fetchFn);
+    expect(r.map((x) => x.id)).toEqual(['off_4006381333931']);
+    expect(url).toContain('ru.openfoodfacts.org/cgi/search.pl');
+    expect(url).toContain('search_terms=%D0%BA%D0%B5%D1%84%D0%B8%D1%80');
+    expect(await searchOffProducts(' ', 'ru', fetchFn)).toEqual([]);
+    const bad = (async () => new Response('', { status: 503 })) as unknown as typeof fetch;
+    await expect(searchOffProducts('кефир', 'en', bad)).rejects.toMatchObject({ code: 'network' });
   });
 });

@@ -92,3 +92,41 @@ export async function fetchOffProduct(raw: string, lang: string, fetchFn: typeof
   if (!food) throw new OffError('notFound');
   return food;
 }
+
+/**
+ * Магазинные товары по названию. У Open Food Facts лимит — около 10 поисков в минуту,
+ * поэтому приложение ищет только по кнопке, а не на каждую букву.
+ * Русский интерфейс ищет на ru.openfoodfacts.org (товары, которые продаются в России), иначе — по всему миру.
+ * Товары без названия или без ккал на 100 г пропускаются.
+ */
+export async function searchOffProducts(query: string, lang: string, fetchFn: typeof fetch = fetch, now = Date.now()): Promise<Food[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const host = lang === 'ru' ? 'https://ru.openfoodfacts.org' : OFF_URL;
+  const params = new URLSearchParams({
+    search_terms: q,
+    search_simple: '1',
+    action: 'process',
+    json: '1',
+    page_size: '20',
+    sort_by: 'unique_scans_n',
+    fields: 'code,product_name,product_name_ru,product_name_en,brands,serving_quantity,nutriments',
+    lc: lang,
+  });
+  let res: Response;
+  try {
+    res = await fetchFn(`${host}/cgi/search.pl?${params}`);
+  } catch {
+    throw new OffError('network');
+  }
+  if (!res.ok) throw new OffError('network');
+  const j = (await res.json().catch(() => null)) as { products?: OffProduct[] } | null;
+  const out: Food[] = [];
+  for (const p of j?.products || []) {
+    const code = cleanBarcode(p.code || '');
+    if (!code || out.some((x) => x.barcode === code)) continue;
+    const food = productFromOff(code, p, lang, now);
+    if (food) out.push(food);
+  }
+  return out;
+}

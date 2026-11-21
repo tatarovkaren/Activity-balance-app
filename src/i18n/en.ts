@@ -513,6 +513,9 @@ export const en: Dict = {
     badCode: 'Looks like a typo in the number: check the digits under the barcode.',
     notFound: 'This product is not in Open Food Facts (or has no calories there). Add it as your own food: the barcode will be saved.',
     network: 'Cannot reach Open Food Facts. Check the internet or add the food manually.',
+    shopSearch: '🛒 Search store products',
+    shopFound: 'Store products from Open Food Facts. People enter these numbers, so check the label.',
+    shopNothing: 'Nothing found in Open Food Facts. Try another word, the barcode, or add your own food.',
     foundOff: 'Found in Open Food Facts. People enter these numbers, so check the label.',
   },
 
