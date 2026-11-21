@@ -835,6 +835,22 @@ export const en: Dict = {
     file: 'report',
   },
 
+  /** "About" section in the profile — src/screens/About.tsx. */
+  about: {
+    title: 'About',
+    slogan: 'Activity Balance is your personal energy balance dashboard: workouts, daily activity, nutrition and weight in a single view.',
+    version: (v: string, date: string) => `Version ${v}, released ${date}`,
+    build: (b: string) => `Build ${b}`,
+    more: 'More',
+    less: 'Less',
+    docs: 'Documents',
+    contacts: 'Contact',
+    email: 'Email',
+    site: 'Website',
+    noContacts: 'Contact details will appear once the service operator is registered.',
+    copyright: (y: string) => `© ${y} Activity Balance`,
+  },
+
   help: helpEn,
 
   demo: {

@@ -10,7 +10,7 @@
 ## Переснять картинки после изменения экранов
 
 ```bash
-EXPO_OFFLINE=1 npx expo export -p web   # сборка в dist/
+EXPO_OFFLINE=1 npm run build:web       # сборка в dist/ (с версией и датой выпуска)
 npm run help:shots                      # нужен playwright; пишет PNG и src/help/shots.gen.ts
 ```
 

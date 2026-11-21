@@ -1,6 +1,6 @@
 {
   "name": "balans",
-  "version": "1.0.0",
+  "version": "0.27.0",
   "main": "index.ts",
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -25,15 +25,17 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web",
+    "web": "node scripts/build-version.mjs && expo start --web",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "build:web": "expo export -p web",
+    "build:web": "node scripts/build-version.mjs && expo export -p web",
+    "version:gen": "node scripts/build-version.mjs",
     "legal": "node scripts/build-legal.mjs",
     "help:shots": "node scripts/help-shots.cjs",
     "db:setup": "node scripts/build-db-setup.mjs",
     "fn:bundle": "node scripts/build-functions.mjs",
-    "icons": "node scripts/build-icons.cjs"
+    "icons": "node scripts/build-icons.cjs",
+    "postinstall": "node scripts/build-version.mjs"
   },
   "private": true
 }

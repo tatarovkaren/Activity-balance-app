@@ -860,6 +860,22 @@ export const ru = {
     file: 'report',
   },
 
+  /** Раздел «О приложении» в профиле — src/screens/About.tsx. */
+  about: {
+    title: 'О приложении',
+    slogan: 'Activity Balance — ваш персональный дашборд баланса энергии: тренировки, повседневная активность, питание и вес в одном визуале.',
+    version: (v: string, date: string) => `Версия ${v} от ${date}`,
+    build: (b: string) => `Сборка ${b}`,
+    more: 'Подробнее',
+    less: 'Свернуть',
+    docs: 'Документы',
+    contacts: 'Контакты',
+    email: 'Почта',
+    site: 'Сайт',
+    noContacts: 'Контакты появятся после регистрации оператора сервиса.',
+    copyright: (y: string) => `© ${y} Activity Balance`,
+  },
+
   /** Раздел «Помощь и ЧаВо» — src/i18n/help.*.ts. */
   help: helpRu,
 

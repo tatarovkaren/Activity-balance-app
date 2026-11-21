@@ -54,6 +54,7 @@ export const helpEn: typeof helpRu = {
         'Body measurement frequency sets how often the app reminds you to measure your neck, waist (and hips).',
         '"How I log food": if you weigh grains dry and meat raw, photo estimates convert portions to raw weight.',
         'At the top of Profile is the **app mode**: basic shows only the essentials, advanced shows every metric and fine-tuning.',
+        'The **About** card shows the version and release date. "More" opens the tagline, documents and contacts. Mention the version when you report a problem.',
       ],
     },
     {
