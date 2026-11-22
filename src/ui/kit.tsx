@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, type TextStyle, type ViewStyle } from 'react-native';
-import { MONO, useTheme } from './theme';
+import { MONO, useFs, useTheme } from './theme';
 import { useI18n } from '../i18n';
 
 export function Card({
@@ -17,6 +17,7 @@ export function Card({
   style?: ViewStyle;
 }) {
   const t = useTheme();
+  const fs = useFs();
   return (
     <View
       style={[
@@ -28,7 +29,7 @@ export function Card({
       {title ? (
         <View style={s.cardHead}>
           {accent ? <View style={[s.dot, { backgroundColor: accent }]} /> : null}
-          <Text style={[s.cardTitle, { color: accent || t.muted }]}>{title.toUpperCase()}</Text>
+          <Text style={[s.cardTitle, { color: accent || t.muted, fontSize: fs(12) }]}>{title.toUpperCase()}</Text>
           <View style={{ flex: 1 }} />
           {right}
         </View>
@@ -60,6 +61,7 @@ export function T({
   numberOfLines?: number;
 }) {
   const t = useTheme();
+  const px = useFs()(size || 14);
   return (
     <Text
       numberOfLines={numberOfLines}
@@ -67,8 +69,8 @@ export function T({
       style={[
         {
           color: color || (muted ? t.muted : t.text),
-          fontSize: size || 14,
-          lineHeight: Math.round((size || 14) * 1.4),
+          fontSize: px,
+          lineHeight: Math.round(px * 1.4),
           fontWeight: bold ? '700' : '400',
           fontFamily: mono ? MONO : undefined,
         },
@@ -142,10 +144,11 @@ export function NumField({
     setText(f.input(value));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [f]);
-  const fs = big ? (text.length > 6 ? 22 : 27) : 16;
+  const k = useFs();
+  const fs = k(big ? (text.length > 6 ? 22 : 27) : 16);
   return (
     <View style={{ width: width as any, alignSelf: width ? undefined : 'stretch', opacity: disabled ? 0.4 : 1 }}>
-      {label ? <Text style={[s.label, { color: t.muted }]}>{label}</Text> : null}
+      {label ? <Text style={[s.label, { color: t.muted, fontSize: k(12) }]}>{label}</Text> : null}
       <View style={[s.inputWrap, { backgroundColor: t.input, borderColor: t.line }]}>
         <TextInput
           testID={testID}
@@ -163,10 +166,10 @@ export function NumField({
           }}
           style={[
             s.input,
-            { color: t.text, fontSize: fs, fontFamily: MONO, fontWeight: big ? '700' : '500', height: big ? 46 : 38 },
+            { color: t.text, fontSize: fs, fontFamily: MONO, fontWeight: big ? '700' : '500', height: k(big ? 46 : 38) },
           ]}
         />
-        {suffix ? <Text style={{ color: t.muted, paddingRight: 8 }}>{suffix}</Text> : null}
+        {suffix ? <Text style={{ color: t.muted, paddingRight: 8, fontSize: k(14) }}>{suffix}</Text> : null}
       </View>
     </View>
   );
@@ -193,9 +196,10 @@ export function TextField({
   numeric?: boolean;
 }) {
   const t = useTheme();
+  const k = useFs();
   return (
     <View style={{ alignSelf: 'stretch' }}>
-      {label ? <Text style={[s.label, { color: t.muted }]}>{label}</Text> : null}
+      {label ? <Text style={[s.label, { color: t.muted, fontSize: k(12) }]}>{label}</Text> : null}
       <TextInput
         testID={testID}
         value={value || ''}
@@ -213,7 +217,8 @@ export function TextField({
             color: t.text,
             backgroundColor: t.input,
             borderColor: t.line,
-            minHeight: multiline ? 72 : 38,
+            fontSize: k(14),
+            minHeight: k(multiline ? 72 : 38),
             textAlignVertical: multiline ? 'top' : 'center',
             paddingTop: multiline ? 8 : 0,
           },
@@ -271,11 +276,12 @@ export function Btn({
   style?: ViewStyle;
 }) {
   const t = useTheme();
+  const fs = useFs();
   const c = color || t.amber;
   if (kind === 'link')
     return (
-      <Pressable testID={testID} onPress={onPress} disabled={disabled} hitSlop={6}>
-        <Text style={{ color: c, textDecorationLine: 'underline', fontSize: small ? 13 : 14 }}>{title}</Text>
+      <Pressable testID={testID} onPress={onPress} disabled={disabled} hitSlop={6} style={{ flexShrink: 1, maxWidth: '100%' }}>
+        <Text style={{ color: c, textDecorationLine: 'underline', fontSize: fs(small ? 13 : 14) }}>{title}</Text>
       </Pressable>
     );
   return (
@@ -291,7 +297,7 @@ export function Btn({
         style,
       ]}
     >
-      <Text style={{ color: kind === 'solid' ? t.onAccent : t.text, fontWeight: '600', fontSize: small ? 13 : 15, textAlign: 'center' }}>
+      <Text style={{ color: kind === 'solid' ? t.onAccent : t.text, fontWeight: '600', fontSize: fs(small ? 13 : 15), textAlign: 'center' }}>
         {title}
       </Text>
     </Pressable>
@@ -312,6 +318,7 @@ export function Seg<V extends string>({
   testID?: string;
 }) {
   const t = useTheme();
+  const fs = useFs();
   const c = color || t.amber;
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }} testID={testID}>
@@ -325,7 +332,7 @@ export function Seg<V extends string>({
             accessibilityState={{ selected: on }}
             style={[s.chip, { borderColor: on ? c : t.line, backgroundColor: on ? c + '22' : 'transparent' }]}
           >
-            <Text style={{ color: on ? c : t.text, fontSize: 13, fontWeight: on ? '700' : '400' }}>{o.label}</Text>
+            <Text style={{ color: on ? c : t.text, fontSize: fs(13), fontWeight: on ? '700' : '400' }}>{o.label}</Text>
           </Pressable>
         );
       })}
@@ -349,7 +356,8 @@ export function Divider() {
 
 export function Note({ children, color }: { children: React.ReactNode; color?: string }) {
   const t = useTheme();
-  return <Text style={{ color: color || t.amber, fontSize: 13, lineHeight: 18 }}>{children}</Text>;
+  const fs = useFs();
+  return <Text style={{ color: color || t.amber, fontSize: fs(13), lineHeight: fs(18) }}>{children}</Text>;
 }
 
 const s = StyleSheet.create({

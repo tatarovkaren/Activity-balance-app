@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 import { boldParts, LEGAL_DOCS, LEGAL_DRAFT, legalText, parseLegal, type LegalDoc } from '../legal';
 import { Btn, Gap, Note, Row, T } from '../ui/kit';
-import { useTheme } from '../ui/theme';
+import { useFs, useTheme } from '../ui/theme';
 import { useI18n } from '../i18n';
 
 function Rich({ text, size, color }: { text: string; size: number; color: string }) {
+  const px = useFs()(size);
   return (
-    <Text style={{ color, fontSize: size, lineHeight: Math.round(size * 1.5) }}>
+    <Text style={{ color, fontSize: px, lineHeight: Math.round(px * 1.5) }}>
       {boldParts(text).map((s, i) => (i % 2 ? <Text key={i} style={{ fontWeight: '700' }}>{s}</Text> : s))}
     </Text>
   );
@@ -112,6 +113,7 @@ export function ConsentCheck({
   testID?: string;
 }) {
   const t = useTheme();
+  const fs = useFs();
   return (
     <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginBottom: 10 }}>
       <Pressable
@@ -133,7 +135,7 @@ export function ConsentCheck({
       >
         {on ? <Text style={{ color: t.bg, fontSize: 14, fontWeight: '700', lineHeight: 16 }}>✓</Text> : null}
       </Pressable>
-      <Text style={{ flex: 1, color: t.muted, fontSize: 13, lineHeight: 19 }} onPress={onToggle}>
+      <Text style={{ flex: 1, color: t.muted, fontSize: fs(13), lineHeight: fs(19) }} onPress={onToggle}>
         {pre}
         <Text style={{ color: t.amber, textDecorationLine: 'underline' }} onPress={() => openLegal(doc)} testID={testID ? testID + 'Link' : undefined}>
           {link}

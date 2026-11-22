@@ -9,6 +9,11 @@ export type ChangelogEntry = { v: string } & Record<Lang, string[]>;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: '0.36.0',
+    ru: ['Крупный шрифт: Профиль → «Размер шрифта» → «Крупный». Текст, поля и кнопки становятся примерно на 20 % больше, подписи на графиках тоже.'],
+    en: ['Large text: Profile → "Text size" → "Large". Text, fields and buttons get about 20% bigger, chart labels too.'],
+  },
+  {
     v: '0.35.0',
     ru: [
       'Дополнительные замеры по желанию: грудь, бицепс, а мужчинам и бёдра (по ягодицам). На % жира не влияют, в дни без замера видны последние значения.',

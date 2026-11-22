@@ -36,6 +36,8 @@ export interface ChartSpec {
   legend?: boolean;
   /** Ползунок: вертикальная линия и точки серий в этот день (только на экране, в выгрузку не идёт). */
   cursor?: ISODate;
+  /** Множитель подписей: 1 — обычный шрифт, 1,2 — «Крупный» в профиле. Выгрузка всегда 1. */
+  fontScale?: number;
   /** Форматы дат и чисел по языку интерфейса (подписи осей). */
   fmt: Pick<Fmt, 'dm' | 'num'>;
 }
@@ -59,17 +61,40 @@ function niceRange(vals: number[], step?: number): [number, number] {
 
 const fmtY = (v: number, f: ChartSpec['fmt']) => (Math.abs(v) >= 100 ? f.num(v, 0) : f.num(v, 1));
 
+type FrameSpec = Pick<ChartSpec, 'width' | 'height' | 'from' | 'to' | 'series' | 'legend' | 'marks' | 'markColor' | 'markLabel' | 'fontScale'>;
+
+/** Подписи легенды, разложенные по строкам: не влезает в ширину — переносится на следующую строку. */
+function legendRows(spec: FrameSpec, k: number, left: number, right: number) {
+  const items = spec.series.filter((s) => s.points.length).map((s) => ({ c: s.color, l: s.label, dash: s.dash }));
+  if (spec.marks?.length) items.push({ c: spec.markColor || '', l: spec.markLabel || '', dash: false });
+  const rows: { c: string; l: string; dash?: boolean; x: number }[][] = [[]];
+  let lx = left;
+  for (const it of items) {
+    const w = (26 + it.l.length * 5.4) * k;
+    if (lx > left && lx + w - 8 * k > right) {
+      rows.push([]);
+      lx = left;
+    }
+    rows[rows.length - 1].push({ ...it, x: lx });
+    lx += w;
+  }
+  return rows;
+}
+
 /** Поля области построения — общие для рисования и для ползунка. */
-function frame(spec: Pick<ChartSpec, 'width' | 'height' | 'from' | 'to' | 'series' | 'legend'>) {
-  const legendH = spec.legend === false ? 0 : 18;
-  const pL = 40;
+function frame(spec: FrameSpec) {
+  const k = spec.fontScale || 1;
+  const pL = Math.round(40 * k);
   const hasRight = spec.series.some((s) => s.axis === 'right' && s.points.length);
-  const pR = hasRight ? 38 : 10;
+  const pR = hasRight ? Math.round(38 * k) : 10;
+  const rows = spec.legend === false ? [] : legendRows(spec, k, pL, spec.width - pR);
+  const rowH = Math.round(14 * k);
+  const legendH = rows.length ? Math.round(18 * k) + (rows.length - 1) * rowH : 0;
   const pT = 10;
-  const pB = 20 + legendH;
+  const pB = Math.round(20 * k) + legendH;
   const span = Math.max(1, dayDiff(spec.from, spec.to));
   const x = (d: ISODate) => pL + (dayDiff(spec.from, d) / span) * (spec.width - pL - pR);
-  return { legendH, pL, pR, pT, pB, hasRight, span, x };
+  return { k, rows, rowH, legendH, pL, pR, pT, pB, hasRight, span, x };
 }
 
 /** Число для подписи ползунка: крупные — целыми, вес и % — с десятыми, малые изменения — с сотыми. */
@@ -78,7 +103,7 @@ export const fmtValue = (v: number, f: Pick<Fmt, 'num'>) =>
 
 /** Ближайший к точке касания день, в который есть хотя бы одно значение. */
 export function nearestDate(
-  spec: Pick<ChartSpec, 'width' | 'height' | 'from' | 'to' | 'series' | 'legend'>,
+  spec: FrameSpec,
   px: number,
 ): ISODate | null {
   const { x } = frame(spec);
@@ -125,7 +150,8 @@ export function valuesAt(spec: Pick<ChartSpec, 'series'>, d: ISODate) {
 
 export function chartSvg(spec: ChartSpec, t: Palette): string {
   const { width: W, height: H } = spec;
-  const { legendH, pL, pR, pT, pB, hasRight, span, x } = frame(spec);
+  const { k, rows, rowH, legendH, pL, pR, pT, pB, hasRight, span, x } = frame(spec);
+  const fz = (n: number) => +(n * k).toFixed(1);
   const leftVals = spec.series.filter((s) => s.axis !== 'right').flatMap((s) => s.points.map((p) => p.v));
   const rightVals = spec.series.filter((s) => s.axis === 'right').flatMap((s) => s.points.map((p) => p.v));
   if (spec.zeroLine) leftVals.push(0);
@@ -138,10 +164,10 @@ export function chartSvg(spec: ChartSpec, t: Palette): string {
     const v = lo + (k * (hi - lo)) / 3;
     const gy = yL(v).toFixed(1);
     g += `<line x1="${pL}" y1="${gy}" x2="${W - pR}" y2="${gy}" stroke="${t.line}" stroke-width="1"/>`;
-    g += `<text x="${pL - 5}" y="${+gy + 3}" fill="${t.muted}" font-size="9" text-anchor="end" ${FONT}>${fmtY(v, spec.fmt)}</text>`;
+    g += `<text x="${pL - 5}" y="${+gy + fz(3)}" fill="${t.muted}" font-size="${fz(9)}" text-anchor="end" ${FONT}>${fmtY(v, spec.fmt)}</text>`;
     if (hasRight) {
       const rv = rlo + (k * (rhi - rlo)) / 3;
-      g += `<text x="${W - pR + 5}" y="${+gy + 3}" fill="${t.muted}" font-size="9" ${FONT}>${fmtY(rv, spec.fmt)}</text>`;
+      g += `<text x="${W - pR + 5}" y="${+gy + fz(3)}" fill="${t.muted}" font-size="${fz(9)}" ${FONT}>${fmtY(rv, spec.fmt)}</text>`;
     }
   }
   if (spec.zeroLine && lo < 0 && hi > 0)
@@ -183,17 +209,19 @@ export function chartSvg(spec: ChartSpec, t: Palette): string {
       g += `<circle cx="${cx}" cy="${cy}" r="4.5" fill="${t.card}" stroke="${s.color}" stroke-width="2.2"/>`;
     }
   }
-  g += `<text x="${pL}" y="${H - pB + 13}" fill="${t.muted}" font-size="9" ${FONT}>${esc(spec.fmt.dm(spec.from))}</text>`;
-  g += `<text x="${W - pR}" y="${H - pB + 13}" fill="${t.muted}" font-size="9" text-anchor="end" ${FONT}>${esc(spec.fmt.dm(spec.to))}</text>`;
+  g += `<text x="${pL}" y="${H - pB + fz(13)}" fill="${t.muted}" font-size="${fz(9)}" ${FONT}>${esc(spec.fmt.dm(spec.from))}</text>`;
+  g += `<text x="${W - pR}" y="${H - pB + fz(13)}" fill="${t.muted}" font-size="${fz(9)}" text-anchor="end" ${FONT}>${esc(spec.fmt.dm(spec.to))}</text>`;
   if (legendH) {
-    let lx = pL;
-    const items = spec.series.filter((s) => s.points.length).map((s) => ({ c: s.color, l: s.label, dash: s.dash }));
-    if (spec.marks?.length) items.push({ c: spec.markColor || t.red, l: spec.markLabel || '', dash: false });
-    for (const it of items) {
-      g += `<line x1="${lx}" y1="${H - 6}" x2="${lx + 14}" y2="${H - 6}" stroke="${it.c}" stroke-width="2.5" ${it.dash ? 'stroke-dasharray="3 2"' : ''}/>`;
-      g += `<text x="${lx + 18}" y="${H - 3}" fill="${t.muted}" font-size="9.5" font-family="sans-serif">${esc(it.l)}</text>`;
-      lx += 26 + it.l.length * 5.4;
-    }
+    rows.forEach((row, ri) => {
+      // последняя строка — у нижнего края, предыдущие — выше
+      const ly = H - (rows.length - 1 - ri) * rowH;
+      for (const it of row) {
+        const c = it.c || t.red;
+        const lx = +it.x.toFixed(1);
+        g += `<line x1="${lx}" y1="${ly - fz(6)}" x2="${lx + fz(14)}" y2="${ly - fz(6)}" stroke="${c}" stroke-width="2.5" ${it.dash ? 'stroke-dasharray="3 2"' : ''}/>`;
+        g += `<text x="${lx + fz(18)}" y="${ly - fz(3)}" fill="${t.muted}" font-size="${fz(9.5)}" font-family="sans-serif">${esc(it.l)}</text>`;
+      }
+    });
   }
   const title = spec.title ? `<title>${esc(spec.title)}</title>` : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${title}${g}</svg>`;

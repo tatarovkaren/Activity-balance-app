@@ -128,7 +128,7 @@ export interface AppData {
 }
 
 /** Что запоминаем до входа: галочки, код из приглашения, язык и тема переживают переход на Google и обратно. */
-type PreLogin = Pick<AppData, 'consent' | 'invite'> & { lang?: Profile['lang']; theme?: Profile['theme'] };
+type PreLogin = Pick<AppData, 'consent' | 'invite'> & { lang?: Profile['lang']; theme?: Profile['theme']; textSize?: Profile['textSize'] };
 
 const EMPTY: AppData = { profile: DEFAULT_PROFILE, days: {}, keep: {}, refs: [], photoUsage: [], consent: {} };
 
@@ -234,6 +234,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         if (pre.invite) base.invite = pre.invite;
         if (pre.lang) base.profile = { ...base.profile, lang: pre.lang };
         if (pre.theme) base.profile = { ...base.profile, theme: pre.theme };
+        if (pre.textSize) base.profile = { ...base.profile, textSize: pre.textSize };
       }
       setData(base);
       // возврат после входа через Google/Apple (веб)
@@ -285,8 +286,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // ---- до входа: галочки и код приглашения, чтобы пережили переход на страницу Google ----
   useEffect(() => {
     if (!ready || session.mode !== 'none') return;
-    save('pre', { consent: data.consent, invite: data.invite, lang: data.profile.lang, theme: data.profile.theme } satisfies PreLogin);
-  }, [ready, session.mode, data.consent, data.invite, data.profile.lang, data.profile.theme]);
+    save('pre', { consent: data.consent, invite: data.invite, lang: data.profile.lang, theme: data.profile.theme, textSize: data.profile.textSize } satisfies PreLogin);
+  }, [ready, session.mode, data.consent, data.invite, data.profile.lang, data.profile.theme, data.profile.textSize]);
 
   // ---- сохранение локально ----
   useEffect(() => {
@@ -627,7 +628,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       // язык и тема, выбранные на экране входа, сохраняются
       setData((cur) => ({
         ...EMPTY,
-        profile: { ...demoProfile(labels, today), lang: cur.profile.lang, theme: cur.profile.theme },
+        profile: { ...demoProfile(labels, today), lang: cur.profile.lang, theme: cur.profile.theme, textSize: cur.profile.textSize },
         days: demoDays(today, labels),
         curatorAccount: demoCuratorAccount(today, labels),
         invite: cur.invite,

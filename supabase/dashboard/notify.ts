@@ -84,6 +84,9 @@ function monthCells(year: number, month0: number, weekStart: 0 | 1): (ISODate | 
 // ======== src/core/types.ts ========
 type Sex = 'male' | 'female';
 type ThemePref = 'system' | 'light' | 'dark';
+/** Размер шрифта: обычный или крупный (для слабого зрения). */
+type TextSize = 'normal' | 'large';
+const TEXT_SIZES: TextSize[] = ['normal', 'large'];
 /** Языки интерфейса. Новый язык: добавить код сюда и словарь в src/i18n (см. docs/i18n.md). */
 type Lang = 'ru' | 'en';
 type LangPref = 'system' | Lang;
@@ -110,6 +113,8 @@ interface Profile {
   theme: ThemePref;
   /** Язык интерфейса: «как в системе» по умолчанию. */
   lang: LangPref;
+  /** Размер шрифта. Нет поля — обычный. */
+  textSize?: TextSize;
   /** Миффлин — Сан Жеор по умолчанию; «по сухой массе» (Кетч — МакАрдл) — если есть замер % жира. */
   bmrFormula: 'mifflin' | 'lean';
   /** Старая норма белка, г на кг общего веса. Заменена коэффициентом в режиме цели (goals); не показывается. */

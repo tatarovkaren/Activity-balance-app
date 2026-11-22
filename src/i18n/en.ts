@@ -609,6 +609,12 @@ export const en: Dict = {
     themeSystem: 'Same as system',
     themeLight: 'Light',
     themeDark: 'Dark',
+    textSize: {
+      title: 'Text size',
+      normal: 'Normal',
+      large: 'Large',
+      note: 'Large makes text, fields and buttons about 20% bigger. Handy if small text is hard to read.',
+    },
     sources: 'Data sources',
     srcFs: '● FatSecret — CSV or PDF report import (one day or a period)',
     srcWeight: '● Weight history — CSV “date; weight” from scales, Google Fit, Excel',

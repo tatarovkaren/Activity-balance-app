@@ -6,15 +6,16 @@ import { Image, Pressable, Text, View } from 'react-native';
 import { boldParts } from '../legal';
 import { HELP_SHOTS, type HelpShot } from '../help/shots.gen';
 import { Btn, Card, Gap, T } from '../ui/kit';
-import { useTheme } from '../ui/theme';
+import { useFs, useTheme } from '../ui/theme';
 import { useI18n } from '../i18n';
 import { APP_VERSION, RELEASE } from '../about';
 
 /** Текст с **жирными** частями. */
 export function Rich({ text, size = 14, color }: { text: string; size?: number; color?: string }) {
   const t = useTheme();
+  const px = useFs()(size);
   return (
-    <Text style={{ color: color || t.text, fontSize: size, lineHeight: Math.round(size * 1.5) }}>
+    <Text style={{ color: color || t.text, fontSize: px, lineHeight: Math.round(px * 1.5) }}>
       {boldParts(text).map((s, i) => (i % 2 ? <Text key={i} style={{ fontWeight: '700' }}>{s}</Text> : s))}
     </Text>
   );
