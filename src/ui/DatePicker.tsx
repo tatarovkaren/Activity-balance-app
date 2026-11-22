@@ -6,7 +6,7 @@ import { Modal, Pressable, Text, View } from 'react-native';
 import Svg, { Line, Rect } from 'react-native-svg';
 import { monthCells, parseISO, type ISODate } from '../core/dates';
 import { useI18n } from '../i18n';
-import { useTheme } from './theme';
+import { useFs, useTheme } from './theme';
 
 /** Иконка календаря для кнопки рядом со стрелками. */
 export function CalendarIcon({ color, size = 16 }: { color: string; size?: number }) {
@@ -38,6 +38,7 @@ export function DatePicker({
   onClose: () => void;
 }) {
   const t = useTheme();
+  const fs = useFs();
   const { tx } = useI18n();
   const C = tx.day.calendar;
   const [ym, setYm] = useState(() => {
@@ -78,7 +79,7 @@ export function DatePicker({
         opacity: disabled ? 0.35 : pressed ? 0.7 : 1,
       })}
     >
-      <Text style={{ color: t.text, fontSize: 18, fontWeight: '600' }}>{label}</Text>
+      <Text style={{ color: t.text, fontSize: fs(18), fontWeight: '600' }}>{label}</Text>
     </Pressable>
   );
 
@@ -96,7 +97,7 @@ export function DatePicker({
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             {navBtn('‹', () => step(-1), false, 'calPrev')}
-            <Text style={{ color: t.text, fontSize: 17, fontWeight: '700' }}>
+            <Text style={{ color: t.text, fontSize: fs(17), fontWeight: '700' }}>
               {C.months[ym.m]} {ym.y}
             </Text>
             {navBtn('›', () => step(1), atMax, 'calNext')}
@@ -104,7 +105,7 @@ export function DatePicker({
 
           <View style={{ flexDirection: 'row' }}>
             {heads.map((h, i) => (
-              <Text key={i} style={{ width: `${100 / 7}%`, textAlign: 'center', color: t.muted, fontSize: 12, paddingBottom: 6 }}>
+              <Text key={i} style={{ width: `${100 / 7}%`, textAlign: 'center', color: t.muted, fontSize: fs(12), paddingBottom: 6 }}>
                 {h}
               </Text>
             ))}
@@ -135,7 +136,7 @@ export function DatePicker({
                       opacity: future ? 0.3 : pressed ? 0.7 : 1,
                     })}
                   >
-                    <Text style={{ color: sel ? t.onAccent : t.text, fontSize: 15, fontWeight: sel || today ? '700' : '400' }}>
+                    <Text style={{ color: sel ? t.onAccent : t.text, fontSize: fs(15), fontWeight: sel || today ? '700' : '400' }}>
                       {Number(d.slice(8))}
                     </Text>
                     {has ? (
@@ -152,14 +153,14 @@ export function DatePicker({
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: t.green }} />
-              <Text style={{ color: t.muted, fontSize: 12 }}>{C.legend}</Text>
+              <Text style={{ color: t.muted, fontSize: fs(12) }}>{C.legend}</Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 14 }}>
               <Pressable onPress={() => pick(max)} hitSlop={6} testID="calToday">
-                <Text style={{ color: t.amber, fontWeight: '600', fontSize: 14 }}>{tx.common.today}</Text>
+                <Text style={{ color: t.amber, fontWeight: '600', fontSize: fs(14) }}>{tx.common.today}</Text>
               </Pressable>
               <Pressable onPress={onClose} hitSlop={6} testID="calClose">
-                <Text style={{ color: t.muted, fontWeight: '600', fontSize: 14 }}>{tx.common.cancel}</Text>
+                <Text style={{ color: t.muted, fontWeight: '600', fontSize: fs(14) }}>{tx.common.cancel}</Text>
               </Pressable>
             </View>
           </View>

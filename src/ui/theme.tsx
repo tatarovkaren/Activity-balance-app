@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext } from 'react';
 import { Platform, useColorScheme } from 'react-native';
-import type { ThemePref } from '../core/types';
+import type { TextSize, ThemePref } from '../core/types';
 
 export interface Palette {
   dark: boolean;
@@ -70,3 +70,23 @@ export function ThemeProvider({ pref, children }: { pref: ThemePref; children: R
 export const useTheme = () => useContext(Ctx);
 
 export const MONO = Platform.select({ web: 'ui-monospace, Menlo, Consolas, "DejaVu Sans Mono", monospace', ios: 'Menlo', default: 'monospace' });
+
+/** Во сколько раз крупнее текст в режиме «Крупный». */
+export const LARGE_SCALE = 1.2;
+export const textScale = (size: TextSize | undefined) => (size === 'large' ? LARGE_SCALE : 1);
+
+const ScaleCtx = createContext(1);
+
+/** Размер шрифта по выбору в профиле: оборачивает всё приложение. */
+export function TextSizeProvider({ size, children }: { size: TextSize | undefined; children: React.ReactNode }) {
+  return <ScaleCtx.Provider value={textScale(size)}>{children}</ScaleCtx.Provider>;
+}
+
+/** Множитель шрифта (1 или 1,2). */
+export const useTextScale = () => useContext(ScaleCtx);
+
+/** Размер шрифта с учётом выбора «Обычный / Крупный»: fs(14) → 14 или 17. */
+export function useFs() {
+  const k = useContext(ScaleCtx);
+  return (n: number) => (k === 1 ? n : Math.round(n * k));
+}

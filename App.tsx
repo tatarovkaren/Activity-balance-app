@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { todayISO, type ISODate } from './src/core/dates';
 import type { MealSlot } from './src/core/types';
 import { StoreProvider, useStore } from './src/data/store';
-import { ThemeProvider, useTheme } from './src/ui/theme';
+import { TextSizeProvider, ThemeProvider, useFs, useTheme } from './src/ui/theme';
 import { T } from './src/ui/kit';
 import { I18nProvider, useI18n } from './src/i18n';
 import { LoginScreen } from './src/screens/Login';
@@ -34,6 +34,7 @@ const TABS: { id: Exclude<Tab, 'hand' | 'help' | 'wiki' | 'food'>; icon: string 
 function Shell() {
   const { ready, session, data, sync } = useStore();
   const t = useTheme();
+  const fs = useFs();
   const { tx } = useI18n();
   const [tab, setTab] = useState<Tab>('day');
   const [sel, setSel] = useState<ISODate>(todayISO());
@@ -102,7 +103,7 @@ function Shell() {
             {tab === 'help' ? <HelpScreen onClose={() => setTab('profile')} /> : null}
             {tab === 'wiki' ? <WikiScreen onClose={() => setTab('profile')} /> : null}
             {tab === 'hand' ? <HandSetup initial={data.hand} onDone={() => setTab('profile')} /> : null}
-            <Text style={{ color: sync.kind === 'offline' ? t.amber : t.muted, fontSize: 12, textAlign: 'center', marginTop: 8 }} testID="syncStatus">
+            <Text style={{ color: sync.kind === 'offline' ? t.amber : t.muted, fontSize: fs(12), textAlign: 'center', marginTop: 8 }} testID="syncStatus">
               {sync.code === 'saved' || sync.code === 'synced' ? tx.sync[sync.code](sync.at || '') : tx.sync[sync.code]}
             </Text>
           </>
@@ -124,7 +125,10 @@ function Shell() {
                   testID={'tab-' + x.id}
                 >
                   <T size={22} color={on ? t.amber : t.muted}>{x.icon}</T>
-                  <T size={13} bold={on} color={on ? t.amber : t.muted}>{tx.tabs[x.id]}</T>
+                  {/* подписи вкладок растут меньше остального текста: пять вкладок должны влезть в 320 px */}
+                  <T size={13} bold={on} color={on ? t.amber : t.muted} numberOfLines={1} style={{ fontSize: Math.min(fs(13), 15) }}>
+                    {tx.tabs[x.id]}
+                  </T>
                 </Pressable>
               );
             })}
@@ -140,7 +144,9 @@ function Themed() {
   return (
     <I18nProvider pref={data.profile.lang}>
       <ThemeProvider pref={data.profile.theme}>
-        <Shell />
+        <TextSizeProvider size={data.profile.textSize}>
+          <Shell />
+        </TextSizeProvider>
       </ThemeProvider>
     </I18nProvider>
   );

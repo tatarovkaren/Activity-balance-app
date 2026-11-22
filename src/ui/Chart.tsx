@@ -4,7 +4,7 @@ import { SvgXml } from 'react-native-svg';
 import { chartSvg, fmtValue, nearestDate, valuesAt, type ChartSpec } from './chartsvg';
 import { Btn, Row, T } from './kit';
 import { downloadBlob, printSvg, svgToPng } from './files';
-import { LIGHT, useTheme } from './theme';
+import { LIGHT, useTextScale, useTheme } from './theme';
 import { useI18n } from '../i18n';
 import type { ISODate } from '../core/dates';
 
@@ -21,6 +21,7 @@ export function Chart({
   exportName?: string;
 }) {
   const t = useTheme();
+  const k = useTextScale();
   const { tx, f } = useI18n();
   const [w, setW] = useState(0);
   const [cursor, setCursor] = useState<ISODate | null>(null);
@@ -33,14 +34,14 @@ export function Chart({
   const full: Omit<ChartSpec, 'width' | 'height'> = { markLabel: tx.charts.unusualDay, ...spec, fmt: f };
   // день под указателем мог выпасть из периода после смены масштаба
   const cur = cursor && cursor >= spec.from && cursor <= spec.to ? cursor : null;
-  const xml = w ? chartSvg({ ...full, width: w, height, cursor: cur ?? undefined }, t) : '';
+  const xml = w ? chartSvg({ ...full, width: w, height, fontScale: k, cursor: cur ?? undefined }, t) : '';
   const exportSpec = () => chartSvg({ ...full, width: 720, height: 300 }, LIGHT);
 
   // Ползунок: касание или нажатие мышью ставит линию, движение пальца её ведёт.
   // Горизонтальное движение остаётся у графика, вертикальное прокручивает страницу (touch-action: pan-y).
   const pick = (pageX: number) => {
     if (!w) return;
-    const d = nearestDate({ ...full, width: w, height }, pageX - left.current);
+    const d = nearestDate({ ...full, width: w, height, fontScale: k }, pageX - left.current);
     if (d && d !== cursor) setCursor(d);
   };
   const measure = (e: GestureResponderEvent) => {
@@ -61,7 +62,7 @@ export function Chart({
   const unusual = cur && spec.marks?.includes(cur);
   return (
     <View>
-      <View style={{ minHeight: 38, marginBottom: 4, flexDirection: 'row', alignItems: 'flex-start' }}>
+      <View style={{ minHeight: Math.round(38 * k), marginBottom: 4, flexDirection: 'row', alignItems: 'flex-start' }}>
         {cur ? (
           <>
             <View style={{ flex: 1 }}>

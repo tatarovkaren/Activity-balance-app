@@ -190,10 +190,11 @@ export const helpEn: typeof helpRu = {
     },
     {
       id: 'settings',
-      title: 'Mode, language, theme and account',
+      title: 'Mode, language, text size, theme and account',
       text: [
         '**App mode**: basic shows weight, steps, food, workouts and the day summary; advanced adds the burn breakdown, reliability, excluded days, custom pace, protein factor and BMR formula. The calculation is the same in both.',
         'Language: Russian, English or same as system. Dates, numbers and the coach report follow your choice.',
+        'Text size: normal or large. Large makes text, fields and buttons about 20% bigger if small text is hard to read.',
         'Theme: light, dark or same as system.',
         'The "Account and data" card holds your consents, documents, the coach dashboard and sign-out.',
       ],

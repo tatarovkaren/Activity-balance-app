@@ -626,6 +626,12 @@ export const ru = {
     themeSystem: 'Как в системе',
     themeLight: 'Светлая',
     themeDark: 'Тёмная',
+    textSize: {
+      title: 'Размер шрифта',
+      normal: 'Обычный',
+      large: 'Крупный',
+      note: 'Крупный — текст, поля и кнопки примерно на 20 % больше. Удобно, если мелкий текст читать тяжело.',
+    },
     sources: 'Источники данных',
     srcFs: '● FatSecret — импорт CSV или PDF-отчёта (один день или период)',
     srcWeight: '● История веса — CSV «дата; вес» из весов, Google Fit, Excel',
