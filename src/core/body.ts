@@ -51,6 +51,24 @@ export function hasMeasurement(e: { neck?: number; waist?: number; hips?: number
   return !!(e && (e.neck || e.waist || e.hips));
 }
 
+/** Необязательные замеры, которые не входят в формулу % жира. */
+export type ExtraMeasureKey = 'chest' | 'biceps' | 'hips';
+
+/** Какие замеры необязательные для этого пола: грудь и бицепс всем, бёдра — мужчинам (у женщин они в формуле). */
+export function extraMeasureKeys(sex: Sex): ExtraMeasureKey[] {
+  return sex === 'male' ? ['chest', 'biceps', 'hips'] : ['chest', 'biceps'];
+}
+
+/** Введены ли за день необязательные замеры (грудь, бицепс). */
+export function hasExtraMeasurement(e: { chest?: number; biceps?: number } | undefined): boolean {
+  return !!(e && (e.chest || e.biceps));
+}
+
+/** Любой замер тела за день — для подсказок последних значений и графика объёмов. */
+export function hasAnyMeasurement(e: { neck?: number; waist?: number; hips?: number; chest?: number; biceps?: number } | undefined): boolean {
+  return hasMeasurement(e) || hasExtraMeasurement(e);
+}
+
 export function nextMeasureDate(last: ISODate, freq: MeasureFreq): ISODate {
   if (freq === 'week') return shiftDate(last, 7);
   if (freq === '2weeks') return shiftDate(last, 14);
@@ -97,13 +115,15 @@ export type CarriedMeasure = {
   neck?: number;
   waist?: number;
   hips?: number;
+  chest?: number;
+  biceps?: number;
   /** % жира по ВМС США и дата замера, по которому он посчитан */
   bf?: { v: number; date: ISODate };
 };
 
 export function carriedMeasure(days: DayMap, sel: ISODate, sex: Sex, heightCm: number): CarriedMeasure | null {
   const ds = Object.keys(days)
-    .filter((d) => d < sel && hasMeasurement(days[d]))
+    .filter((d) => d < sel && hasAnyMeasurement(days[d]))
     .sort()
     .reverse();
   if (!ds.length) return null;
@@ -113,11 +133,13 @@ export function carriedMeasure(days: DayMap, sel: ISODate, sex: Sex, heightCm: n
     if (out.neck == null && e.neck) out.neck = e.neck;
     if (out.waist == null && e.waist) out.waist = e.waist;
     if (out.hips == null && e.hips) out.hips = e.hips;
+    if (out.chest == null && e.chest) out.chest = e.chest;
+    if (out.biceps == null && e.biceps) out.biceps = e.biceps;
     if (!out.bf) {
       const v = navyBodyFat(sex, e, heightCm);
       if (v != null) out.bf = { v, date: d };
     }
-    if (out.neck != null && out.waist != null && (sex === 'male' || out.hips != null) && out.bf) break;
+    if (out.neck != null && out.waist != null && out.hips != null && out.chest != null && out.biceps != null && out.bf) break;
   }
   return out;
 }

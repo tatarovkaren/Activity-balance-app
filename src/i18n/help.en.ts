@@ -105,6 +105,7 @@ export const helpEn: typeof helpRu = {
         '"Workout steps" is for on-foot cardio only. The app subtracts them from your daily steps so the same effort is not counted twice. If the field is empty, steps are estimated from your usual pace.',
         'The **Energy balance** card shows what you ate and burned today and over 7 days, and the expected weight change per week.',
         '**Body measurements** are taken once a week (frequency is set in the profile). On other days the fields show your latest measurements in grey, and body fat % in grey with the measurement date. Nothing is saved for those days: new numbers are stored only on the day you enter them.',
+        'If you like, you can also log **extra measurements**: chest (at nipple level), biceps (flexed, at the widest point) and, for men, hips (around the buttocks at the widest point; for women hips are already part of the formula). Tap "＋ More measurements" in the measurements card. They do not affect body fat %, and the "Body measurements" chart shows how they change.',
       ],
     },
     {
@@ -133,7 +134,7 @@ export const helpEn: typeof helpRu = {
       text: [
         'Choose a period: week, month, 3 months, all time or custom dates.',
         'Weight and trend: dots are your weigh-ins, the line is the trend without unusual days.',
-        'Eaten and burned, expected versus actual weight change, and body fat: every chart can be saved as PNG or PDF.',
+        'Eaten and burned, expected versus actual weight change, body fat, and body measurements (how much neck, waist, hips, chest and biceps changed since the first measurement in the period): every chart can be saved as PNG or PDF.',
         'Drag your finger (or mouse) along any chart: a vertical line marks the day, and the date and the value of every line on that day appear above the chart. The cross hides the line.',
         'If the actual weight line runs well above the expected one, your log is probably incomplete or the formula overestimates your burn.',
       ],

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
 import { dayDiff, shiftDate, todayISO, ageAt, type ISODate } from '../core/dates';
-import { bodyFatNorm, carriedMeasure, hasMeasurement, measureHint, navyBodyFat } from '../core/body';
+import { bodyFatNorm, carriedMeasure, extraMeasureKeys, measureHint, navyBodyFat } from '../core/body';
 import { classifyWorkout, KCAL_PER_KG, macroKcal } from '../core/energy';
 import { applyFoodDays } from '../core/importers';
 import { ANOMALY_REASONS, MEAL_SLOTS, type AnomalyReason, type MealSlot } from '../core/types';
@@ -104,7 +104,17 @@ export function DayScreen({
   const mh = measureHint(days, sel, profile.measureFreq);
   const bf = navyBodyFat(profile.sex, e, profile.heightCm);
   // нет замера за день — показываем последние значения серым (как подсказки), в день не пишем
-  const carried = hasMeasurement(e) ? null : carriedMeasure(days, sel, profile.sex, profile.heightCm);
+  // подсказки — по группам: основные (для формулы) и необязательные (грудь, бицепс, у мужчин бёдра)
+  const female = profile.sex === 'female';
+  const extraKeys = extraMeasureKeys(profile.sex);
+  const formulaEntered = !!(e.neck || e.waist || (female && e.hips));
+  const extraEntered = extraKeys.some((k) => !!e[k]);
+  const carriedAll = carriedMeasure(days, sel, profile.sex, profile.heightCm);
+  const carried = formulaEntered ? null : carriedAll;
+  const carriedExtra = extraEntered ? null : carriedAll;
+  const hasExtraData = extraEntered || extraKeys.some((k) => carriedAll?.[k] != null);
+  const [extraOpen, setExtraOpen] = useState(false);
+  const showExtra = extraOpen || hasExtraData;
   const age = ageAt(profile.birthDate, sel);
   const norm = age != null ? bodyFatNorm(profile.sex, age) : null;
 
@@ -412,10 +422,34 @@ export function DayScreen({
         <Fields>
           <NumField label={D.body.neck} value={e.neck} onChange={(v) => set({ neck: v })} digits={1} placeholder={carried?.neck != null ? f.input(carried.neck) : undefined} testID="neck" />
           <NumField label={D.body.waist} value={e.waist} onChange={(v) => set({ waist: v })} digits={1} placeholder={carried?.waist != null ? f.input(carried.waist) : undefined} testID="waist" />
-          {profile.sex === 'female' ? (
+          {female ? (
             <NumField label={D.body.hips} value={e.hips} onChange={(v) => set({ hips: v })} digits={1} placeholder={carried?.hips != null ? f.input(carried.hips) : undefined} testID="hips" />
           ) : null}
         </Fields>
+        <Gap h={8} />
+        {showExtra ? (
+          <>
+            <T muted size={12}>{D.body.extraTitle}</T>
+            <Gap h={4} />
+            <Fields>
+              {extraKeys.map((k) => (
+                <NumField
+                  key={k}
+                  label={D.body[k]}
+                  value={e[k]}
+                  onChange={(v) => set({ [k]: v })}
+                  digits={1}
+                  placeholder={carriedExtra?.[k] != null ? f.input(carriedExtra[k]!) : undefined}
+                  testID={k}
+                />
+              ))}
+            </Fields>
+            <Gap h={4} />
+            <T muted size={11}>{D.body.extraHint(!female)}</T>
+          </>
+        ) : (
+          <Btn kind="link" small title={D.body.extraAdd(!female)} onPress={() => setExtraOpen(true)} testID="extra-measures" />
+        )}
         <Gap h={8} />
         <Row style={{ justifyContent: 'space-between' }}>
           <View>

@@ -92,7 +92,11 @@ export interface DayEntry {
   workoutSteps?: number;
   neck?: number;
   waist?: number;
+  /** Бёдра — по ягодицам в самом широком месте. У женщин входит в формулу % жира, у мужчин — по желанию. */
   hips?: number;
+  /** Необязательные замеры, в формулу не входят: грудь (по соскам) и бицепс (напряжённый, в самом широком месте). */
+  chest?: number;
+  biceps?: number;
   comment?: string;
   wellbeing?: number;
   anomaly?: AnomalyReason;

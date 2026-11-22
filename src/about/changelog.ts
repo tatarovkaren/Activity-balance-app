@@ -9,6 +9,17 @@ export type ChangelogEntry = { v: string } & Record<Lang, string[]>;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: '0.35.0',
+    ru: [
+      'Дополнительные замеры по желанию: грудь, бицепс, а мужчинам и бёдра (по ягодицам). На % жира не влияют, в дни без замера видны последние значения.',
+      'Новый график «Объёмы тела» на «Графиках»: насколько изменились шея, живот, бёдра, грудь и бицепс за период.',
+    ],
+    en: [
+      'Optional extra measurements: chest, biceps and, for men, hips (around the buttocks). They do not affect body fat %, and your latest values show on days without a measurement.',
+      'New "Body measurements" chart: how your neck, waist, hips, chest and biceps changed over the period.',
+    ],
+  },
+  {
     v: '0.34.0',
     ru: ['Справочник продуктов дополнен базой USDA: ещё около 6 400 продуктов (мясо по отрубам, рыба, овощи, фрукты, крупы, молочное), ищутся по-русски и по-английски.'],
     en: ['The food list now includes the USDA database: about 6,400 more foods (meat cuts, fish, vegetables, fruit, grains, dairy), searchable in Russian and English.'],

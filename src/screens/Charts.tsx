@@ -14,6 +14,8 @@ import { useAdvanced } from '../ui/mode';
 
 type Scale = 'week' | 'month' | '3m' | 'all' | 'custom';
 
+const VOLUME_KEYS = ['chest', 'waist', 'hips', 'biceps', 'neck'] as const;
+
 export function ChartsScreen({ sel }: { sel: ISODate }) {
   const t = useTheme();
   const { tx, f } = useI18n();
@@ -25,6 +27,7 @@ export function ChartsScreen({ sel }: { sel: ISODate }) {
   const [cTo, setCTo] = useState('');
   const d = useDerived(profile, days, keep, sel);
   const adv = useAdvanced();
+  const volumeColor: Record<(typeof VOLUME_KEYS)[number], string> = { chest: t.blue, waist: t.amber, hips: t.red, biceps: t.green, neck: t.muted };
 
   const allDates = Object.keys(days).sort();
   const first = allDates[0] || sel;
@@ -65,7 +68,13 @@ export function ChartsScreen({ sel }: { sel: ISODate }) {
     const w0 = fit ? fit.at(0) : weights[0]?.v;
     const actual = w0 != null ? weights.filter((p) => !manualOrAuto(p.d)).map((p) => ({ d: p.d, v: p.v - w0 })) : [];
     const factE = (d.adaptive?.series || []).filter((p) => p.E != null && p.d >= from && p.d <= to).map((p) => ({ d: p.d, v: p.E! }));
-    return { weights, trend, fat, intake, total, expected, actual, factE, slope: fit?.slope, marks: range.filter(manualOrAuto) };
+    // объёмы: изменение от первого замера за период, у каждого замера своя линия
+    const volumes = VOLUME_KEYS.map((k) => {
+      const pts = range.filter((x) => days[x]?.[k]).map((x) => ({ d: x, v: days[x][k]! }));
+      const v0 = pts[0]?.v;
+      return { k, points: pts.length >= 2 ? pts.map((p) => ({ d: p.d, v: p.v - v0 })) : [] };
+    }).filter((s) => s.points.length);
+    return { weights, trend, fat, volumes, intake, total, expected, actual, factE, slope: fit?.slope, marks: range.filter(manualOrAuto) };
   }, [from, to, days, profile, d]);
 
   return (
@@ -165,6 +174,27 @@ export function ChartsScreen({ sel }: { sel: ISODate }) {
           />
         ) : (
           <T muted>{C.noFat}</T>
+        )}
+      </Card>
+
+      <Card title={C.volumesTitle} accent={t.violet}>
+        {series.volumes.length ? (
+          <>
+            <Chart
+              height={160}
+              exportName={`${C.files.volumes}-${from}-${to}`}
+              spec={{
+                title: C.volumesTitle,
+                from,
+                to,
+                zeroLine: true,
+                series: series.volumes.map((s) => ({ label: C.volume[s.k], color: volumeColor[s.k], dots: true, gapDays: 1e6, points: s.points })),
+              }}
+            />
+            <T muted size={12}>{C.volumesNote}</T>
+          </>
+        ) : (
+          <T muted>{C.noVolumes}</T>
         )}
       </Card>
     </View>

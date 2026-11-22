@@ -261,6 +261,12 @@ export const ru = {
       neck: 'Шея, см',
       waist: 'Живот (у пупка), см',
       hips: 'Бёдра, см',
+      chest: 'Грудь, см',
+      biceps: 'Бицепс, см',
+      extraTitle: 'Дополнительно, по желанию — в % жира не входят',
+      extraAdd: (male: boolean) => `＋ Дополнительные замеры: грудь, бицепс${male ? ', бёдра' : ''}`,
+      extraHint: (male: boolean) =>
+        `Грудь — по соскам, на выдохе; бицепс — напряжённый, в самом широком месте${male ? '; бёдра — по ягодицам, в самом широком месте' : ''}.`,
       fat: '% ЖИРА (ВМС США)',
       ageNorm: 'ВОЗРАСТ · НОРМА',
       carried: (date: string) => `замер ${date}`,
@@ -373,7 +379,11 @@ export const ru = {
     noFat: 'Нет замеров за период.',
     scrubHint: 'Проведите пальцем или мышью по графику — покажу значения за день',
     unusualDay: 'необычный день',
-    files: { weight: 'ves', kcal: 'kkal', deficit: 'deficit', fat: 'zhir' },
+    volumesTitle: 'Объёмы тела: изменение, см',
+    volumesNote: 'От первого замера за период. Сами цифры — на «Дне» в замерах.',
+    volume: { neck: 'шея', waist: 'живот', hips: 'бёдра', chest: 'грудь', biceps: 'бицепс' },
+    noVolumes: 'Нужно хотя бы два замера за период.',
+    files: { weight: 'ves', kcal: 'kkal', deficit: 'deficit', fat: 'zhir', volumes: 'obyomy' },
   },
 
   photo: {
@@ -934,6 +944,11 @@ export const ru = {
     carried: (date: string) => `замер ${date}`,
     bodyLine: (neck: string, waist: string, hips: string | null, fat: string | null) =>
       `шея ${neck} · талия ${waist}${hips != null ? ' · бёдра ' + hips : ''}${fat ? ' · жир ' + fat + '%' : ''}`,
+    volumes: 'Объёмы',
+    volumesLine: (chest: string | null, biceps: string | null, hips: string | null) =>
+      [chest != null ? 'грудь ' + chest : '', biceps != null ? 'бицепс ' + biceps : '', hips != null ? 'бёдра ' + hips : '']
+        .filter(Boolean)
+        .join(' · '),
     unusual: 'Необычный день',
     wellbeing: 'Самочувствие',
     wellbeingLine: (n: number) => `${n} из 10`,

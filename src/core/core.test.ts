@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { addMonthsClamped, ageAt, monthCells, shiftDate, toLocalISO } from './dates';
 import { energyModel, PaceIndex } from './energy';
-import { carriedMeasure, measureHint, navyBodyFat } from './body';
+import { carriedMeasure, extraMeasureKeys, hasAnyMeasurement, measureHint, navyBodyFat } from './body';
 import { adaptiveTDEE, goalForecast, wls } from './adaptive';
 import { applyFoodDays, applyWeights, parseBackup, parseFatSecret, parseWeightHistory } from './importers';
 import { mergeEntry } from './merge';
@@ -103,6 +103,25 @@ describe('% жира и замеры', () => {
     expect(days['2026-11-12'].neck).toBeUndefined();
     // замер в сам день не считается перенесённым; до первого замера — ничего
     expect(carriedMeasure(days, '2026-11-02', 'male', 178)).toBeNull();
+  });
+  it('необязательные замеры: грудь, бицепс, бёдра у мужчин — подсказками, в % жира не входят', () => {
+    const days: DayMap = {
+      '2026-11-02': { neck: 40, waist: 92, chest: 104, biceps: 36 },
+      '2026-11-05': { hips: 100 },
+      '2026-11-09': { biceps: 36.5 },
+    };
+    const c = carriedMeasure(days, '2026-11-12', 'male', 178)!;
+    expect(c.chest).toBe(104);
+    expect(c.biceps).toBe(36.5);
+    expect(c.hips).toBe(100);
+    expect(c.bf!.date).toBe('2026-11-02');
+    // у мужчин бёдра и грудь не меняют % жира
+    expect(navyBodyFat('male', days['2026-11-02'], 178)).toBeCloseTo(navyBodyFat('male', { neck: 40, waist: 92 }, 178)!, 6);
+    expect(extraMeasureKeys('male')).toEqual(['chest', 'biceps', 'hips']);
+    expect(extraMeasureKeys('female')).toEqual(['chest', 'biceps']);
+    // день только с бицепсом — уже есть подсказки
+    expect(hasAnyMeasurement({ biceps: 36 })).toBe(true);
+    expect(carriedMeasure({ '2026-11-09': { biceps: 36 } }, '2026-11-10', 'male', 178)!.biceps).toBe(36);
   });
 });
 
