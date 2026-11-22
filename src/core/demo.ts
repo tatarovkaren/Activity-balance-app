@@ -97,6 +97,9 @@ export function generateDemo(spec: DemoSpec, today: ISODate): DayMap {
       e.neck = spec.sex === 'male' ? 40 : 33;
       e.waist = Math.round((spec.sex === 'male' ? 92 : 80) - i * 0.06);
       if (spec.sex === 'female') e.hips = Math.round(104 - i * 0.04);
+      // необязательные замеры: грудь и бицепс
+      e.chest = Math.round((spec.sex === 'male' ? 104 : 92) - i * 0.02);
+      e.biceps = Math.round(((spec.sex === 'male' ? 36 : 29) + i * 0.005) * 2) / 2;
     }
     if (Object.keys(e).length) out[d] = e;
   }

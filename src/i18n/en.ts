@@ -249,6 +249,12 @@ export const en: Dict = {
       neck: 'Neck, cm',
       waist: 'Waist (at navel), cm',
       hips: 'Hips, cm',
+      chest: 'Chest, cm',
+      biceps: 'Biceps, cm',
+      extraTitle: 'Optional — not used for body fat %',
+      extraAdd: (male) => `＋ More measurements: chest, biceps${male ? ', hips' : ''}`,
+      extraHint: (male) =>
+        `Chest at nipple level, breathing out; biceps flexed, at the widest point${male ? '; hips around the buttocks, at the widest point' : ''}.`,
       fat: 'BODY FAT % (US NAVY)',
       ageNorm: 'AGE · NORM',
       carried: (date) => `measured ${date}`,
@@ -359,7 +365,11 @@ export const en: Dict = {
     noFat: 'No measurements in this period.',
     scrubHint: 'Drag your finger or mouse along the chart to see the values for a day',
     unusualDay: 'unusual day',
-    files: { weight: 'weight', kcal: 'kcal', deficit: 'deficit', fat: 'body-fat' },
+    volumesTitle: 'Body measurements: change, cm',
+    volumesNote: 'From the first measurement in the period. The numbers themselves are on the Day screen.',
+    volume: { neck: 'neck', waist: 'waist', hips: 'hips', chest: 'chest', biceps: 'biceps' },
+    noVolumes: 'At least two measurements in the period are needed.',
+    files: { weight: 'weight', kcal: 'kcal', deficit: 'deficit', fat: 'body-fat', volumes: 'measurements' },
   },
 
   photo: {
@@ -905,6 +915,11 @@ export const en: Dict = {
     body: 'Measurements',
     bodyLine: (neck, waist, hips, fat) => `neck ${neck} · waist ${waist}${hips != null ? ' · hips ' + hips : ''}${fat ? ' · fat ' + fat + '%' : ''}`,
     carried: (date) => `measured ${date}`,
+    volumes: 'Sizes',
+    volumesLine: (chest, biceps, hips) =>
+      [chest != null ? 'chest ' + chest : '', biceps != null ? 'biceps ' + biceps : '', hips != null ? 'hips ' + hips : '']
+        .filter(Boolean)
+        .join(' · '),
     unusual: 'Unusual day',
     wellbeing: 'Wellbeing',
     wellbeingLine: (n) => `${n} of 10`,

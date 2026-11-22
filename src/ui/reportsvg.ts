@@ -5,7 +5,7 @@ import type { ISODate } from '../core/dates';
 import type { AdaptiveResult } from '../core/adaptive';
 import type { EnergyResult } from '../core/energy';
 import type { DayEntry, DayMap, Profile } from '../core/types';
-import { carriedMeasure, hasMeasurement, navyBodyFat } from '../core/body';
+import { carriedMeasure, extraMeasureKeys, hasMeasurement, navyBodyFat } from '../core/body';
 import type { I18n } from '../i18n';
 import type { DayPlan } from '../core/targets';
 import { pctText } from './targets';
@@ -86,6 +86,13 @@ export function reportSvg(
         t.teal,
         t.muted,
       ]);
+  }
+  {
+    // необязательные замеры — только введённые в этот день
+    const ex = extraMeasureKeys(p.profile.sex);
+    const pick = (k: 'chest' | 'biceps' | 'hips') => (ex.includes(k) && e[k] ? f.input(e[k]!) : null);
+    const line = R.volumesLine(pick('chest'), pick('biceps'), pick('hips'));
+    if (line) rows.push([R.volumes, line, t.teal]);
   }
   if (e.anomaly) rows.push([R.unusual, tx.common.reason[e.anomaly], t.violet]);
   if (e.wellbeing) rows.push([R.wellbeing, R.wellbeingLine(e.wellbeing), t.violet]);
