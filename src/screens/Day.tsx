@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
 import { dayDiff, shiftDate, todayISO, ageAt, type ISODate } from '../core/dates';
-import { bodyFatNorm, carriedMeasure, extraMeasureKeys, measureHint, navyBodyFat } from '../core/body';
+import { bodyFatNorm, carriedMeasure, extraMeasureKeys, measureHint, missingFatFields, navyBodyFat } from '../core/body';
 import { classifyWorkout, KCAL_PER_KG, macroKcal } from '../core/energy';
 import { applyFoodDays } from '../core/importers';
 import { ANOMALY_REASONS, MEAL_SLOTS, type AnomalyReason, type MealSlot } from '../core/types';
@@ -107,12 +107,13 @@ export function DayScreen({
   // подсказки — по группам: основные (для формулы) и необязательные (грудь, бицепс, у мужчин бёдра)
   const female = profile.sex === 'female';
   const extraKeys = extraMeasureKeys(profile.sex);
+  // подсказка у каждого поля своя: пропадает только у того поля, которое вводится
   const formulaEntered = !!(e.neck || e.waist || (female && e.hips));
   const extraEntered = extraKeys.some((k) => !!e[k]);
-  const carriedAll = carriedMeasure(days, sel, profile.sex, profile.heightCm);
-  const carried = formulaEntered ? null : carriedAll;
-  const carriedExtra = extraEntered ? null : carriedAll;
-  const hasExtraData = extraEntered || extraKeys.some((k) => carriedAll?.[k] != null);
+  const carried = carriedMeasure(days, sel, profile.sex, profile.heightCm);
+  // % жира за день — только по замерам этого дня; пока введены не все, виден прошлый % и чего не хватает
+  const fatMissing = formulaEntered && bf == null ? missingFatFields(profile.sex, e) : [];
+  const hasExtraData = extraEntered || extraKeys.some((k) => carried?.[k] != null);
   const [extraOpen, setExtraOpen] = useState(false);
   const showExtra = extraOpen || hasExtraData;
   const age = ageAt(profile.birthDate, sel);
@@ -439,7 +440,7 @@ export function DayScreen({
                   value={e[k]}
                   onChange={(v) => set({ [k]: v })}
                   digits={1}
-                  placeholder={carriedExtra?.[k] != null ? f.input(carriedExtra[k]!) : undefined}
+                  placeholder={carried?.[k] != null ? f.input(carried[k]!) : undefined}
                   testID={k}
                 />
               ))}
@@ -462,6 +463,9 @@ export function DayScreen({
             ) : (
               <T bold mono size={20}>{bf != null ? kg(bf) + '%' : '—'}</T>
             )}
+            {fatMissing.length ? (
+              <T muted size={11}>{D.body.fatMissing(fatMissing.map((k) => D.body.fieldName[k]).join(', '))}</T>
+            ) : null}
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <T muted size={11}>{D.body.ageNorm}</T>

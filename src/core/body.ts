@@ -51,6 +51,12 @@ export function hasMeasurement(e: { neck?: number; waist?: number; hips?: number
   return !!(e && (e.neck || e.waist || e.hips));
 }
 
+/** Какие замеры формулы % жира ещё не введены за день (шея, живот, у женщин — бёдра). */
+export function missingFatFields(sex: Sex, e: { neck?: number; waist?: number; hips?: number }): ('neck' | 'waist' | 'hips')[] {
+  const keys: ('neck' | 'waist' | 'hips')[] = sex === 'female' ? ['neck', 'waist', 'hips'] : ['neck', 'waist'];
+  return keys.filter((k) => !e[k]);
+}
+
 /** Необязательные замеры, которые не входят в формулу % жира. */
 export type ExtraMeasureKey = 'chest' | 'biceps' | 'hips';
 
