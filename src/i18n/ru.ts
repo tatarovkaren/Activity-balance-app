@@ -270,6 +270,8 @@ export const ru = {
       fat: '% ЖИРА (ВМС США)',
       ageNorm: 'ВОЗРАСТ · НОРМА',
       carried: (date: string) => `замер ${date}`,
+      fatMissing: (fields: string) => `Новый % посчитается, когда введёте: ${fields}`,
+      fieldName: { neck: 'шея', waist: 'живот', hips: 'бёдра' },
     },
     comment: {
       title: 'Комментарий и самочувствие',

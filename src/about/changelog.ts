@@ -9,6 +9,11 @@ export type ChangelogEntry = { v: string } & Record<Lang, string[]>;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: '0.36.1',
+    ru: ['Замеры тела: когда начинаете вводить новый замер, серая подсказка пропадает только у этого поля, остальные прошлые значения остаются видны. Пока замер неполный, виден прошлый % жира и подсказка, что ещё ввести.'],
+    en: ['Body measurements: when you start entering a new measurement, only that field loses its grey hint, the other previous values stay visible. Until the measurement is complete you see the previous body fat % and what is still missing.'],
+  },
+  {
     v: '0.36.0',
     ru: ['Крупный шрифт: Профиль → «Размер шрифта» → «Крупный». Текст, поля и кнопки становятся примерно на 20 % больше, подписи на графиках тоже.'],
     en: ['Large text: Profile → "Text size" → "Large". Text, fields and buttons get about 20% bigger, chart labels too.'],

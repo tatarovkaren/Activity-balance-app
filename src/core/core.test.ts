@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { addMonthsClamped, ageAt, monthCells, shiftDate, toLocalISO } from './dates';
 import { energyModel, PaceIndex } from './energy';
-import { carriedMeasure, extraMeasureKeys, hasAnyMeasurement, measureHint, navyBodyFat } from './body';
+import { carriedMeasure, extraMeasureKeys, hasAnyMeasurement, measureHint, missingFatFields, navyBodyFat } from './body';
 import { adaptiveTDEE, goalForecast, wls } from './adaptive';
 import { applyFoodDays, applyWeights, parseBackup, parseFatSecret, parseWeightHistory } from './importers';
 import { mergeEntry } from './merge';
@@ -103,6 +103,17 @@ describe('% жира и замеры', () => {
     expect(days['2026-11-12'].neck).toBeUndefined();
     // замер в сам день не считается перенесённым; до первого замера — ничего
     expect(carriedMeasure(days, '2026-11-02', 'male', 178)).toBeNull();
+  });
+  it('чего не хватает для % жира за день: подсказки остальных полей не пропадают', () => {
+    expect(missingFatFields('male', { neck: 39 })).toEqual(['waist']);
+    expect(missingFatFields('male', { neck: 39, waist: 90 })).toEqual([]);
+    expect(missingFatFields('female', { waist: 80 })).toEqual(['neck', 'hips']);
+    // ввели только шею — подсказки живота и % жира берутся из прошлых замеров, шея дня в них не мешает
+    const days: DayMap = { '2026-11-02': { neck: 40, waist: 92 }, '2026-11-12': { neck: 39 } };
+    const c = carriedMeasure(days, '2026-11-12', 'male', 178)!;
+    expect(c.waist).toBe(92);
+    expect(c.bf!.date).toBe('2026-11-02');
+    expect(navyBodyFat('male', days['2026-11-12'], 178)).toBeNull();
   });
   it('необязательные замеры: грудь, бицепс, бёдра у мужчин — подсказками, в % жира не входят', () => {
     const days: DayMap = {

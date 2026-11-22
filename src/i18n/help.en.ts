@@ -104,7 +104,7 @@ export const helpEn: typeof helpRu = {
         'Enter the duration and average heart rate. Strength is counted by load and time, cardio by heart rate.',
         '"Workout steps" is for on-foot cardio only. The app subtracts them from your daily steps so the same effort is not counted twice. If the field is empty, steps are estimated from your usual pace.',
         'The **Energy balance** card shows what you ate and burned today and over 7 days, and the expected weight change per week.',
-        '**Body measurements** are taken once a week (frequency is set in the profile). On other days the fields show your latest measurements in grey, and body fat % in grey with the measurement date. Nothing is saved for those days: new numbers are stored only on the day you enter them.',
+        '**Body measurements** are taken once a week (frequency is set in the profile). On other days the fields show your latest measurements in grey, and body fat % in grey with the measurement date. Nothing is saved for those days: new numbers are stored only on the day you enter them. When you start entering a new measurement, only that field loses its grey hint. A new body fat % is calculated once all formula measurements are entered for the day (neck and waist, plus hips for women); until then you see the previous % with its date.',
         'If you like, you can also log **extra measurements**: chest (at nipple level), biceps (flexed, at the widest point) and, for men, hips (around the buttocks at the widest point; for women hips are already part of the formula). Tap "＋ More measurements" in the measurements card. They do not affect body fat %, and the "Body measurements" chart shows how they change.',
       ],
     },

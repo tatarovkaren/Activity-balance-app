@@ -258,6 +258,8 @@ export const en: Dict = {
       fat: 'BODY FAT % (US NAVY)',
       ageNorm: 'AGE · NORM',
       carried: (date) => `measured ${date}`,
+      fatMissing: (fields) => `New % will show once you enter: ${fields}`,
+      fieldName: { neck: 'neck', waist: 'waist', hips: 'hips' },
     },
     comment: {
       title: 'Comment and wellbeing',
