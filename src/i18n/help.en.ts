@@ -118,7 +118,7 @@ export const helpEn: typeof helpRu = {
         'Use the comment for sleep, mood or anything unusual. Wellbeing is a score from 1 to 10.',
         'An **unusual day** is a trip, a feast, illness, an incomplete log (and the cycle for women). Such days and the 2–3 days after them are left out of the burn estimate, so water and salt are not mistaken for fat.',
         'The app highlights suspicious days on its own (a weight jump or very few calories). If the day was normal, tap "include again".',
-        '"Send report to coach" sends a summary of the day, "Report as image" saves it as a picture.',
+        '"Send report to coach" sends a summary of the day, "Report as image" saves it as a picture: a one-line summary on top, then calorie, protein and step bars with the target zone, and tiles with everything else.',
       ],
     },
     {

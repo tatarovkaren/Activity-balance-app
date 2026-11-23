@@ -9,6 +9,17 @@ export type ChangelogEntry = { v: string } & Record<Lang, string[]>;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: '0.40.0',
+    ru: [
+      'Новый вид «Отчёта картинкой» для куратора: фирменная шапка с датой и итогом («! мимо: 3»), одна фраза о том, что пошло не так, шкалы калорий, белка и шагов с зоной цели, как на «Дне», и плитки с остальными показателями.',
+      'Если включены «Цвета для дальтоников», отчёт тоже рисуется синим и оранжевым. Исправлено: если вес не изменился, вместо «▼ 0,00» пишется «= 0,00».',
+    ],
+    en: [
+      'New look for "Report as image": a branded header with the date and result ("! missed: 3"), one sentence on what went off track, calorie, protein and step bars with the target zone like on the Day screen, and tiles with everything else.',
+      'With colorblind colors on, the report uses blue and orange too. Fixed: an unchanged weight now shows "= 0.00" instead of "▼ 0.00".',
+    ],
+  },
+  {
     v: '0.39.0',
     ru: [
       'Питание: если калории, введённые вручную, заметно расходятся с БЖУ (Б×4 + Ж×9 + У×4), под полями появляется предупреждение и кнопка «Пересчитать по БЖУ». Небольшую разницу (до 100 ккал или 15 %) — из‑за клетчатки, алкоголя или округлений в FatSecret — не отмечаем.',
