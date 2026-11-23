@@ -10,7 +10,7 @@ import {
   parseWeightHistory,
 } from '../core/importers';
 import { applyReport, isReportBackup, parseReportBackup } from '../core/import-report';
-import { DEFAULT_PROFILE, TEXT_SIZES, UI_MODES, type MeasureFreq, type Profile, type Sex, type TextSize, type ThemePref, type UiMode } from '../core/types';
+import { DEFAULT_PROFILE, PALETTES, TEXT_SIZES, type PalettePref, UI_MODES, type MeasureFreq, type Profile, type Sex, type TextSize, type ThemePref, type UiMode } from '../core/types';
 import { useStore } from '../data/store';
 import { cloudConfigured } from '../data/cloud';
 import { Btn, Card, Divider, Gap, Note, NumField, Row, Seg, T, TextField, DateField, Fields } from '../ui/kit';
@@ -163,6 +163,17 @@ export function ProfileScreen({ openHand, openHelp, openWiki }: { openHand: () =
         />
         <Gap h={6} />
         <T muted size={12}>{P.textSize.note}</T>
+      </Card>
+
+      <Card title={P.palette.title} accent={t.violet}>
+        <Seg<PalettePref>
+          value={p.palette || 'normal'}
+          onChange={(v) => set({ palette: v })}
+          options={PALETTES.map((k) => ({ v: k, label: P.palette[k] }))}
+          testID="palette"
+        />
+        <Gap h={6} />
+        <T muted size={12}>{P.palette.note}</T>
       </Card>
 
       <Card title={P.theme} accent={t.violet}>

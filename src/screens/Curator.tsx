@@ -28,6 +28,7 @@ import { useTheme } from '../ui/theme';
 import { goalShort, reasonText, workoutName } from '../ui/format';
 import { errorText, useI18n, type I18n } from '../i18n';
 import { Chart } from '../ui/Chart';
+import { CuratorAdvice } from './Advice';
 
 interface ClientRow {
   id: string;
@@ -279,6 +280,7 @@ function ClientDay({ c, today, comments, onComment, comment, setComment }: { c: 
       {c.profile.goals?.length ? (
         <T muted size={12}>{C.goalHistory([...c.profile.goals].reverse().slice(0, 6).map((g) => historyLine(L, g)).join('; '))}</T>
       ) : null}
+      <CuratorAdvice id={c.id} profile={c.profile} days={c.days} />
       <ProposeGoal c={c} />
       <Divider />
       {comments.map((x, i) => (

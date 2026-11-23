@@ -2,7 +2,7 @@
   "expo": {
     "name": "Activity Balance",
     "slug": "balans",
-    "version": "0.36.1",
+    "version": "0.37.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",

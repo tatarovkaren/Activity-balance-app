@@ -5,6 +5,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 import Svg, { Line, Rect } from 'react-native-svg';
 import { monthCells, parseISO, type ISODate } from '../core/dates';
+import { monthDates, monthSummary, scoreDays } from '../core/dayscore';
+import type { DayMap, KeepMap, Profile } from '../core/types';
+import { scoreColor, VERDICT_ICON } from './score';
 import { useI18n } from '../i18n';
 import { useFs, useTheme } from './theme';
 
@@ -25,9 +28,12 @@ export function DatePicker({
   value,
   max,
   marked,
+  scores,
   onPick,
   onClose,
 }: {
+  /** Данные для значков итога дня (✓ ≈ ▲ ▼ • ◷); без них — точки «есть записи». */
+  scores?: { profile: Profile; days: DayMap; keep: KeepMap };
   visible: boolean;
   value: ISODate;
   /** Последний доступный день (сегодня). */
@@ -54,6 +60,13 @@ export function DatePicker({
   const maxD = parseISO(max);
   const atMax = ym.y > maxD.getFullYear() || (ym.y === maxD.getFullYear() && ym.m >= maxD.getMonth());
   const cells = useMemo(() => monthCells(ym.y, ym.m, C.weekStart), [ym, C.weekStart]);
+  // итоги дней месяца считаются только пока календарь открыт
+  const sc = useMemo(
+    () => (visible && scores ? scoreDays(scores.profile, scores.days, scores.keep, monthDates(ym.y, ym.m)) : null),
+    [visible, scores?.profile, scores?.days, scores?.keep, ym], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const anyScore = !!sc && Object.values(sc).some((x) => x);
+  const sum = sc ? monthSummary(sc) : null;
   const heads = [...Array(7)].map((_, i) => C.weekdaysShort[(i + C.weekStart) % 7]);
   const step = (k: number) => setYm(({ y, m }) => ({ y: y + Math.floor((m + k) / 12), m: (((m + k) % 12) + 12) % 12 }));
   const pick = (d: ISODate) => {
@@ -103,6 +116,11 @@ export function DatePicker({
             {navBtn('›', () => step(1), atMax, 'calNext')}
           </View>
 
+          {anyScore && sum ? (
+            <Text testID="calSummary" style={{ color: t.muted, fontSize: fs(12), marginBottom: 8 }}>
+              {C.summary(sum.ok, sum.total, sum.over, sum.under)}
+            </Text>
+          ) : null}
           <View style={{ flexDirection: 'row' }}>
             {heads.map((h, i) => (
               <Text key={i} style={{ width: `${100 / 7}%`, textAlign: 'center', color: t.muted, fontSize: fs(12), paddingBottom: 6 }}>
@@ -118,6 +136,10 @@ export function DatePicker({
               const sel = d === value;
               const today = d === max;
               const has = !future && marked(d);
+              const ds = sc?.[d];
+              // итог дня: значок с цветом; день без калорий — серая точка, сегодня — ◷
+              const icon = ds && (ds.verdict !== 'noData' || has) ? VERDICT_ICON[ds.verdict] : null;
+              const iconColor = ds ? (ds.verdict === 'open' || ds.verdict === 'noData' ? t.muted : ds.verdict === 'ok' ? t.green : scoreColor(t, ds.tone)) : t.muted;
               return (
                 <View key={i} style={{ width: `${100 / 7}%`, height: 42, alignItems: 'center', justifyContent: 'center' }}>
                   <Pressable
@@ -136,10 +158,12 @@ export function DatePicker({
                       opacity: future ? 0.3 : pressed ? 0.7 : 1,
                     })}
                   >
-                    <Text style={{ color: sel ? t.onAccent : t.text, fontSize: fs(15), fontWeight: sel || today ? '700' : '400' }}>
+                    <Text style={{ color: sel ? t.onAccent : t.text, fontSize: fs(15), fontWeight: sel || today ? '700' : '400', marginBottom: icon ? 9 : 0 }}>
                       {Number(d.slice(8))}
                     </Text>
-                    {has ? (
+                    {icon ? (
+                      <Text style={{ position: 'absolute', bottom: 0, fontSize: fs(12), lineHeight: fs(13), fontWeight: '800', color: sel ? t.onAccent : iconColor }}>{icon}</Text>
+                    ) : has ? (
                       <View
                         style={{ position: 'absolute', bottom: 4, width: 5, height: 5, borderRadius: 3, backgroundColor: sel ? t.onAccent : t.green }}
                       />
@@ -151,10 +175,14 @@ export function DatePicker({
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
-              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: t.green }} />
-              <Text style={{ color: t.muted, fontSize: fs(12) }}>{C.legend}</Text>
-            </View>
+            {anyScore ? (
+              <Text style={{ color: t.muted, fontSize: fs(11), flexShrink: 1, marginRight: 8 }}>{C.legendScore}</Text>
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: t.green }} />
+                <Text style={{ color: t.muted, fontSize: fs(12) }}>{C.legend}</Text>
+              </View>
+            )}
             <View style={{ flexDirection: 'row', gap: 14 }}>
               <Pressable onPress={() => pick(max)} hitSlop={6} testID="calToday">
                 <Text style={{ color: t.amber, fontWeight: '600', fontSize: fs(14) }}>{tx.common.today}</Text>

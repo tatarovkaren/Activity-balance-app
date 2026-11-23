@@ -50,6 +50,7 @@ export function planNotes(L: I18n, t: Targets): { text: string; warn: boolean }[
   if (t.pace.clamped) out.push({ text: T.clamped(pctText(L, t.pace.clamped.max), L.f.dmy(t.pace.clamped.realDate)), warn: true });
   else if (t.pace.fromDate) out.push({ text: T.fromDate(pctText(L, t.pct)), warn: false });
   if (t.manual) out.push({ text: T.manualNote(pctText(L, Math.round(t.pct * 100) / 100)), warn: false });
+  if (t.adjust) out.push({ text: T.adjustNote(L.f.signed(t.adjust, 0), pctText(L, Math.round(t.pct * 100) / 100)), warn: false });
   if (t.proteinBasis === 'weight') out.push({ text: T.proteinNoMeasure(L.f.num(t.proteinCoef, 1)), warn: false });
   for (const w of t.warnings)
     out.push({ text: w === 'floored' ? T.warn.floored(L.f.int(t.floor ?? t.kcal)) : T.warn[w], warn: w !== 'start' });
@@ -62,7 +63,7 @@ export function basisLine(L: I18n, t: Targets): string {
   return T.basis(L.f.int(t.E), L.f.num(t.weight, 1), t.weightSource === 'trend') + lean;
 }
 
-export function historyLine(L: I18n, g: GoalSetting): string {
+export function historyLine(L: I18n, g: GoalSetting & { stepGoal?: number }): string {
   const T = L.tx.target;
   const pace =
     g.mode === 'maintain'
@@ -70,7 +71,10 @@ export function historyLine(L: I18n, g: GoalSetting): string {
       : g.targetDate
         ? T.historyDate(L.f.dmy(g.targetDate))
         : T.paceOnly(pctText(L, g.pacePct ?? DEFAULT_PACE_PCT[g.mode]));
-  const kcal = g.kcalManual != null ? T.historyKcal(L.f.int(g.kcalManual)) : '';
+  const kcal =
+    (g.kcalManual != null ? T.historyKcal(L.f.int(g.kcalManual)) : '') +
+    (g.kcalManual == null && g.kcalAdjust ? T.historyAdjust(L.f.signed(g.kcalAdjust, 0)) : '') +
+    (g.stepGoal ? T.historySteps(L.f.int(g.stepGoal)) : '');
   return T.historyLine(L.f.dmy(g.start), T.modeLower[g.mode], (g.kcalManual != null && g.mode !== 'maintain' ? '' : pace) + kcal, g.by === 'curator');
 }
 
@@ -94,5 +98,5 @@ export function factForecastText(L: I18n, g: GoalForecast): string {
 }
 
 export function toneColor(t: Palette, tone: Tone): string {
-  return tone === 'ok' ? t.green : tone === 'warn' ? t.amber : tone === 'bad' ? t.red : t.muted;
+  return tone === 'ok' ? t.green : tone === 'warn' ? t.warn : tone === 'bad' ? t.red : t.muted;
 }
