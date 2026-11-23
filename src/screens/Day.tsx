@@ -149,7 +149,7 @@ export function DayScreen({
   };
 
   const makeReport = async (send: boolean) => {
-    const rep = reportSvg(L, { date: sel, name: profile.name || D.report.clientFallback, profile, e, energy: en, adaptive: r, prevWeight: prevW, plan, days });
+    const rep = reportSvg(L, { date: sel, name: profile.name || D.report.clientFallback, profile, e, energy: en, adaptive: r, prevWeight: prevW, plan, score, days, colorblind: profile.palette === 'colorblind' });
     if (Platform.OS === 'web' && !send) {
       const b = await svgToPng(rep.svg, rep.w, rep.h);
       if (b) downloadBlob(`${tx.report.file}-${sel}.png`, b);
