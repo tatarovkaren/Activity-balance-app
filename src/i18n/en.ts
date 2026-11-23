@@ -244,6 +244,9 @@ export const en: Dict = {
       c: 'Carbs, g',
       manual: 'Kcal entered manually · ',
       auto: 'Kcal = P×4 + F×9 + C×4 · ',
+      mismatch: (kcal, macro, diff) =>
+        `⚠ Kcal don't match the macros: you entered ${kcal}, but the macros (P×4 + F×9 + C×4) add up to ${macro} kcal (${diff}). A small gap is normal because of fiber or alcohol, but this one is too big — check the numbers.`,
+      recalc: (macro) => `Recalculate from macros: ${macro} kcal`,
       proteinNorm: (g, perKg) => `protein target ${g} g (${perKg} g/kg)`,
       photo: '📷 Snap a meal',
       whichMeal: 'Which meal are you photographing?',
