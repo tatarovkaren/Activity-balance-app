@@ -1,5 +1,6 @@
-// Тренировки недели Пн–Вс в карточке «Тренировка» (вариант Б): счётчик в заголовке, 7 ячеек, полоска и подсказка.
+// Тренировки недели Пн–Вс в карточке «Тренировка» (вариант Б): счётчик в заголовке, 7 ячеек и подсказка.
 // Силовая — квадратная ячейка «С», кардио — круглая «К»: различаются буквой и формой, не только цветом.
+// День с тренировкой отмечен зелёной галочкой рядом с названием дня «Пн ✓» (в палитре для дальтоников — синей).
 
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -7,7 +8,7 @@ import type { ISODate } from '../core/dates';
 import { parseISO } from '../core/dates';
 import type { WeekWorkouts } from '../core/workouts';
 import { useI18n } from '../i18n';
-import { Bar, T } from './kit';
+import { T } from './kit';
 import { useFs, useTheme } from './theme';
 import { useStore } from '../data/store';
 
@@ -40,7 +41,6 @@ export function WeekStrip({ w, sel, curator, onPick }: { w: WeekWorkouts; sel: I
           ? W.missed(w.done, w.goal)
           : W.left(h.left, h.strengthLeft);
   const lead = curator ? W.goalOnly(w.goal) : W.recommend(w.goal);
-  const ok = w.done >= w.goal;
   return (
     <View testID="weekStrip">
       <View style={{ flexDirection: 'row', gap: 4 }}>
@@ -74,13 +74,14 @@ export function WeekStrip({ w, sel, curator, onPick }: { w: WeekWorkouts; sel: I
               >
                 {d.kind ? <Text style={{ color: c, fontWeight: '800', fontSize: fs(11) }}>{W.letter[d.kind]}</Text> : null}
               </View>
-              <Text style={{ color: on ? t.text : t.muted, fontWeight: on ? '700' : '400', fontSize: fs(11) }}>{label}</Text>
+              <Text style={{ color: on ? t.text : t.muted, fontWeight: on ? '700' : '400', fontSize: fs(11) }}>
+                {label}
+                {d.kind ? <Text style={{ color: t.green, fontWeight: '800' }}>{' ✓'}</Text> : null}
+              </Text>
             </Pressable>
           );
         })}
       </View>
-      <View style={{ height: 6 }} />
-      <Bar value={w.done / w.goal} color={ok ? t.green : t.progress} />
       <T muted size={12} style={{ marginTop: 6 }} testID="weekHint">
         {`${lead} ${status}`}
       </T>
