@@ -74,6 +74,8 @@ export interface GoalProposal {
   setting: Omit<GoalSetting, 'start' | 'by'> & {
     /** Новая цель по шагам (рекомендация «добавить шаги»). */
     stepGoal?: number;
+    /** Тренировок в неделю (куратор предлагает вместе с целью). */
+    workoutGoal?: number;
   };
   note?: string;
 }

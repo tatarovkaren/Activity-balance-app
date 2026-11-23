@@ -1,6 +1,7 @@
 // Кабинет куратора (веб): все клиенты на одном экране — кто не отчитался или не взвешивался,
 // у кого низкая надёжность, темп и прогноз цели; ниже — отчёт дня выбранного клиента и комментарий.
 
+import { clampWorkoutGoal } from '../core/workouts';
 import React, { useEffect, useMemo, useState } from 'react';
 import { AppState, ScrollView, useWindowDimensions, View } from 'react-native';
 import { dayDiff, shiftDate, todayISO, type ISODate } from '../core/dates';
@@ -307,12 +308,14 @@ function ProposeGoal({ c }: { c: ClientRow }) {
   const [mode, setMode] = useState<GoalMode | undefined>(undefined);
   const [pace, setPace] = useState<number | undefined>(undefined);
   const [protein, setProtein] = useState<number | undefined>(undefined);
+  const [workouts, setWorkouts] = useState<number | undefined>(undefined);
   const [note, setNote] = useState('');
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   useEffect(() => {
     setMode(undefined);
     setPace(undefined);
     setProtein(undefined);
+    setWorkouts(undefined);
     setNote('');
     setMsg(null);
   }, [c.id]);
@@ -324,7 +327,7 @@ function ProposeGoal({ c }: { c: ClientRow }) {
     if (e) return setMsg({ text: settingErrorText(L, e), ok: false });
     if (session.mode !== 'cloud') return setMsg({ text: C.proposeDemo, ok: true });
     try {
-      await proposeGoal(c.id, setting, note.trim() || undefined);
+      await proposeGoal(c.id, workouts != null ? { ...setting, workoutGoal: clampWorkoutGoal(workouts) } : setting, note.trim() || undefined);
       setMsg({ text: C.proposeSent, ok: true });
     } catch (err) {
       setMsg({ text: errorText(L, err), ok: false });
@@ -339,6 +342,7 @@ function ProposeGoal({ c }: { c: ClientRow }) {
       <Fields>
         {m && m !== 'maintain' ? <NumField label={G.paceTitle} value={pace} digits={2} onChange={setPace} placeholder={cur?.pacePct != null ? L.f.input(cur.pacePct) : ''} /> : null}
         <NumField label={G.protein} value={protein} digits={1} onChange={setProtein} />
+        <NumField label={C.proposeWorkouts} value={workouts} onChange={setWorkouts} placeholder={String(clampWorkoutGoal(c.profile?.workoutGoal))} />
       </Fields>
       <Gap h={6} />
       <Fields>

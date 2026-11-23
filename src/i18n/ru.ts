@@ -291,6 +291,23 @@ export const ru = {
       breakdown: (bmr: string, neat: string, train: string, tef: string) => `БМР ${bmr} · шаги ${neat} · трен. ${train} · переваривание ${tef}`,
       stepsDeducted: (n: string, tracker: boolean) => `шаги на тренировке (−${n}, ${tracker ? 'из трекера' : 'оценка'}) учтены в тренировке`,
       noEnergy: 'Расход появится, когда будут вес (за день или 3 дня до), рост и дата рождения.',
+      /** Тренировки недели Пн–Вс над полями карточки. */
+      week: {
+        count: (done: number, goal: number) => `${done} из ${goal}`,
+        countWide: (done: number, goal: number) => `${done} из ${goal} за неделю`,
+        letter: { cardio: 'К', strength: 'С' } as Record<'cardio' | 'strength', string>,
+        a11y: (day: string, kind: 'cardio' | 'strength' | null) => `${day}: ${kind === 'cardio' ? 'кардио' : kind === 'strength' ? 'силовая' : 'нет тренировки'}`,
+        recommend: (goal: number) => `Рекомендуем ${goal} в неделю, из них силовых не меньше 2.`,
+        /** С куратором — без совета приложения, только цель. */
+        goalOnly: (goal: number) => `Цель недели: ${goal} ${goal >= 5 ? 'тренировок' : 'тренировки'}.`,
+        left: (left: number, strengthLeft: number) =>
+          `Осталось ${left}` +
+          (strengthLeft <= 0 ? '' : left === 1 ? ' — лучше силовую' : strengthLeft >= left ? ' — лучше силовые' : `, из них силовых ${strengthLeft}`) +
+          '.',
+        done: 'Цель недели выполнена ✓',
+        doneNeedStrength: (n: number) => `Цель недели выполнена. Для баланса добавьте ${n === 1 ? 'ещё силовую' : `ещё ${n} силовые`}.`,
+        missed: (done: number, goal: number) => `Неделя прошла: ${done} из ${goal}.`,
+      },
     },
     balance: {
       title: 'Баланс энергии',
@@ -670,6 +687,8 @@ export const ru = {
     height: 'Рост, см',
     goal: 'Цель, кг',
     stepGoal: 'Шаги, цель',
+    workoutGoal: 'Тренировок в неделю',
+    workoutGoalNote: 'От 2 до 7, по умолчанию 3. Неделя считается с понедельника.',
     protein: 'Белок, г на кг веса',
     proteinPh: 'задаёт куратор',
     measureFreq: 'Частота замеров тела',
@@ -821,6 +840,7 @@ export const ru = {
     adjustNote: (kcal: string, pct: string) => `Поправка по рекомендации: ${kcal} ккал · темп по расчёту ≈ ${pct} %/нед`,
     historyAdjust: (kcal: string) => ` · поправка ${kcal} ккал`,
     historySteps: (n: string) => ` · шаги ${n}`,
+    historyWorkouts: (n: number) => ` · тренировок в неделю ${n}`,
     recalc: 'Пересчитать сейчас',
     recalcDone: 'Пересчитано по данным на сегодня',
     errors: {
@@ -968,6 +988,7 @@ export const ru = {
     goalHistory: (list: string) => `История режимов: ${list}`,
     proposeTitle: 'Предложить изменение цели',
     proposeNote: 'Комментарий для клиента',
+    proposeWorkouts: 'Тренировок в неделю',
     proposeSend: 'Предложить',
     proposeSent: 'Предложение отправлено: изменится после подтверждения клиентом',
     proposeDemo: 'Демо: в облаке клиент увидит предложение и подтвердит его',

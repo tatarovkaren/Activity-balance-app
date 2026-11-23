@@ -63,7 +63,7 @@ export function basisLine(L: I18n, t: Targets): string {
   return T.basis(L.f.int(t.E), L.f.num(t.weight, 1), t.weightSource === 'trend') + lean;
 }
 
-export function historyLine(L: I18n, g: GoalSetting & { stepGoal?: number }): string {
+export function historyLine(L: I18n, g: GoalSetting & { stepGoal?: number; workoutGoal?: number }): string {
   const T = L.tx.target;
   const pace =
     g.mode === 'maintain'
@@ -74,7 +74,8 @@ export function historyLine(L: I18n, g: GoalSetting & { stepGoal?: number }): st
   const kcal =
     (g.kcalManual != null ? T.historyKcal(L.f.int(g.kcalManual)) : '') +
     (g.kcalManual == null && g.kcalAdjust ? T.historyAdjust(L.f.signed(g.kcalAdjust, 0)) : '') +
-    (g.stepGoal ? T.historySteps(L.f.int(g.stepGoal)) : '');
+    (g.stepGoal ? T.historySteps(L.f.int(g.stepGoal)) : '') +
+    (g.workoutGoal ? T.historyWorkouts(g.workoutGoal) : '');
   return T.historyLine(L.f.dmy(g.start), T.modeLower[g.mode], (g.kcalManual != null && g.mode !== 'maintain' ? '' : pace) + kcal, g.by === 'curator');
 }
 
