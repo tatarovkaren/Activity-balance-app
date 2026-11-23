@@ -83,6 +83,9 @@ export type ThemePref = 'system' | 'light' | 'dark';
 /** Размер шрифта: обычный или крупный (для слабого зрения). */
 export type TextSize = 'normal' | 'large';
 export const TEXT_SIZES: TextSize[] = ['normal', 'large'];
+/** Палитра: обычная или для дальтоников. */
+export type PalettePref = 'normal' | 'colorblind';
+export const PALETTES: PalettePref[] = ['normal', 'colorblind'];
 /** Языки интерфейса. Новый язык: добавить код сюда и словарь в src/i18n (см. docs/i18n.md). */
 export type Lang = 'ru' | 'en';
 export type LangPref = 'system' | Lang;
@@ -111,6 +114,8 @@ export interface Profile {
   lang: LangPref;
   /** Размер шрифта. Нет поля — обычный. */
   textSize?: TextSize;
+  /** Цвета: обычные или для дальтоников (синий вместо зелёного, оранжевый вместо красного). Нет поля — обычные. */
+  palette?: PalettePref;
   /** Миффлин — Сан Жеор по умолчанию; «по сухой массе» (Кетч — МакАрдл) — если есть замер % жира. */
   bmrFormula: 'mifflin' | 'lean';
   /** Старая норма белка, г на кг общего веса. Заменена коэффициентом в режиме цели (goals); не показывается. */
@@ -130,6 +135,8 @@ export interface Profile {
   backupReminder?: boolean;
   /** Уведомления: что и во сколько присылать (пуши, Telegram). Нет поля — по умолчанию (core/notify.ts). */
   notify?: Partial<NotifyPrefs>;
+  /** Рекомендации по планке: применённые и отложенные «Не сейчас» (последние 30). */
+  advice?: AdviceMark[];
 }
 
 export const DEFAULT_PROFILE: Profile = {
@@ -188,6 +195,8 @@ export interface DayEntry {
   photoMeals?: PhotoMeal[];
   /** Отчёт дня отправлен куратору (время, мс). */
   reportSentAt?: number;
+  /** День закрыт кнопкой «Закрыть день» (мс): итог подводится сразу, не дожидаясь 21:00. */
+  closedAt?: number;
   updatedAt?: number;
   /**
    * Когда поле записал Telegram-бот (мс). Приложение не затирает такое поле своей старой копией дня,
@@ -236,6 +245,15 @@ export interface PhotoMeal {
 }
 
 export type DayMap = Record<ISODate, DayEntry>;
+
+/** Отметка рекомендации по планке (core/advice.ts): применена или отложена «Не сейчас». */
+export interface AdviceMark {
+  /** Понедельник недели рекомендации. */
+  week: ISODate;
+  at: ISODate;
+  action: 'applied' | 'dismissed';
+  reason: 'lowData' | 'overeat' | 'underreport' | 'slow' | 'fast';
+}
 
 /** Автоматически найденные необычные дни, которые пользователь вернул в расчёт. */
 export type KeepMap = Record<ISODate, true>;

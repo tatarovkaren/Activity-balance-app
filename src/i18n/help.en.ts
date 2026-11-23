@@ -76,11 +76,13 @@ export const helpEn: typeof helpRu = {
       title: 'Daily log: weight, steps, food',
       text: [
         'At the top you get a greeting with the name from Profile (the “Name” field; a nickname is fine). If no name is set, there is no greeting.',
-        'The ‹ › arrows at the top switch days, and the calendar button lets you jump to any date (days with entries are marked with a dot). You can fill in past days too.',
+        'The ‹ › arrows at the top switch days, and the calendar button lets you jump to any date. With a target set, each date shows the day result: ✓ on target, ≈ close, ▲ over, ▼ under, • too little data, ◷ in progress, with “On target N of M days” on top. Without a target, days with entries get a dot. You can fill in past days too.',
         '**Morning weight**: fasted, after the toilet. Below it you see the change since yesterday and the weekly average.',
         '**Steps**: from your phone or tracker, for the whole day.',
         '**Food**: enter calories and macros by hand, add foods with "＋ Food", tap "Import FatSecret", or tap "📷 Snap a meal" and pick the meal. If calories are empty, they are calculated from macros.',
-        'The fields show "actual / target": the colour tells you whether you are within your target.',
+        'Calories and protein get a **bar with the target range** (dashed) and a status with an icon and a word: "✓ in range", "▲ over +320", "▼ under −18", "660–840 to go". Calories: within ±5% is on target, up to 10% is close. Protein and steps: from the target up is ✓, 90–100% is ≈. Steps that are not logged do not count.',
+        'The food card header shows the **day result**: "✓ day on target" (calories, protein and steps all ✓), "! missed: 2" or "◷ day in progress". While the day is in progress, shortfalls are not flagged (blue bar). The day closes by itself at 21:00, with "Close the day", or when you send the report to your coach; past days are always closed.',
+        'On Mondays the Day screen may show a **target tip**: why your weight is off plan and what you could do (lower or raise the target, add steps, move the date). The app never changes anything by itself, only when you tap "Apply". If you have a coach, the tip goes to them first.',
       ],
     },
     {
@@ -190,11 +192,12 @@ export const helpEn: typeof helpRu = {
     },
     {
       id: 'settings',
-      title: 'Mode, language, text size, theme and account',
+      title: 'Mode, language, text size, colors, theme and account',
       text: [
         '**App mode**: basic shows weight, steps, food, workouts and the day summary; advanced adds the burn breakdown, reliability, excluded days, custom pace, protein factor and BMR formula. The calculation is the same in both.',
         'Language: Russian, English or same as system. Dates, numbers and the coach report follow your choice.',
         'Text size: normal or large. Large makes text, fields and buttons about 20% bigger if small text is hard to read.',
+        'Colors: standard or color-blind friendly (blue instead of green, orange instead of red). The ✓ ≈ ▲ ▼ icons and labels are always there.',
         'Theme: light, dark or same as system.',
         'The "Account and data" card holds your consents, documents, the coach dashboard and sign-out.',
       ],

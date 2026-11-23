@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext } from 'react';
 import { Platform, useColorScheme } from 'react-native';
-import type { TextSize, ThemePref } from '../core/types';
+import type { PalettePref, TextSize, ThemePref } from '../core/types';
 
 export interface Palette {
   dark: boolean;
@@ -21,6 +21,12 @@ export interface Palette {
   teal: string;
   violet: string;
   onAccent: string;
+  /** «В процессе» (день идёт): синий; в палитре для дальтоников — серый, чтобы не путать с «в цели». */
+  progress: string;
+  /** «Рядом / жёлтый» в оценке дня: янтарный; в палитре для дальтоников — жёлтый, чтобы не путать с оранжевым. */
+  warn: string;
+  /** Палитра для дальтоников включена. */
+  cb?: boolean;
 }
 
 export const DARK: Palette = {
@@ -39,6 +45,8 @@ export const DARK: Palette = {
   teal: '#3ED9D1',
   violet: '#8B7CF0',
   onAccent: '#080B10',
+  progress: '#4FA8E8',
+  warn: '#F0A93B',
 };
 
 export const LIGHT: Palette = {
@@ -57,14 +65,28 @@ export const LIGHT: Palette = {
   teal: '#12918B',
   violet: '#6252D1',
   onAccent: '#FFFFFF',
+  progress: '#1F7BC4',
+  warn: '#B8720B',
 };
+
+/**
+ * Для дальтоников: зелёный → синий, красный → оранжевый, жёлтый светлее. Пара синий/оранжевый различима
+ * при всех частых видах дальтонизма; значки и слова остаются.
+ */
+export function colorblind(p: Palette): Palette {
+  return p.dark
+    ? { ...p, green: '#4FA8E8', red: '#F28C28', warn: '#E3CF4A', progress: '#A7B4C2', cb: true }
+    : { ...p, green: '#1F6FB8', red: '#C75F00', warn: '#857200', progress: '#6B7A89', cb: true };
+}
 
 const Ctx = createContext<Palette>(DARK);
 
-export function ThemeProvider({ pref, children }: { pref: ThemePref; children: React.ReactNode }) {
+export function ThemeProvider({ pref, palette, children }: { pref: ThemePref; palette?: PalettePref; children: React.ReactNode }) {
   const sys = useColorScheme();
   const dark = pref === 'dark' || (pref === 'system' && sys !== 'light');
-  return <Ctx.Provider value={dark ? DARK : LIGHT}>{children}</Ctx.Provider>;
+  const base = dark ? DARK : LIGHT;
+  const value = React.useMemo(() => (palette === 'colorblind' ? colorblind(base) : base), [base, palette]);
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 export const useTheme = () => useContext(Ctx);

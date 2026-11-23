@@ -143,7 +143,7 @@ function Themed() {
   const { data } = useStore();
   return (
     <I18nProvider pref={data.profile.lang}>
-      <ThemeProvider pref={data.profile.theme}>
+      <ThemeProvider pref={data.profile.theme} palette={data.profile.palette}>
         <TextSizeProvider size={data.profile.textSize}>
           <Shell />
         </TextSizeProvider>

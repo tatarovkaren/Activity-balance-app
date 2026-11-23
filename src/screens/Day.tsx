@@ -24,6 +24,9 @@ import { CalendarIcon, DatePicker } from '../ui/DatePicker';
 import { backupDue } from '../core/backup';
 import { dayPart, greetName } from '../core/greeting';
 import { useBackupExport } from '../ui/backup';
+import { DAY_CLOSE_HOUR, scoreDay, scoreSteps, type DayScore } from '../core/dayscore';
+import { DayLabel, metricText, scoreColor, ScoreRow } from '../ui/score';
+import { AdviceCard } from './Advice';
 
 export function DayScreen({
   sel,
@@ -53,6 +56,10 @@ export function DayScreen({
   const d = useDerived(profile, days, keep, sel);
   const plan = useMemo(() => dayPlan(profile, days, keep, sel), [profile, days, keep, sel]);
   const tg = plan.kind === 'ok' ? plan.targets : null;
+  // итог дня по цели: калории, белок и шаги (вариант B «шкала с коридором»)
+  const score: DayScore | null = tg ? scoreDay(e, sel, tg, profile) : null;
+  const stepsScore = score ? score.steps : scoreSteps(e.steps, profile.stepGoal, sel === todayISO() && new Date().getHours() < DAY_CLOSE_HOUR);
+  const mode = plan.kind === 'none' ? undefined : plan.setting.mode;
   const [importMsg, setImportMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [reportMsg, setReportMsg] = useState('');
@@ -142,6 +149,7 @@ export function DayScreen({
       if (b) downloadBlob(`${tx.report.file}-${sel}.png`, b);
     }
     if (send) {
+      // отправка отчёта куратору закрывает день
       set({ reportSentAt: Date.now() });
       setReportMsg(data.curator ? D.report.sent(dm(sel), data.curator.name) : D.report.noCurator);
     }
@@ -189,7 +197,7 @@ export function DayScreen({
           </Pressable>
         </Row>
       </Row>
-      <DatePicker visible={calOpen} value={sel} max={today} marked={hasEntry} onPick={setSel} onClose={() => setCalOpen(false)} />
+      <DatePicker visible={calOpen} value={sel} max={today} marked={hasEntry} scores={{ profile, days, keep }} onPick={setSel} onClose={() => setCalOpen(false)} />
 
       {due ? (
         <View testID="backupReminder">
@@ -205,6 +213,7 @@ export function DayScreen({
       ) : null}
 
       <ProposalCards />
+      {sel === today ? <AdviceCard /> : null}
 
       <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
         {/* Вес */}
@@ -212,7 +221,7 @@ export function DayScreen({
           <NumField big value={e.weight} onChange={(v) => set({ weight: v })} placeholder={D.weight.placeholder} digits={2} suffix={tx.common.kg} testID="weight" />
           <Gap h={6} />
           {dW != null ? (
-            <T size={13} color={dW <= 0 ? t.green : t.red}>
+            <T size={13} color={(mode === 'surplus' ? dW >= 0 : dW <= 0) ? t.green : t.red}>
               {D.weight.delta(dW <= 0 ? '▼' : '▲', kg(Math.abs(dW), 2))}
             </T>
           ) : null}
@@ -224,17 +233,17 @@ export function DayScreen({
         <Card title={D.steps.title} accent={t.green} style={{ flexGrow: 1, flexBasis: 160 }}>
           <NumField big value={e.steps} onChange={(v) => set({ steps: v == null ? undefined : Math.round(v) })} placeholder="0" testID="steps" />
           <Gap h={8} />
-          <Bar value={(e.steps || 0) / (profile.stepGoal || 10000)} color={t.green} />
+          <Bar value={(e.steps || 0) / (profile.stepGoal || 10000)} color={e.steps ? scoreColor(t, stepsScore.tone) : t.green} />
           <Gap h={4} />
           <T muted size={12}>{D.steps.goal(int(profile.stepGoal))}{e.steps ? ` · ${Math.round(((e.steps || 0) / profile.stepGoal) * 100)}%` : ''}</T>
+          {e.steps ? (
+            <T size={12} bold color={scoreColor(t, stepsScore.tone)} testID="stepsStatus">{metricText(L, stepsScore, 'steps')}</T>
+          ) : null}
         </Card>
       </View>
 
       {/* КБЖУ */}
-      <Card
-        title={D.food.title}
-        accent={t.amber}
-      >
+      <Card title={D.food.title} accent={t.amber} right={score ? <DayLabel s={score} testID="dayLabel" /> : null}>
         <Row gap={6} style={{ marginBottom: 10 }}>
           {openFood ? <Btn small kind="solid" title={D.food.addFood} onPress={openFood} testID="addFood" /> : null}
           {openPhoto ? <Btn small kind="solid" title={D.food.photo} onPress={() => setAskMeal(!askMeal)} testID="photoMeal" /> : null}
@@ -251,12 +260,12 @@ export function DayScreen({
           </View>
         ) : null}
         <NumField big label={D.food.kcal} value={kcalShown} onChange={(v) => set({ kcal: v == null ? undefined : Math.round(v), kcalManual: v != null })} placeholder="0" testID="kcal" />
-        {tg ? <FactTarget fact={kcalShown} target={tg.kcal} tone={kcalTone(kcalShown, tg.kcal)} testID="kcalTarget" /> : null}
+        {score ? <ScoreRow m={score.kcal} kind="kcal" unit={tx.common.kcal} testID="kcalScore" /> : null}
         <Gap h={6} />
         <Fields>
           <View>
             <NumField label={D.food.p} value={e.protein} onChange={(v) => set({ protein: v })} digits={1} testID="protein" />
-            {tg ? <FactTarget fact={e.protein} target={tg.protein} tone={proteinTone(e.protein, tg.protein)} unit testID="proteinTarget" /> : null}
+            {tg ? <FactTarget fact={e.protein} target={tg.protein} tone="none" unit testID="proteinTarget" /> : null}
           </View>
           <View>
             <NumField label={D.food.f} value={e.fat} onChange={(v) => set({ fat: v })} digits={1} testID="fat" />
@@ -267,6 +276,12 @@ export function DayScreen({
             {tg ? <FactTarget fact={e.carbs} target={tg.carbs} tone="none" unit testID="carbsTarget" /> : null}
           </View>
         </Fields>
+        {score ? (
+          <>
+            <ScoreRow m={score.protein} kind="protein" unit={tx.common.g} testID="proteinScore" />
+            <DaySummary s={score} />
+          </>
+        ) : null}
         <Gap h={6} />
         <T muted size={12}>
           {e.kcalManual ? D.food.manual : autoKcal != null ? D.food.auto : ''}
@@ -360,9 +375,9 @@ export function DayScreen({
             {D.balance.spent}
             <T bold>{int(en.total)}</T> →{' '}
             {en.total - en.intake >= 0 ? (
-              <T color={t.green} bold>{D.balance.deficit(int(en.total - en.intake))}</T>
+              <T color={balanceColor(t, mode, en.total - en.intake, en.total)} bold>{D.balance.deficit(int(en.total - en.intake))}</T>
             ) : (
-              <T color={t.red} bold>{D.balance.surplus(int(en.intake - en.total))}</T>
+              <T color={balanceColor(t, mode, en.total - en.intake, en.total)} bold>{D.balance.surplus(int(en.intake - en.total))}</T>
             )}
           </T>
         ) : (
@@ -539,6 +554,70 @@ export function DayScreen({
       ) : (
         <Btn kind="link" small title={D.clear.link} color={t.muted} onPress={() => setConfirmClear(true)} />
       )}
+    </View>
+  );
+}
+
+/**
+ * Цвет баланса дня по режиму: при дефиците хорош дефицит, при наборе — профицит,
+ * при поддержании — отклонение в пределах 10 % расхода. Без режима — как раньше (дефицит зелёный).
+ */
+export function balanceColor(t: ReturnType<typeof useTheme>, mode: 'deficit' | 'maintain' | 'surplus' | undefined, deficit: number, total: number) {
+  if (mode === 'surplus') return deficit <= 0 ? t.green : t.red;
+  if (mode === 'maintain') return Math.abs(deficit) <= total * 0.1 ? t.green : t.warn;
+  return deficit >= 0 ? t.green : t.red;
+}
+
+/** Итог дня под шкалами: шаги, пояснения к промахам, «Закрыть день». */
+function DaySummary({ s }: { s: DayScore }) {
+  const t = useTheme();
+  const L = useI18n();
+  const { tx, f } = L;
+  const S = tx.day.score;
+  const { setDay } = useStore();
+  const today = todayISO();
+  const hour = String(DAY_CLOSE_HOUR) + ':00';
+  const notes: string[] = [];
+  if (!s.open) {
+    const k = s.kcal;
+    if (k.status === 'over' || (k.status === 'near' && (k.diff || 0) > 0))
+      notes.push(s.mode === 'deficit' ? S.notes.overDeficit : s.mode === 'surplus' ? S.notes.overSurplus : S.notes.overMaintain);
+    if (k.status === 'under') notes.push(k.tone === 'bad' && s.mode === 'deficit' ? S.notes.underFloor : s.mode === 'surplus' ? S.notes.underSurplus : s.mode === 'maintain' ? S.notes.underMaintain : S.notes.underDeficit);
+    if (s.protein.status === 'under') notes.push(S.notes.protein);
+  }
+  return (
+    <View testID="daySummary">
+      <Gap h={6} />
+      <Row style={{ justifyContent: 'space-between' }}>
+        <T size={13}>
+          {S.steps + ' '}
+          <T bold size={13}>{s.steps.fact ? f.int(s.steps.fact) : '—'}</T>
+          <T muted size={13}>{` / ${f.int(s.steps.target)}`}</T>
+        </T>
+        <T size={13} bold={s.steps.status !== 'none'} color={s.steps.status === 'none' ? t.muted : scoreColor(t, s.steps.tone)}>
+          {metricText(L, s.steps, 'steps')}
+        </T>
+      </Row>
+      {s.kcal.status === 'none' && !s.open ? <T muted size={12}>{S.noKcal}</T> : null}
+      {notes.map((n) => (
+        <T key={n} muted size={12}>{n}</T>
+      ))}
+      {s.open ? (
+        <>
+          <T muted size={12}>{S.openHint(hour)}</T>
+          <Gap h={6} />
+          <Btn small title={S.close} onPress={() => setDay(today, { closedAt: Date.now() })} testID="closeDay" />
+        </>
+      ) : s.closedBy === 'button' ? (
+        <Row>
+          <T muted size={12}>{S.closedBy.button}</T>
+          <Btn small kind="link" title={S.reopen} color={t.muted} onPress={() => setDay(today, { closedAt: undefined })} testID="reopenDay" />
+        </Row>
+      ) : s.closedBy === 'report' ? (
+        <T muted size={12}>{S.closedBy.report}</T>
+      ) : s.closedBy === 'time' ? (
+        <T muted size={12}>{S.closedBy.time(hour)}</T>
+      ) : null}
     </View>
   );
 }

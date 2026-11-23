@@ -9,6 +9,19 @@ export type ChangelogEntry = { v: string } & Record<Lang, string[]>;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: '0.37.0',
+    ru: [
+      'Итог дня по цели: под калориями и белком — шкала с коридором цели и статус («✓ в коридоре», «▲ перебор +320», «ещё 660–840»), в заголовке питания — «✓ день в цели» или «! мимо: 2». День закрывается в 21:00, кнопкой «Закрыть день» или отправкой отчёта; в календаре под каждым днём — его итог. В Профиле появились цвета для дальтоников.',
+      'Подсказка по планке раз в неделю: приложение объясняет, почему вес идёт не по плану, и предлагает одно действие — «Применить» или «Не сейчас». Если есть куратор, подсказка сначала уходит ему.',
+      'Исправлено: в режиме набора массы профицит в «Балансе» больше не красный, а дефицит — не зелёный.',
+    ],
+    en: [
+      'Day result against your target: calories and protein get a bar with the target range and a status ("✓ in range", "▲ over +320", "660–840 to go"), and the food card shows "✓ day on target" or "! missed: 2". The day closes at 21:00, with "Close the day" or when you send the report; the calendar shows each day\'s result. Profile now has color-blind friendly colors.',
+      'A weekly target tip: the app explains why your weight is off plan and suggests one action — "Apply" or "Not now". If you have a coach, the tip goes to them first.',
+      'Fixed: in the weight gain mode, a surplus in "Balance" is no longer red and a deficit no longer green.',
+    ],
+  },
+  {
     v: '0.36.1',
     ru: ['Замеры тела: когда начинаете вводить новый замер, серая подсказка пропадает только у этого поля, остальные прошлые значения остаются видны. Пока замер неполный, виден прошлый % жира и подсказка, что ещё ввести.'],
     en: ['Body measurements: when you start entering a new measurement, only that field loses its grey hint, the other previous values stay visible. Until the measurement is complete you see the previous body fat % and what is still missing.'],

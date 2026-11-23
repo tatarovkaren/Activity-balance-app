@@ -74,7 +74,7 @@ async function main() {
     const dir = path.join(OUT, lang);
     fs.mkdirSync(dir, { recursive: true });
     sizes[lang] = {};
-    const ctx = await browser.newContext({ viewport: { width: W, height: 3600 }, deviceScaleFactor: 2, locale, colorScheme: 'light', timezoneId: TZ[lang], permissions: ['notifications'] });
+    const ctx = await browser.newContext({ viewport: { width: W, height: 4200 }, deviceScaleFactor: 2, locale, colorScheme: 'light', timezoneId: TZ[lang], permissions: ['notifications'] });
     const p = await ctx.newPage();
     const card = async (sel) => p.locator(`[data-testid=${sel}]`).first().evaluate(new Function('return ' + CARD_BOX)());
     const top = async (sel) => p.locator(`[data-testid=${sel}]`).first().evaluate((el) => el.getBoundingClientRect().top + scrollY);

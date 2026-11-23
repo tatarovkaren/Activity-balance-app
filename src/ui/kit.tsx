@@ -49,9 +49,11 @@ export function T({
   style,
   numberOfLines,
   onPress,
+  testID,
 }: {
   children: React.ReactNode;
   onPress?: () => void;
+  testID?: string;
   muted?: boolean;
   color?: string;
   size?: number;
@@ -64,6 +66,7 @@ export function T({
   const px = useFs()(size || 14);
   return (
     <Text
+      testID={testID}
       numberOfLines={numberOfLines}
       onPress={onPress}
       style={[
@@ -362,7 +365,7 @@ export function Note({ children, color }: { children: React.ReactNode; color?: s
 
 const s = StyleSheet.create({
   card: { borderRadius: 18, borderWidth: 1, padding: 14, marginBottom: 12 },
-  cardHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 8 },
+  cardHead: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 8, flexWrap: 'wrap' },
   dot: { width: 10, height: 10, borderRadius: 3 },
   cardTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 1.2 },
   label: { fontSize: 12, marginBottom: 4 },

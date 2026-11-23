@@ -613,10 +613,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (!p) return;
       if (session.mode === 'cloud') await respondGoalProposal(id, accept);
       const start = todayISO();
+      // цель по шагам (рекомендация «добавить шаги») — в профиль, остальное — новый режим цели
+      const { stepGoal, ...setting } = p.setting;
       setData((cur) => ({
         ...cur,
         goalProposals: (cur.goalProposals || []).filter((x) => x.id !== id),
-        profile: accept ? { ...cur.profile, goals: withGoal(cur.profile.goals, { ...p.setting, start, by: 'curator' }) } : cur.profile,
+        profile: accept
+          ? { ...cur.profile, ...(stepGoal ? { stepGoal } : {}), goals: withGoal(cur.profile.goals, { ...setting, start, by: 'curator' }) }
+          : cur.profile,
       }));
       if (accept) touchProfile();
     },

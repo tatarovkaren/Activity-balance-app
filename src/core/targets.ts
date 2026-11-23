@@ -57,6 +57,11 @@ export interface GoalSetting {
   proteinPerKg?: number;
   /** Своя планка калорий, ккал/день. Задана — темп не считается, а выводится из неё. */
   kcalManual?: number;
+  /**
+   * Поправка к расчётной планке, ккал/день (минус — ниже): из рекомендации «снизить / поднять планку».
+   * Пересчёт по понедельникам сохраняется, темп выводится из итоговой планки.
+   */
+  kcalAdjust?: number;
   /** Кто задал: пользователь или куратор (принято пользователем). */
   by?: 'user' | 'curator';
 }
@@ -66,7 +71,10 @@ export interface GoalProposal {
   id: string;
   curatorName: string;
   createdAt: ISODate;
-  setting: Omit<GoalSetting, 'start' | 'by'>;
+  setting: Omit<GoalSetting, 'start' | 'by'> & {
+    /** Новая цель по шагам (рекомендация «добавить шаги»). */
+    stepGoal?: number;
+  };
   note?: string;
 }
 
@@ -210,6 +218,8 @@ export interface Targets {
   floor?: number;
   /** Планка задана вручную: темп и кг/нед выведены из неё. */
   manual?: boolean;
+  /** Поправка к расчётной планке из рекомендации, ккал. */
+  adjust?: number;
   warnings: TargetWarning[];
 }
 
@@ -223,8 +233,11 @@ export function computeTargets(i: TargetInput): Targets | { error: SettingError 
   if (pace.error) return { error: pace.error };
   const sign = g.mode === 'deficit' ? -1 : g.mode === 'surplus' ? 1 : 0;
   const manual = g.kcalManual != null;
+  const adjust = !manual && g.kcalAdjust ? g.kcalAdjust : 0;
   let kgPerWeek = (sign * pace.pct * i.weight) / 100;
-  let kcal = round10(i.E + (kgPerWeek * KCAL_PER_KG) / 7);
+  let kcal = round10(i.E + (kgPerWeek * KCAL_PER_KG) / 7 + adjust);
+  // поправка меняет и темп: он — следствие итоговой планки
+  if (adjust) kgPerWeek = ((kcal - i.E) * 7) / KCAL_PER_KG;
   if (manual) {
     // своя планка: темп — следствие разницы с расходом
     kcal = round10(g.kcalManual!);
@@ -245,7 +258,7 @@ export function computeTargets(i: TargetInput): Targets | { error: SettingError 
     floored = floor;
     kcal = floor;
     // фактический темп при поднятой планке; в дефиците — не «в плюс»
-    if (manual) kgPerWeek = ((kcal - i.E) * 7) / KCAL_PER_KG;
+    if (manual || adjust) kgPerWeek = ((kcal - i.E) * 7) / KCAL_PER_KG;
     else if (g.mode === 'deficit') kgPerWeek = Math.min(0, ((kcal - i.E) * 7) / KCAL_PER_KG);
   }
 
@@ -261,7 +274,7 @@ export function computeTargets(i: TargetInput): Targets | { error: SettingError 
   const warnings: TargetWarning[] = [];
   if (floored != null) warnings.push('floored');
   if (kcal < bmr) warnings.push('belowBmr');
-  const pct = manual ? (Math.abs(kgPerWeek) / i.weight) * 100 : pace.pct;
+  const pct = manual || adjust ? (Math.abs(kgPerWeek) / i.weight) * 100 : pace.pct;
   if ((manual ? kgPerWeek < 0 : g.mode === 'deficit') && pct > 1 + 1e-9) warnings.push('paceHigh');
   if (carbs < CARBS_WARN) warnings.push('carbsLow');
   if (i.eStart) warnings.push('start');
@@ -285,6 +298,7 @@ export function computeTargets(i: TargetInput): Targets | { error: SettingError 
     weightSource: i.weightSource,
     floor: floored,
     manual: manual || undefined,
+    adjust: adjust || undefined,
     warnings,
   };
 }

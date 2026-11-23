@@ -34,6 +34,7 @@ const strip = (g: GoalSetting): Omit<GoalSetting, 'start'> => ({
   proteinPerLean: g.proteinPerLean,
   proteinPerKg: g.proteinPerKg,
   kcalManual: g.kcalManual,
+  kcalAdjust: g.kcalAdjust,
 });
 
 export function GoalCard() {
@@ -113,16 +114,16 @@ export function GoalCard() {
             onChange={(v) => {
               if (v === 'custom' || v === 'date') {
                 setPick(v);
-                if (v === 'custom' && cur.targetDate) apply({ ...strip(cur), targetDate: undefined, kcalManual: undefined });
+                if (v === 'custom' && cur.targetDate) apply({ ...strip(cur), targetDate: undefined, kcalManual: undefined, kcalAdjust: undefined });
                 if (v === 'date') {
                   const iso = normDate(dateText);
-                  if (isISODate(iso)) apply({ ...strip(cur), targetDate: iso, pacePct: undefined, kcalManual: undefined });
+                  if (isISODate(iso)) apply({ ...strip(cur), targetDate: iso, pacePct: undefined, kcalManual: undefined, kcalAdjust: undefined });
                 }
                 return;
               }
               setPick(null);
               // выбор темпа отменяет свою планку
-              apply({ ...strip(cur), pacePct: Number(v), targetDate: undefined, kcalManual: undefined });
+              apply({ ...strip(cur), pacePct: Number(v), targetDate: undefined, kcalManual: undefined, kcalAdjust: undefined });
             }}
             options={paceOptions(cur.mode)}
           />
@@ -135,7 +136,7 @@ export function GoalCard() {
                   label={G.customLabel(pctText(L, PACE_LIMITS[cur.mode][0]), pctText(L, PACE_LIMITS[cur.mode][1]))}
                   value={cur.pacePct}
                   digits={2}
-                  onChange={(v) => v != null && apply({ ...strip(cur), pacePct: v, targetDate: undefined, kcalManual: undefined })}
+                  onChange={(v) => v != null && apply({ ...strip(cur), pacePct: v, targetDate: undefined, kcalManual: undefined, kcalAdjust: undefined })}
                   testID="goalCustomPace"
                 />
               </Fields>
@@ -151,7 +152,7 @@ export function GoalCard() {
                   onChange={(v) => {
                     setDateText(v);
                     const iso = normDate(v);
-                    if (isISODate(iso)) apply({ ...strip(cur), targetDate: iso, pacePct: undefined, kcalManual: undefined });
+                    if (isISODate(iso)) apply({ ...strip(cur), targetDate: iso, pacePct: undefined, kcalManual: undefined, kcalAdjust: undefined });
                   }}
                   testID="goalDate"
                 />
@@ -193,7 +194,7 @@ export function GoalCard() {
               value={cur.kcalManual}
               digits={0}
               placeholder={G.kcalManualPh}
-              onChange={(v) => apply({ ...strip(cur), kcalManual: v == null ? undefined : Math.round(v) })}
+              onChange={(v) => apply({ ...strip(cur), kcalManual: v == null ? undefined : Math.round(v), kcalAdjust: undefined })}
               testID="goalKcal"
             />
           </Fields>
