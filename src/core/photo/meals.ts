@@ -9,6 +9,7 @@
 
 import type { DayEntry, PhotoMeal } from '../types';
 import type { Draft, DraftComponent } from './estimate';
+import { macroKcal } from '../energy';
 
 const r1 = (x: number) => Math.round(x * 10) / 10;
 
@@ -63,7 +64,8 @@ export function mealFromDraft(
 /** Патч дня: добавить приём по фото к уже записанному КБЖУ. */
 export function addPhotoMeal(e: DayEntry | undefined, m: PhotoMeal): Partial<DayEntry> {
   const cur = e || {};
-  const base = cur.kcal ?? 0;
+  // ккал до приёма: введённые вручную, а если их нет — посчитанные по БЖУ (иначе авто‑ккал терялись)
+  const base = cur.kcal ?? Math.round(macroKcal(cur.protein, cur.fat, cur.carbs) ?? 0);
   return {
     photoMeals: [...(cur.photoMeals || []).filter((x) => x.id !== m.id), m],
     kcal: Math.round(base + m.kcal),

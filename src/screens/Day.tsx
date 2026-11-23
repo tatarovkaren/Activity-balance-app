@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
 import { dayDiff, shiftDate, todayISO, ageAt, type ISODate } from '../core/dates';
 import { bodyFatNorm, carriedMeasure, extraMeasureKeys, measureHint, missingFatFields, navyBodyFat } from '../core/body';
-import { classifyWorkout, KCAL_PER_KG, macroKcal } from '../core/energy';
+import { classifyWorkout, KCAL_PER_KG, kcalMismatch, macroKcal } from '../core/energy';
 import { applyFoodDays } from '../core/importers';
 import { ANOMALY_REASONS, MEAL_SLOTS, type AnomalyReason, type MealSlot } from '../core/types';
 import { useStore } from '../data/store';
@@ -101,6 +101,8 @@ export function DayScreen({
   // ---- КБЖУ ----
   const autoKcal = macroKcal(e.protein, e.fat, e.carbs);
   const kcalShown = e.kcalManual ? e.kcal : autoKcal != null ? Math.round(autoKcal) : e.kcal;
+  // введённые ккал не сходятся с Б×4 + Ж×9 + У×4 — предупреждаем и предлагаем пересчитать
+  const mismatch = kcalMismatch(e);
 
   // ---- тренировка ----
   const kind = classifyWorkout(e.workoutType, e.workoutMin, e.workoutKind);
@@ -280,6 +282,15 @@ export function DayScreen({
             {tg ? <FactTarget fact={e.carbs} target={tg.carbs} tone="none" unit testID="carbsTarget" /> : null}
           </View>
         </Fields>
+        {mismatch ? (
+          <View style={{ marginTop: 8, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: t.amber }} testID="kcalMismatch">
+            <Note>{D.food.mismatch(int(mismatch.kcal), int(mismatch.macro), (mismatch.diff > 0 ? '+' : '−') + int(Math.abs(mismatch.diff)))}</Note>
+            <Gap h={8} />
+            <Row style={{ flexWrap: 'wrap', gap: 8 }}>
+              <Btn small kind="solid" title={D.food.recalc(int(mismatch.macro))} onPress={() => set({ kcal: undefined, kcalManual: undefined })} testID="kcalRecalc" />
+            </Row>
+          </View>
+        ) : null}
         {score ? (
           <>
             <ScoreRow m={score.protein} kind="protein" unit={tx.common.g} testID="proteinScore" />

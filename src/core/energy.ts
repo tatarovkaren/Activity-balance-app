@@ -50,6 +50,28 @@ export function macroKcal(p?: number, f?: number, c?: number): number | undefine
   return (p || 0) * 4 + (f || 0) * 9 + (c || 0) * 4;
 }
 
+/**
+ * Ккал, введённые вручную (или из FatSecret / фото), не сходятся с Б×4 + Ж×9 + У×4.
+ * Допуск — max(100 ккал, 15 %): у FatSecret и этикеток бывают расхождения из‑за клетчатки
+ * (≈2 ккал/г вместо 4), алкоголя (7 ккал/г, в БЖУ не входит) и округлений.
+ * Если БЖУ введены не все, предупреждаем только когда они уже дают больше калорий, чем введено.
+ */
+export const KCAL_MISMATCH_ABS = 100;
+export const KCAL_MISMATCH_REL = 0.15;
+export type KcalMismatch = { kcal: number; macro: number; diff: number };
+export function kcalMismatch(e: Pick<DayEntry, 'kcal' | 'kcalManual' | 'protein' | 'fat' | 'carbs'> | undefined): KcalMismatch | undefined {
+  if (!e || !e.kcalManual || e.kcal == null || e.kcal <= 0) return undefined;
+  const m = macroKcal(e.protein, e.fat, e.carbs);
+  if (m == null || m <= 0) return undefined;
+  const macro = Math.round(m);
+  const diff = Math.round(e.kcal - macro);
+  const tol = Math.max(KCAL_MISMATCH_ABS, KCAL_MISMATCH_REL * Math.max(e.kcal, macro));
+  if (Math.abs(diff) <= tol) return undefined;
+  const full = e.protein != null && e.fat != null && e.carbs != null;
+  if (!full && diff > 0) return undefined;
+  return { kcal: e.kcal, macro, diff };
+}
+
 /** Ккал дня: введённые вручную или посчитанные по БЖУ. */
 export function dayKcal(e: DayEntry | undefined): number | undefined {
   if (!e) return undefined;

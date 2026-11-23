@@ -9,6 +9,17 @@ export type ChangelogEntry = { v: string } & Record<Lang, string[]>;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: '0.39.0',
+    ru: [
+      'Питание: если калории, введённые вручную, заметно расходятся с БЖУ (Б×4 + Ж×9 + У×4), под полями появляется предупреждение и кнопка «Пересчитать по БЖУ». Небольшую разницу (до 100 ккал или 15 %) — из‑за клетчатки, алкоголя или округлений в FatSecret — не отмечаем.',
+      'Исправлено: если калории считались по БЖУ, добавление продукта или блюда по фото больше не сбрасывает их до калорий одного этого блюда.',
+    ],
+    en: [
+      'Food: if the calories you typed are far off the macros (P×4 + F×9 + C×4), a warning and a "Recalculate from macros" button appear under the fields. Small gaps (up to 100 kcal or 15%) from fiber, alcohol or FatSecret rounding are not flagged.',
+      'Fixed: when calories were calculated from macros, adding a food or a photo meal no longer resets them to that one meal\'s calories.',
+    ],
+  },
+  {
     v: '0.38.1',
     ru: ['Тренировки недели: убрана полоска прогресса (дублировала счётчик), а у дней с тренировкой рядом с названием дня теперь зелёная галочка — «Пн ✓».'],
     en: ['Workouts this week: the progress bar is gone (it repeated the counter), and days with a workout now have a green check next to the day name — "Mo ✓".'],
