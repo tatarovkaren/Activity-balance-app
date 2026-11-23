@@ -27,6 +27,8 @@ import { useBackupExport } from '../ui/backup';
 import { DAY_CLOSE_HOUR, scoreDay, scoreSteps, type DayScore } from '../core/dayscore';
 import { DayLabel, metricText, scoreColor, ScoreRow } from '../ui/score';
 import { AdviceCard } from './Advice';
+import { WeekStrip, WeekCount } from '../ui/week';
+import { weekWorkouts } from '../core/workouts';
 
 export function DayScreen({
   sel,
@@ -105,6 +107,8 @@ export function DayScreen({
   // вид для переключателя: выбранный явно, а у старых записей — определённый по названию
   const kindChoice = e.workoutKind ?? (kind === 'strength' ? 'strength' : kind === 'none' ? undefined : 'cardio');
   const stepsFieldOn = kind === 'cardioLegs';
+  // неделя Пн–Вс: с куратором — только цель, без совета приложения про силовые
+  const week = useMemo(() => weekWorkouts(days, sel, today, profile.workoutGoal, !data.curator), [days, sel, today, profile.workoutGoal, data.curator]);
   const en = d.today;
 
   // ---- замеры ----
@@ -315,7 +319,9 @@ export function DayScreen({
       </Card>
 
       {/* Тренировка */}
-      <Card title={D.workout.title} accent={t.red}>
+      <Card title={D.workout.title} accent={t.red} right={<WeekCount w={week} />}>
+        <WeekStrip w={week} sel={sel} curator={!!data.curator} onPick={setSel} />
+        <Gap h={10} />
         <Seg<'cardio' | 'strength'>
           value={kindChoice}
           onChange={(v) => set({ workoutKind: v })}

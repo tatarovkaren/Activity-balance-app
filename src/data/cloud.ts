@@ -8,7 +8,7 @@ import type { ISODate } from '../core/dates';
 import { AppError } from '../core/errors';
 import { keepBotWrites } from '../core/merge';
 import type { DayEntry, DayMap, KeepMap, PhotoMeal, Profile } from '../core/types';
-import type { GoalProposal, GoalSetting } from '../core/targets';
+import type { GoalProposal } from '../core/targets';
 import { latinSurname, type CuratorPlan, type Referral, type ReferralOffer } from '../core/promo';
 
 const URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -226,7 +226,7 @@ export async function addCuratorComment(clientId: string, date: ISODate, text: s
 // ---- Предложения куратора по режиму цели (миграция 0003) ----
 
 /** Куратор предлагает клиенту новый режим цели; применяется только после подтверждения клиента. */
-export async function proposeGoal(clientId: string, setting: Omit<GoalSetting, 'start' | 'by'>, note?: string) {
+export async function proposeGoal(clientId: string, setting: GoalProposal['setting'], note?: string) {
   const sb = supabase();
   if (!sb) throw new AppError('serverNotConnected');
   const { error } = await sb.from('goal_proposals').insert({ client_id: clientId, setting, note: note || null });

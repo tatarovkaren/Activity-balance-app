@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { clampWorkoutGoal, WORKOUT_GOAL_DEFAULT } from '../core/workouts';
 import { View } from 'react-native';
 import { ageAt, isISODate, todayISO, toLocalISO } from '../core/dates';
 import { MEASURE_FREQS } from '../core/body';
@@ -130,6 +131,17 @@ export function ProfileScreen({ openHand, openHelp, openWiki }: { openHand: () =
           <NumField label={P.goal} value={p.goalWeightKg} onChange={(v) => set({ goalWeightKg: v })} digits={1} testID="goal" />
           <NumField label={P.stepGoal} value={p.stepGoal} onChange={(v) => v && set({ stepGoal: Math.round(v) })} />
         </Fields>
+        <Gap h={6} />
+        <Fields>
+          <NumField
+            label={P.workoutGoal}
+            value={p.workoutGoal}
+            placeholder={String(WORKOUT_GOAL_DEFAULT)}
+            onChange={(v) => set({ workoutGoal: v == null ? undefined : clampWorkoutGoal(v) })}
+            testID="workoutGoal"
+          />
+        </Fields>
+        <T muted size={12}>{P.workoutGoalNote}</T>
         <Gap h={8} />
         <T muted size={12}>{P.measureFreq}</T>
         <Seg<MeasureFreq> value={p.measureFreq} onChange={(v) => set({ measureFreq: v })} options={MEASURE_FREQS.map((k) => ({ v: k, label: tx.common.freq[k] }))} />

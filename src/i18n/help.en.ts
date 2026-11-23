@@ -50,7 +50,7 @@ export const helpEn: typeof helpRu = {
       text: [
         'Sex changes the formulas: basal metabolism, body fat norms and a hip measurement for women.',
         'Date of birth, height and goal weight are needed to estimate your burn and forecast your goal date. You can change any field at any time.',
-        '"Step goal" is your daily step target, shown as a bar on the Day tab.',
+        '"Step goal" is your daily step target, shown as a bar on the Day tab. "Workouts per week" is your weekly target (2 to 7, 3 by default).',
         'Body measurement frequency sets how often the app reminds you to measure your neck, waist (and hips).',
         '"How I log food": if you weigh grains dry and meat raw, photo estimates convert portions to raw weight.',
         'At the top of Profile is the **app mode**: basic shows only the essentials, advanced shows every metric and fine-tuning.',
@@ -104,6 +104,7 @@ export const helpEn: typeof helpRu = {
       text: [
         'Choose **Cardio** or **Strength**: the calculation depends on it. In the field below, add a name such as "running", "elliptical" or "legs + back", so your coach knows what you did.',
         'Enter the duration and average heart rate. Strength is counted by load and time, cardio by heart rate.',
+        'At the top of the card are **this week\'s workouts** from Monday to Sunday: "S" in a square is strength, "C" in a circle is cardio. On the right is a "2 of 3 this week" counter, with a bar and how many are left below. We recommend 3 workouts a week, at least 2 of them strength (as the WHO advises); set your own number in the profile under "Workouts per week". Tap a day to open it.',
         '"Workout steps" is for on-foot cardio only. The app subtracts them from your daily steps so the same effort is not counted twice. If the field is empty, steps are estimated from your usual pace.',
         'The **Energy balance** card shows what you ate and burned today and over 7 days, and the expected weight change per week.',
         '**Body measurements** are taken once a week (frequency is set in the profile). On other days the fields show your latest measurements in grey, and body fat % in grey with the measurement date. Nothing is saved for those days: new numbers are stored only on the day you enter them. When you start entering a new measurement, only that field loses its grey hint. A new body fat % is calculated once all formula measurements are entered for the day (neck and waist, plus hips for women); until then you see the previous % with its date.',

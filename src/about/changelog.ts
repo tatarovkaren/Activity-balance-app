@@ -9,6 +9,15 @@ export type ChangelogEntry = { v: string } & Record<Lang, string[]>;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: '0.38.0',
+    ru: [
+      'Тренировки недели: в карточке «Тренировка» — неделя с понедельника по воскресенье, у каждого дня отметка «С» (силовая) или «К» (кардио), счётчик «2 из 3 за неделю» и подсказка, сколько осталось. Рекомендуем 3 тренировки в неделю, из них силовых не меньше 2; своё число (от 2 до 7) — в Профиле. Если есть куратор, цель недели может предложить он.',
+    ],
+    en: [
+      'Workouts this week: the Workout card shows the week from Monday to Sunday with an "S" (strength) or "C" (cardio) mark for each day, a "2 of 3 this week" counter and how many are left. We recommend 3 workouts a week, at least 2 of them strength; set your own number (2 to 7) in Profile. If you have a coach, they can suggest the weekly goal.',
+    ],
+  },
+  {
     v: '0.37.0',
     ru: [
       'Итог дня по цели: под калориями и белком — шкала с коридором цели и статус («✓ в коридоре», «▲ перебор +320», «ещё 660–840»), в заголовке питания — «✓ день в цели» или «! мимо: 2». День закрывается в 21:00, кнопкой «Закрыть день» или отправкой отчёта; в календаре под каждым днём — его итог. В Профиле появились цвета для дальтоников.',

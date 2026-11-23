@@ -2,6 +2,7 @@
 // Правила синхронизации из прототипа: флаг неотправленных изменений; без флага облако главнее;
 // с флагом — объединение, где заполненные локальные поля побеждают; пустое не затирает заполненное.
 
+import { clampWorkoutGoal } from '../core/workouts';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import { addMonthsClamped, shiftDate, todayISO, type ISODate } from '../core/dates';
@@ -614,12 +615,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (session.mode === 'cloud') await respondGoalProposal(id, accept);
       const start = todayISO();
       // цель по шагам (рекомендация «добавить шаги») — в профиль, остальное — новый режим цели
-      const { stepGoal, ...setting } = p.setting;
+      const { stepGoal, workoutGoal, ...setting } = p.setting;
       setData((cur) => ({
         ...cur,
         goalProposals: (cur.goalProposals || []).filter((x) => x.id !== id),
         profile: accept
-          ? { ...cur.profile, ...(stepGoal ? { stepGoal } : {}), goals: withGoal(cur.profile.goals, { ...setting, start, by: 'curator' }) }
+          ? { ...cur.profile, ...(stepGoal ? { stepGoal } : {}), ...(workoutGoal ? { workoutGoal: clampWorkoutGoal(workoutGoal) } : {}), goals: withGoal(cur.profile.goals, { ...setting, start, by: 'curator' }) }
           : cur.profile,
       }));
       if (accept) touchProfile();

@@ -275,6 +275,21 @@ export const en: Dict = {
       breakdown: (bmr, neat, train, tef) => `BMR ${bmr} · steps ${neat} · workout ${train} · digestion ${tef}`,
       stepsDeducted: (n, tracker) => `workout steps (−${n}, ${tracker ? 'from tracker' : 'estimate'}) are counted in the workout`,
       noEnergy: 'Burn will appear once there is a weight (this day or up to 3 days before), height and date of birth.',
+      week: {
+        count: (done, goal) => `${done} of ${goal}`,
+        countWide: (done, goal) => `${done} of ${goal} this week`,
+        letter: { cardio: 'C', strength: 'S' },
+        a11y: (day, kind) => `${day}: ${kind === 'cardio' ? 'cardio' : kind === 'strength' ? 'strength' : 'no workout'}`,
+        recommend: (goal) => `We recommend ${goal} a week, at least 2 of them strength.`,
+        goalOnly: (goal) => `Weekly goal: ${goal} workouts.`,
+        left: (left, strengthLeft) =>
+          `${left} to go` +
+          (strengthLeft <= 0 ? '' : left === 1 ? ' — strength is best' : strengthLeft >= left ? ' — strength is best' : `, ${strengthLeft} of them strength`) +
+          '.',
+        done: 'Weekly goal reached ✓',
+        doneNeedStrength: (n) => `Weekly goal reached. For balance, add ${n === 1 ? 'one more strength session' : `${n} more strength sessions`}.`,
+        missed: (done, goal) => `Week over: ${done} of ${goal}.`,
+      },
     },
     balance: {
       title: 'Energy balance',
@@ -649,6 +664,8 @@ export const en: Dict = {
     height: 'Height, cm',
     goal: 'Goal, kg',
     stepGoal: 'Step goal',
+    workoutGoal: 'Workouts per week',
+    workoutGoalNote: 'From 2 to 7, 3 by default. Weeks start on Monday.',
     protein: 'Protein, g per kg of weight',
     proteinPh: 'set by your coach',
     measureFreq: 'Body measurement frequency',
@@ -797,6 +814,7 @@ export const en: Dict = {
     adjustNote: (kcal, pct) => `Adjusted by a tip: ${kcal} kcal · calculated pace ≈ ${pct}%/week`,
     historyAdjust: (kcal) => ` · adjustment ${kcal} kcal`,
     historySteps: (n) => ` · steps ${n}`,
+    historyWorkouts: (n) => ` · workouts per week ${n}`,
     recalc: 'Recalculate now',
     recalcDone: 'Recalculated with data as of today',
     errors: {
@@ -933,6 +951,7 @@ export const en: Dict = {
     goalHistory: (list) => `Mode history: ${list}`,
     proposeTitle: 'Suggest a target change',
     proposeNote: 'Note for the client',
+    proposeWorkouts: 'Workouts per week',
     proposeSend: 'Suggest',
     proposeSent: 'Suggestion sent: it applies once the client confirms',
     proposeDemo: 'Demo: with the cloud on, the client sees the suggestion and confirms it',

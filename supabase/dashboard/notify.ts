@@ -112,6 +112,8 @@ interface Profile {
   heightCm: number;
   goalWeightKg?: number;
   stepGoal: number;
+  /** Тренировок в неделю (Пн–Вс), от 2 до 7. Нет поля — 3 (core/workouts.ts). */
+  workoutGoal?: number;
   measureFreq: MeasureFreq;
   theme: ThemePref;
   /** Язык интерфейса: «как в системе» по умолчанию. */
