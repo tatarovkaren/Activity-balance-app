@@ -9,6 +9,19 @@ export type ChangelogEntry = { v: string } & Record<Lang, string[]>;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: '0.42.0',
+    ru: [
+      'Заработал вход через Google: дневник хранится на сервере и одинаков на телефоне и компьютере. Без входа всё по-прежнему хранится только на этом устройстве.',
+      'Клиент и куратор теперь связываются по коду куратора через сервер: куратор видит дневник клиента в своём кабинете.',
+      'Вход по почте приходит ссылкой: откройте её в том же браузере. Пока он работает только для команды проекта, остальным — через Google.',
+    ],
+    en: [
+      'Sign in with Google now works: your diary is stored on the server and is the same on your phone and computer. Without signing in, everything stays on this device as before.',
+      "Clients and coaches now connect through the server with the coach's code, and the coach sees the client's diary in their dashboard.",
+      'Email sign-in now sends a link: open it in the same browser. For now it only works for the project team; everyone else, please use Google.',
+    ],
+  },
+  {
     v: '0.41.0',
     ru: [
       'Профиль → «Куратор»: если куратора нет, можно оставить заявку «Хочу куратора» — цель, как с вами связаться и пара слов о себе. Цифры из профиля прикладываются только по галочке.',

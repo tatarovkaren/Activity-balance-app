@@ -88,6 +88,10 @@ export const en: Dict = {
 
   errors: {
     serverNotConnected: 'Server not connected',
+    email_address_not_authorized: 'Email sign-in is limited to the project team for now. Please sign in with Google.',
+    over_email_send_rate_limit: 'Too many emails in the last hour. Try later or sign in with Google.',
+    email_address_invalid: 'Please check the email address.',
+    otp_expired: 'The code or link has expired. Request a new email.',
     gatewayMissing: 'Sign-in with Yandex ID and VK ID will be available once the gateway is connected',
     telegramOff: 'The Telegram bot is not connected on the server yet',
     notifyServer: 'The notification server did not respond. Please try later.',
@@ -118,9 +122,10 @@ export const en: Dict = {
     yandex: 'Sign in with Yandex ID',
     vk: 'Sign in with VK ID',
     email: 'Email',
-    sendCode: 'Email me a code',
+    sendCode: 'Email me a link',
     resend: 'Resend',
-    code: 'Code from the email',
+    emailSent: 'Email sent. Open the link from it in this same browser and you will be signed in. If the email has a numeric code, enter it below.',
+    code: 'Code from the email, if any',
     signIn: 'Sign in',
     noServer: 'Sign-in and sync across devices will work once the server is connected. Yandex ID and VK ID go through a separate gateway for Russia.',
     accept: {
