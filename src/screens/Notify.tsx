@@ -1,7 +1,7 @@
 // Профиль → «Уведомления»: что и во сколько присылать, пуш в этом браузере и Telegram-бот.
 // Настройки лежат в профиле (уходят на сервер вместе с ним), отправляет функция supabase/functions/notify.
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Linking, View } from 'react-native';
 import { appUrlOf, deviceTz, isTime, maskTime, NOTIFY_KINDS, TIMED, withDefaults, type NotifyKind, type NotifyPrefs } from '../core/notify';
 import { useStore } from '../data/store';
@@ -10,8 +10,21 @@ import { Btn, Card, Divider, Gap, Note, Row, Seg, T, TextField } from '../ui/kit
 import { useTheme } from '../ui/theme';
 import { disablePush, enablePush, pushState, type PushState } from '../ui/push';
 import { errorText, useI18n } from '../i18n';
+import { createTelegramLinkRequest } from './telegramLink';
 
 const here = () => (typeof window !== 'undefined' ? appUrlOf(window.location?.href) : undefined);
+
+// Keep pending codes while navigating away from and back to the profile.
+const telegramRequests = new Map<string, ReturnType<typeof createTelegramLinkRequest>>();
+
+function telegramRequest(userId: string) {
+  let request = telegramRequests.get(userId);
+  if (!request) {
+    request = createTelegramLinkRequest(telegramLinkUrl);
+    telegramRequests.set(userId, request);
+  }
+  return request;
+}
 
 function TimeInput({ value, onChange, testID }: { value: string; onChange: (v: string) => void; testID?: string }) {
   const [v, setV] = useState(value);
@@ -34,6 +47,11 @@ function TimeInput({ value, onChange, testID }: { value: string; onChange: (v: s
 }
 
 export function NotifyCard() {
+  const { session } = useStore();
+  return <NotifyCardContent key={session.mode + ':' + session.userId} />;
+}
+
+function NotifyCardContent() {
   const t = useTheme();
   const L = useI18n();
   const N = L.tx.notify;
@@ -45,8 +63,7 @@ export function NotifyCard() {
   const [tgLink, setTgLink] = useState<{ username?: string } | null | undefined>(undefined);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
-  // ссылка на бота готовится заранее: на телефоне окно можно открыть только сразу по нажатию
-  const tgUrl = useRef<{ url: string; at: number } | null>(null);
+  const [tgRequest] = useState(() => telegramRequest(session.userId));
 
   const ctx = (): Pick<NotifyPrefs, 'tz' | 'lang' | 'appUrl'> => ({ tz: deviceTz(), lang: L.lang, appUrl: here() || prefs.appUrl });
   const update = (patch: Partial<NotifyPrefs>) => setProfile({ notify: { ...data.profile.notify, ...patch, ...ctx() } });
@@ -60,28 +77,27 @@ export function NotifyCard() {
     if (cur?.tz !== c.tz || cur?.lang !== c.lang || (c.appUrl && cur?.appUrl !== c.appUrl)) update({});
   }, [cloud, L.lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const prepareTg = async () => {
-    try {
-      tgUrl.current = { url: await telegramLinkUrl(), at: Date.now() };
-    } catch {
-      tgUrl.current = null;
-    }
-  };
-
-  const refresh = async () => {
-    setPush(await pushState());
-    if (!cloud) return;
-    const info = await notifyInfo();
-    setServer(info);
-    if (info?.telegram) {
-      const st = await telegramStatus().catch(() => null);
-      setTgLink(st);
-      if (!st) await prepareTg();
-    }
-  };
   useEffect(() => {
-    refresh();
-  }, [cloud]); // eslint-disable-line react-hooks/exhaustive-deps
+    let active = true;
+    async function refresh() {
+      const push = await pushState();
+      if (!active) return;
+      setPush(push);
+      if (!cloud) return;
+      const info = await notifyInfo();
+      if (!active) return;
+      if (info?.telegram) {
+        const st = await telegramStatus().catch(() => undefined);
+        if (!active) return;
+        setTgLink(st);
+        if (st) tgRequest.clear();
+        if (st === null) void tgRequest.prepare().catch(() => {});
+      }
+      setServer(info);
+    }
+    void refresh();
+    return () => { active = false; };
+  }, [cloud, tgRequest]);
 
   const run = async (f: () => Promise<void>) => {
     setBusy(true);
@@ -96,21 +112,10 @@ export function NotifyCard() {
   };
 
   const ready = cloud && !!server;
-  const connectTg = () => {
-    const c = tgUrl.current;
-    if (c && Date.now() - c.at < 25 * 60_000) {
-      Linking.openURL(c.url);
-      setMsg({ text: N.tgOpened, ok: true });
-      // следующая ссылка — с новым кодом
-      prepareTg();
-    } else run(async () => {
-      await prepareTg();
-      if (tgUrl.current) {
-        Linking.openURL(tgUrl.current.url);
-        setMsg({ text: N.tgOpened, ok: true });
-      }
-    });
-  };
+  const connectTg = () => run(async () => {
+    await tgRequest.open((url) => Linking.openURL(url));
+    setMsg({ text: N.tgOpened, ok: true });
+  });
 
   return (
     <Card title={N.title} accent={t.blue}>
@@ -167,13 +172,19 @@ export function NotifyCard() {
       <Row>
         <T size={14} style={{ flex: 1 }}>{N.telegram}</T>
         {tgLink ? (
-          <Btn small title={N.tgUnlink} color={t.red} disabled={busy} onPress={() => run(async () => (await telegramUnlink(), setTgLink(null), prepareTg()))} testID="tgUnlink" />
+          <Btn small title={N.tgUnlink} color={t.red} disabled={busy} onPress={() => run(async () => {
+            await telegramUnlink();
+            tgRequest.clear();
+            setTgLink(null);
+            await tgRequest.prepare().catch(() => {});
+          })} testID="tgUnlink" />
         ) : (
           <>
             <Btn small title={N.tgCheck} disabled={busy || !ready || !server?.telegram} onPress={() => run(async () => {
               const st = await telegramStatus();
               setTgLink(st);
-              if (!st) setMsg({ text: N.tgNotYet, ok: false });
+              if (st) tgRequest.clear();
+              else setMsg({ text: N.tgNotYet, ok: false });
             })} testID="tgCheck" />
             <Btn small kind="solid" title={N.tgConnect} disabled={busy || !ready || !server?.telegram} onPress={connectTg} testID="tgConnect" />
           </>
