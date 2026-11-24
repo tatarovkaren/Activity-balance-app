@@ -114,6 +114,7 @@ export function LoginScreen() {
             <TextField value={email} onChange={setEmail} placeholder={tx.login.email} />
             <Btn small title={sent ? tx.login.resend : tx.login.sendCode} onPress={guard(async () => { await sendEmailCode(email); setSent(true); })} />
           </Fields>
+          {sent ? <T muted size={12} style={{ marginTop: 6 }}>{tx.login.emailSent}</T> : null}
           {sent ? (
             <Fields>
               <TextField value={code} onChange={setCode} placeholder={tx.login.code} />

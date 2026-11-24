@@ -25,29 +25,36 @@ export const cloudConfigured = () => !!(URL && KEY);
 
 export type OAuthProvider = 'google' | 'apple' | 'yandex' | 'vk';
 
-/** Поддержано Supabase из коробки: Google, Apple. Яндекс ID и VK ID — через свой OIDC-шлюз (этап 2). */
-export const NATIVE_OAUTH: OAuthProvider[] = ['google', 'apple'];
+/**
+ * Включённые на сервере способы входа. Apple Supabase поддерживает из коробки, но нужен платный аккаунт
+ * Apple Developer — добавим сюда, когда он появится. Яндекс ID и VK ID — через свой OIDC-шлюз (этап 2).
+ */
+export const NATIVE_OAUTH: OAuthProvider[] = ['google'];
+
+/** Куда вернуться после входа (Google или ссылка из письма): та же страница, без #/… и ?… */
+const backHere = () => (Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin + window.location.pathname : undefined);
 
 export async function signInOAuth(p: OAuthProvider) {
   const sb = supabase();
   if (!sb) throw new AppError('serverNotConnected');
   if (!NATIVE_OAUTH.includes(p)) throw new AppError('gatewayMissing');
-  const redirectTo = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin + window.location.pathname : undefined;
-  const { error } = await sb.auth.signInWithOAuth({ provider: p as 'google' | 'apple', options: { redirectTo } });
+  const { error } = await sb.auth.signInWithOAuth({ provider: p as 'google' | 'apple', options: { redirectTo: backHere() } });
   if (error) throw error;
 }
 
 export async function sendEmailCode(email: string) {
   const sb = supabase();
   if (!sb) throw new AppError('serverNotConnected');
-  const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+  // В стандартном письме Supabase — ссылка (код в письме бывает только со своим почтовым сервером и шаблоном).
+  // Ссылка возвращает на эту же страницу, вход подхватывается при загрузке, как после Google.
+  const { error } = await sb.auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: true, emailRedirectTo: backHere() } });
   if (error) throw error;
 }
 
 export async function verifyEmailCode(email: string, token: string) {
   const sb = supabase();
   if (!sb) throw new AppError('serverNotConnected');
-  const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
+  const { error } = await sb.auth.verifyOtp({ email: email.trim(), token: token.trim(), type: 'email' });
   if (error) throw error;
 }
 
