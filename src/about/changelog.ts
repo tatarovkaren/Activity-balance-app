@@ -9,6 +9,15 @@ export type ChangelogEntry = { v: string } & Record<Lang, string[]>;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: '0.43.0',
+    ru: [
+      'Исправлено подключение Telegram: ссылка привязки больше не становится недействительной при открытии бота. Повторное нажатие «Подключить» использует тот же код, пока он действителен.',
+    ],
+    en: [
+      'Fixed Telegram account linking: the link no longer expires when opening the bot. Tapping Connect again reuses the same code while it is still valid.',
+    ],
+  },
+  {
     v: '0.42.0',
     ru: [
       'Заработал вход через Google: дневник хранится на сервере и одинаков на телефоне и компьютере. Без входа всё по-прежнему хранится только на этом устройстве.',
