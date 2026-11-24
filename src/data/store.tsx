@@ -126,6 +126,8 @@ export interface AppData {
   lastBackupAt?: number;
   /** Комментарии куратора к дням (с сервера, последние 60 дней). */
   curatorComments?: DayComment[];
+  /** Последняя заявка «Хочу куратора»: когда и ушла ли письмом (false — демо, отправка не настроена). */
+  curatorRequest?: { at: number; sent: boolean };
 }
 
 /** Что запоминаем до входа: галочки, код из приглашения, язык и тема переживают переход на Google и обратно. */
@@ -184,6 +186,8 @@ interface StoreApi {
   setConsent: (c: Consent) => void;
   /** Резервная копия сохранена: запомнить время (напоминание пропадает). */
   markBackup: () => void;
+  /** Заявка «Хочу куратора» отправлена (или собрана в демо). */
+  markCuratorRequest: (sent: boolean) => void;
   /** Новый режим цели с сегодняшнего дня (правка в тот же день заменяет режим дня). */
   setGoal: (g: Omit<GoalSetting, 'start'>) => void;
   /** «Пересчитать сейчас»: планка считается заново по данным на сегодня. */
@@ -590,6 +594,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       });
     },
     setConsent: (c) => setData((cur) => ({ ...cur, consent: { ...cur.consent, ...c } })),
+    markCuratorRequest: (sent) => setData((cur) => ({ ...cur, curatorRequest: { at: Date.now(), sent } })),
     markBackup: () => {
       const at = Date.now();
       // в облаке время копии уходит и на сервер — для напоминания о копии в пушах и Telegram
