@@ -107,9 +107,10 @@ export function ConsentCheck({
   on: boolean;
   onToggle: () => void;
   pre: string;
-  link: string;
-  post: string;
-  doc: LegalDoc;
+  /** Ссылка на документ внутри текста; без неё — простая галочка. */
+  link?: string;
+  post?: string;
+  doc?: LegalDoc;
   testID?: string;
 }) {
   const t = useTheme();
@@ -137,9 +138,11 @@ export function ConsentCheck({
       </Pressable>
       <Text style={{ flex: 1, color: t.muted, fontSize: fs(13), lineHeight: fs(19) }} onPress={onToggle}>
         {pre}
-        <Text style={{ color: t.amber, textDecorationLine: 'underline' }} onPress={() => openLegal(doc)} testID={testID ? testID + 'Link' : undefined}>
-          {link}
-        </Text>
+        {link && doc ? (
+          <Text style={{ color: t.amber, textDecorationLine: 'underline' }} onPress={() => openLegal(doc)} testID={testID ? testID + 'Link' : undefined}>
+            {link}
+          </Text>
+        ) : null}
         {post}
       </Text>
     </View>

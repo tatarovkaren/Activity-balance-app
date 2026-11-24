@@ -31,6 +31,7 @@ import { FeedbackCard } from './Feedback';
 import { WikiCard } from './Wiki';
 import { CodeEntry, OfferCard } from './Promo';
 import { NotifyCard } from './Notify';
+import { CuratorRequestBlock } from './CuratorRequest';
 
 export function ProfileScreen({ openHand, openHelp, openWiki }: { openHand: () => void; openHelp: () => void; openWiki: () => void }) {
   const t = useTheme();
@@ -253,7 +254,10 @@ export function ProfileScreen({ openHand, openHelp, openWiki }: { openHand: () =
             <Btn small title={P.unlink} color={t.red} onPress={unlinkCurator} testID="curatorUnlink" />
           </>
         ) : (
-          <CodeEntry />
+          <>
+            <CodeEntry />
+            <CuratorRequestBlock />
+          </>
         )}
       </Card>
 

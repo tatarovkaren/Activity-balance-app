@@ -9,6 +9,17 @@ export type ChangelogEntry = { v: string } & Record<Lang, string[]>;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: '0.41.0',
+    ru: [
+      'Профиль → «Куратор»: если куратора нет, можно оставить заявку «Хочу куратора» — цель, как с вами связаться и пара слов о себе. Цифры из профиля прикладываются только по галочке.',
+      'Заявка приходит команде письмом, куратора пока подбираем вручную и пишем вам сами.',
+    ],
+    en: [
+      'Profile → "Coach": if you have no coach, you can send an "I want a coach" request with your goal, how to reach you and a few words about yourself. Profile numbers are attached only if you tick the box.',
+      'The request reaches the team by email. For now we match coaches by hand and contact you ourselves.',
+    ],
+  },
+  {
     v: '0.40.0',
     ru: [
       'Новый вид «Отчёта картинкой» для куратора: фирменная шапка с датой и итогом («! мимо: 3»), одна фраза о том, что пошло не так, шкалы калорий, белка и шагов с зоной цели, как на «Дне», и плитки с остальными показателями.',
