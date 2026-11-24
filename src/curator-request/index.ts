@@ -5,7 +5,7 @@
 // Подбора куратора пока нет: заявку разбирают вручную. Описание — docs/curator-request.md.
 
 /** Ключ доступа Web3Forms (вида 1a2b3c4d-…). Пусто = отправка не настроена, форма работает как демо. */
-export const CURATOR_FORM_KEY = '';
+export const CURATOR_FORM_KEY = '7a1ef8c8-d44f-462f-8728-dbd2ea2e59d9';
 
 export const CURATOR_FORM_URL = 'https://api.web3forms.com/submit';
 
