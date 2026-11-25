@@ -63,6 +63,20 @@ describe('отчёт дня картинкой', () => {
     expect(svg).toContain('Калории');
   });
 
+  it('Dark Premium uses its own palette, preserves values and isolates overage', () => {
+    const { svg } = reportSvg(i18nFor('ru'), base);
+    expect(svg).toContain('fill="#0B1720"');
+    expect(svg).toContain('fill="#1B303B"');
+    expect(svg).toContain('fill="#299DAD"');
+    expect(svg).toContain('fill="#EF6570"');
+    expect(svg).toContain('fill="url(#hatch)"');
+    expect(svg).toContain('2 183');
+    expect(svg).toContain('Перебор калорий +483');
+    const accessible = reportSvg(i18nFor('ru'), { ...base, colorblind: true }).svg;
+    expect(accessible).toContain('fill="#FFFFFF"');
+    expect(accessible).toContain('#C75F00');
+  });
+
   it('перенос по словам', () => {
     expect(wrapText('раз два три четыре', 9)).toEqual(['раз два', 'три', 'четыре']);
   });
