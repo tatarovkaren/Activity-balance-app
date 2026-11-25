@@ -1,4 +1,4 @@
-// Отчёт дня картинкой (для куратора). Всегда светлый, без полей ввода и кнопок.
+// Отчёт дня картинкой (для куратора): Dark Premium; специальная палитра для дальтоников остаётся светлой.
 // Вид — вариант A «шкалы с коридором» + фраза-итог, фирменная бирюзовая шапка (решение Карэна 23.11.2026,
 // макеты design/day-report/). При «Цветах для дальтоников» — синий/оранжевый и светлая шапка.
 // Цвет никогда не единственный признак: у статусов всегда значок и слово, промах — штриховка.
@@ -14,7 +14,7 @@ import type { I18n } from '../i18n';
 import type { DayPlan, GoalMode } from '../core/targets';
 import { pctText } from './targets';
 import { workoutName } from './format';
-import { colorblind, LIGHT, type Palette } from './palette';
+import { colorblind, DARK, LIGHT, type Palette } from './palette';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -23,7 +23,13 @@ const W = 600;
 const PAD = 26;
 const IW = W - PAD * 2;
 /** Фирменная шапка: бирюзовый градиент. */
-const BRAND = ['#0E5E66', '#13868A'];
+const BRAND = ['#07343C', '#087C82'];
+/** Палитра только для экспортируемой картинки — UI приложения не меняется. */
+const REPORT_DARK: Palette = {
+  ...DARK, bg: '#0B1720', card: '#1B303B', text: '#F5F8FA', muted: '#B2C2CC',
+  teal: '#299DAD', green: '#43CA96', warn: '#E9AA4B', amber: '#E9AA4B',
+  red: '#EF6570', blue: '#55B6DE',
+};
 
 type Kind = 'kcal' | 'protein' | 'steps';
 
@@ -126,14 +132,14 @@ export function reportSvg(L: I18n, p: ReportInput): { svg: string; w: number; h:
   const { tx, f } = L;
   const R = tx.report;
   const S = tx.day.score;
-  const t = p.colorblind ? colorblind(LIGHT) : LIGHT;
+  const t = p.colorblind ? colorblind(LIGHT) : REPORT_DARK;
   const brand = !p.colorblind;
   const { e, energy, adaptive } = p;
   const tg = p.plan?.kind === 'ok' ? p.plan.targets : null;
   const sc = tg ? p.score ?? null : null;
   const kc = energy?.intake;
-  const card = '#F3F5F8';
-  const track = '#E3E8EE';
+  const card = brand ? REPORT_DARK.card : '#F3F5F8';
+  const track = brand ? '#354953' : '#E3E8EE';
 
   const tspan = (x: Span) =>
     `<tspan${x.size ? ` font-size="${x.size}"` : ''} font-weight="${x.bold ? 700 : 400}"${x.fill ? ` fill="${x.fill}"` : ''}>${esc(x.s)}</tspan>`;
@@ -174,7 +180,7 @@ export function reportSvg(L: I18n, p: ReportInput): { svg: string; w: number; h:
     const full = (sum.head ? sum.head + ' ' : '') + sum.text;
     const lines = wrapText(full, 64);
     const bh = 20 + lines.length * 20;
-    g += `<rect x="${PAD}" y="${y}" width="${IW}" height="${bh}" rx="12" fill="${c}" fill-opacity="0.07" stroke="${c}" stroke-width="1.5"/>`;
+    g += `<rect x="${PAD}" y="${y}" width="${IW}" height="${bh}" rx="12" fill="${c}" fill-opacity="${brand ? 0.14 : 0.07}" stroke="${c}" stroke-width="1.5"/>`;
     g += `<circle cx="${PAD + 24}" cy="${y + 22}" r="11" fill="${c}"/>`;
     g += text(PAD + 24, y + 27, sum.icon, { size: 13, bold: true, fill: '#FFFFFF', anchor: 'middle' });
     lines.forEach((l, i) => {
@@ -209,7 +215,7 @@ export function reportSvg(L: I18n, p: ReportInput): { svg: string; w: number; h:
       const w = cw * span + gap * (span - 1);
       const maxCh = Math.floor((w - 20) / 6.6);
       const cut = (s: string) => (s.length > maxCh ? s.slice(0, maxCh - 1) + '…' : s);
-      g += `<rect x="${x}" y="${y}" width="${w}" height="${th}" rx="10" fill="${card}"/>`;
+      g += `<rect x="${x}" y="${y}" width="${w}" height="${th}" rx="10" fill="${card}"${brand ? ' stroke="#38515D" stroke-width="0.8"' : ''}/>`;
       g += text(x + 10, y + 18, cut(tl.label), { size: 12, fill: t.muted });
       g += text(x + 10, y + 40, tl.value, { size: 18, bold: true });
       if (tl.sub) g += text(x + 10, y + 57, cut(tl.sub), { size: 12, bold: true, fill: tl.subFill || t.muted });
@@ -243,11 +249,22 @@ export function reportSvg(L: I18n, p: ReportInput): { svg: string; w: number; h:
       const zLo = X(m.lo);
       const zHi = X(m.hi ?? max);
       g += `<rect x="${PAD}" y="${ty}" width="${IW}" height="13" rx="6.5" fill="${track}"/>`;
-      g += `<rect x="${zLo}" y="${ty - 4}" width="${Math.max(zHi - zLo, 4)}" height="21" rx="5" fill="${t.green}" fill-opacity="0.16" stroke="rgba(17,24,32,0.45)" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+      g += `<rect x="${zLo}" y="${ty - 4}" width="${Math.max(zHi - zLo, 4)}" height="21" rx="5" fill="${t.green}" fill-opacity="0.16" stroke="${brand ? '#A4C7CE' : 'rgba(17,24,32,0.45)'}" stroke-width="1.5" stroke-dasharray="4 3"/>`;
       if (fact > 0) {
         const fw = Math.max(X(fact) - PAD, 13);
-        g += `<rect x="${PAD}" y="${ty}" width="${fw}" height="13" rx="6.5" fill="${c}"/>`;
-        if (m.status === 'over' || m.status === 'under') g += `<rect x="${PAD}" y="${ty}" width="${fw}" height="13" rx="6.5" fill="url(#hatch)"/>`;
+        if (kind === 'kcal' && m.status === 'over') {
+          // Красный и штриховка — только участок выше допустимого коридора.
+          const overStart = Math.max(PAD, Math.min(X(fact), X(m.hi ?? m.target)));
+          const normalWidth = Math.max(0, overStart - PAD);
+          const excessWidth = Math.max(0, fw - normalWidth);
+          if (normalWidth > 0) g += `<rect x="${PAD}" y="${ty}" width="${normalWidth}" height="13" rx="6.5" fill="${t.teal}"/>`;
+          if (excessWidth > 0) {
+            g += `<rect x="${overStart}" y="${ty}" width="${excessWidth}" height="13" rx="3" fill="${t.red}"/>`;
+            g += `<rect x="${overStart}" y="${ty}" width="${excessWidth}" height="13" rx="3" fill="url(#hatch)"/>`;
+          }
+        } else {
+          g += `<rect x="${PAD}" y="${ty}" width="${fw}" height="13" rx="6.5" fill="${c}"/>`;
+        }
         if (kind === 'kcal') g += `<rect x="${X(fact) - 1.5}" y="${ty - 6}" width="3" height="25" rx="1.5" fill="${t.text}"/>`;
       }
       y = ty + 13;
@@ -348,7 +365,7 @@ export function reportSvg(L: I18n, p: ReportInput): { svg: string; w: number; h:
 
   // ---- подвал ----
   y += 18;
-  g += `<line x1="${PAD}" y1="${y}" x2="${W - PAD}" y2="${y}" stroke="rgba(17,24,32,0.1)"/>`;
+  g += `<line x1="${PAD}" y1="${y}" x2="${W - PAD}" y2="${y}" stroke="${brand ? '#3E5660' : 'rgba(17,24,32,0.1)'}"/>`;
   y += 22;
   g += text(PAD, y, R.footer(tx.app.name), { size: 11.5, fill: t.muted });
   const H = Math.ceil(y + 18);
@@ -357,7 +374,7 @@ export function reportSvg(L: I18n, p: ReportInput): { svg: string; w: number; h:
     `<defs><linearGradient id="brand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${BRAND[0]}"/><stop offset="1" stop-color="${BRAND[1]}"/></linearGradient>` +
     `<pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="7" fill="#FFFFFF" fill-opacity="0.38"/></pattern></defs>`;
   return {
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${defs}<rect width="${W}" height="${H}" fill="#FFFFFF"/>${g}</svg>`,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${defs}<rect width="${W}" height="${H}" fill="${brand ? t.bg : '#FFFFFF'}"/>${g}</svg>`,
     w: W,
     h: H,
   };
