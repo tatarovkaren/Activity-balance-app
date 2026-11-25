@@ -9,6 +9,17 @@ export type ChangelogEntry = { v: string } & Record<Lang, string[]>;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: '0.44.0',
+    ru: [
+      'Отчёт дня картинкой теперь в стиле Dark Premium: тёмные карточки, выразительная шапка и более чёткие цветовые статусы.',
+      'При переборе калорий красным выделяется только превышение над целевым коридором. Палитра для дальтоников сохранена.',
+    ],
+    en: [
+      'Daily report images now use Dark Premium styling with dark cards, a refined header, and clearer status colors.',
+      'When calories exceed the target range, only the excess segment is highlighted red. The colorblind-friendly palette is preserved.',
+    ],
+  },
+  {
     v: '0.43.0',
     ru: [
       'Исправлено подключение Telegram: ссылка привязки больше не становится недействительной при открытии бота. Повторное нажатие «Подключить» использует тот же код, пока он действителен.',
