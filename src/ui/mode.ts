@@ -6,5 +6,5 @@ import { useStore } from '../data/store';
 /** true — продвинутый режим: показывать разбивки, надёжность, исключённые дни и тонкие настройки. */
 export function useAdvanced(): boolean {
   const { data } = useStore();
-  return data.profile.uiMode !== 'basic';
+  return data.profile.uiMode === 'advanced';
 }
