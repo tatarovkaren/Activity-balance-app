@@ -62,7 +62,6 @@ function Shell() {
     if (Platform.OS === 'web') document.body.style.backgroundColor = t.bg;
   }, [t.bg]);
 
-  const availableWidth = useWindowDimensions().width;
   if (!ready) return <View style={{ flex: 1, backgroundColor: t.bg }} />;
 
   const curator = session.mode !== 'none' && session.role === 'curator';
