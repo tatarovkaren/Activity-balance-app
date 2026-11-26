@@ -1,7 +1,7 @@
 // Простой режим: данные общие с обычным дневником, но ввод в коротких диалогах.
 // При отмене ничего не записываем. Не создаём отдельный источник данных.
 import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
+import { Modal, Pressable, ScrollView, View } from 'react-native';
 import { shiftDate, todayISO, type ISODate } from '../core/dates';
 import type { DayEntry, MealSlot } from '../core/types';
 import { applyFoodDays } from '../core/importers';
@@ -14,10 +14,9 @@ import { useStore } from '../data/store';
 import { Btn, Card, Gap, NumField, Row, T, TextField } from '../ui/kit';
 import { useTheme } from '../ui/theme';
 import { useI18n } from '../i18n';
-import { layoutColumns } from '../ui/layout';
 
-type Section = 'weight' | 'food' | 'activity' | 'feeling';
-type Draft = Pick<DayEntry, 'weight' | 'kcal' | 'protein' | 'fat' | 'carbs' | 'steps' | 'workoutMin' | 'wellbeing' | 'comment'>;
+type Section = 'weight' | 'food' | 'activity' | 'feeling' | 'measure';
+type Draft = Pick<DayEntry, 'weight' | 'kcal' | 'protein' | 'fat' | 'carbs' | 'steps' | 'workoutMin' | 'wellbeing' | 'comment' | 'neck' | 'waist' | 'hips' | 'chest' | 'biceps'>;
 
 export function ChillDay({ sel, setSel, openFood, openPhoto, openCharts }: {
   sel: ISODate;
@@ -31,8 +30,6 @@ export function ChillDay({ sel, setSel, openFood, openPhoto, openCharts }: {
   const { tx, f } = L;
   const C = tx.chill;
   const { data, setDay, replaceDays } = useStore();
-  const width = useWindowDimensions().width;
-  const columns = layoutColumns(width, data.profile.layoutMode);
   const e = data.days[sel] || {};
   const savedMismatch = kcalMismatch(e);
   const from = shiftDate(sel, -13);
@@ -68,6 +65,7 @@ export function ChillDay({ sel, setSel, openFood, openPhoto, openCharts }: {
     setDraft({
       weight: e.weight, kcal: e.kcal, protein: e.protein, fat: e.fat, carbs: e.carbs,
       steps: e.steps, workoutMin: e.workoutMin, wellbeing: e.wellbeing, comment: e.comment,
+      neck: e.neck, waist: e.waist, hips: e.hips, chest: e.chest, biceps: e.biceps,
     });
     setError('');
     setActive(section);
@@ -86,6 +84,9 @@ export function ChillDay({ sel, setSel, openFood, openPhoto, openCharts }: {
       if (draft.steps != null && (draft.steps < 0 || draft.steps > 200000)) return setError(C.invalidValue);
       if (draft.workoutMin != null && (draft.workoutMin < 0 || draft.workoutMin > 1440)) return setError(C.invalidValue);
       patch = { steps: draft.steps, workoutMin: draft.workoutMin };
+    } else if (active === 'measure') {
+      if ([draft.neck, draft.waist, draft.hips, draft.chest, draft.biceps].some((v) => v != null && (!Number.isFinite(v) || v <= 0 || v > 300))) return setError(C.invalidMeasure);
+      patch = { neck: draft.neck, waist: draft.waist, hips: draft.hips, chest: draft.chest, biceps: draft.biceps };
     } else {
       if (draft.wellbeing != null && (!Number.isInteger(draft.wellbeing) || draft.wellbeing < 1 || draft.wellbeing > 10)) return setError(C.invalidFeeling);
       patch = { wellbeing: draft.wellbeing, comment: draft.comment };
@@ -98,6 +99,7 @@ export function ChillDay({ sel, setSel, openFood, openPhoto, openCharts }: {
     { id: 'food', icon: '◉', title: C.food, value: e.kcal == null && macroKcal(e.protein, e.fat, e.carbs) == null ? C.add : f.int(e.kcal ?? Math.round(macroKcal(e.protein, e.fat, e.carbs)!)) + ' ' + tx.common.kcal, accent: t.amber },
     { id: 'activity', icon: '↗', title: C.activity, value: e.steps == null ? C.add : f.int(e.steps) + ' ' + C.steps, accent: t.green },
     { id: 'feeling', icon: '♡', title: C.feeling, value: e.wellbeing == null ? C.add : e.wellbeing + '/10', accent: t.violet },
+    { id: 'measure', icon: '◎', title: C.measure, value: e.waist != null ? C.waist + ': ' + f.num(e.waist, 1) + ' ' + tx.common.cm : [e.neck,e.hips,e.chest,e.biceps].some(v => v != null) ? C.recorded : C.add, accent: t.teal },
   ];
   return (
     <View testID="chillDay">
@@ -126,7 +128,7 @@ export function ChillDay({ sel, setSel, openFood, openPhoto, openCharts }: {
             accessibilityLabel={section.title}
             testID={'chill-' + section.id}
             onPress={() => open(section.id)}
-            style={{ backgroundColor: t.card, borderColor: t.cardBorder, borderWidth: 1, borderRadius: 16, minWidth: columns === 2 ? 260 : 0, width: columns === 2 ? '48%' : '100%', flexGrow: 1, minHeight: 118, padding: 16, justifyContent: 'space-between' }}
+            style={{ backgroundColor: t.card, borderColor: t.cardBorder, borderWidth: 1, borderRadius: 16, minWidth: 0, width: '100%', flexGrow: 1, minHeight: 118, padding: 16, justifyContent: 'space-between' }}
           >
             <Row gap={8}>
               <T size={25} color={section.accent}>{section.icon}</T>
@@ -148,8 +150,8 @@ export function ChillDay({ sel, setSel, openFood, openPhoto, openCharts }: {
       <Card title={C.trendsTitle} accent={t.teal}>
         <T muted size={12}>{C.trendsHint}</T>
         <Gap h={8} />
-        <View style={{ flexDirection: columns === 2 ? 'row' : 'column', flexWrap: 'wrap', gap: 10 }}>
-          <View style={{ flex: 1, minWidth: columns === 2 ? 260 : 0 }}>
+        <View style={{ flexDirection: 'column', flexWrap: 'wrap', gap: 10 }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
             <T size={13} bold>{C.weightTrend}</T>
             {weightPoints.length > 0 ? <Chart height={155} spec={{ title: C.weightTrend, from, to: sel, series: [{ label: C.weightTrend, color: t.blue, dots: true, points: weightPoints }] }} /> : <T muted>{C.noWeightTrend}</T>}
           </View>
@@ -204,6 +206,22 @@ export function ChillDay({ sel, setSel, openFood, openPhoto, openCharts }: {
                   <NumField label={C.steps} value={draft.steps} digits={0} onChange={(v) => set({ steps: v })} testID="chillStepsInput" />
                   <Gap h={8} />
                   <NumField label={C.workout} value={draft.workoutMin} digits={0} onChange={(v) => set({ workoutMin: v })} />
+                </>
+              ) : null}
+              {active === 'measure' ? (
+                <>
+                  <T muted size={12}>{C.measureHelp}</T>
+                  <Gap h={10} />
+                  <NumField label={C.neck} value={draft.neck} digits={1} onChange={(v) => set({ neck: v })} suffix={tx.common.cm} testID="chillNeckInput" />
+                  <Gap h={8} />
+                  <NumField label={C.waist} value={draft.waist} digits={1} onChange={(v) => set({ waist: v })} suffix={tx.common.cm} testID="chillWaistInput" />
+                  <Gap h={8} />
+                  {data.profile.sex === 'female' ? <><NumField label={C.hips} value={draft.hips} digits={1} onChange={(v) => set({ hips: v })} suffix={tx.common.cm} testID="chillHipsInput" /><Gap h={8} /></> : null}
+                  <NumField label={C.chest} value={draft.chest} digits={1} onChange={(v) => set({ chest: v })} suffix={tx.common.cm} testID="chillChestInput" />
+                  <Gap h={8} />
+                  <NumField label={C.biceps} value={draft.biceps} digits={1} onChange={(v) => set({ biceps: v })} suffix={tx.common.cm} testID="chillBicepsInput" />
+                  {data.profile.sex !== 'female' ? <><Gap h={8} /><NumField label={C.hipsOptional} value={draft.hips} digits={1} onChange={(v) => set({ hips: v })} suffix={tx.common.cm} testID="chillHipsInput" /></> : null}
+                  <Gap h={6} /><T muted size={12}>{C.measureTrendHint}</T>
                 </>
               ) : null}
               {active === 'feeling' ? (
