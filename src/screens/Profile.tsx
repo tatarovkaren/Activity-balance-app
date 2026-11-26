@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { clampWorkoutGoal, WORKOUT_GOAL_DEFAULT } from '../core/workouts';
 import { View } from 'react-native';
-import { LAYOUT_MODES, type LayoutMode } from '../ui/layout';
 import { ageAt, isISODate, todayISO, toLocalISO } from '../core/dates';
 import { MEASURE_FREQS } from '../core/body';
 import {
@@ -106,12 +105,6 @@ export function ProfileScreen({ openHand, openHelp, openWiki }: { openHand: () =
         <Seg<UiMode> value={p.uiMode} onChange={(v) => set({ uiMode: v })} options={UI_MODES.map((m) => ({ v: m, label: P.uiMode[m] }))} testID="uiMode" />
         <Gap h={6} />
         <T muted size={12}>{p.uiMode === 'chill' ? P.uiMode.chillNote : p.uiMode === 'basic' ? P.uiMode.basicNote : P.uiMode.advancedNote}</T>
-      </Card>
-
-      <Card title={P.layout.title} accent={t.teal}>
-        <Seg<LayoutMode> value={p.layoutMode || 'auto'} onChange={(v) => set({ layoutMode: v })} options={LAYOUT_MODES.map((v) => ({ v, label: P.layout[v] }))} testID="foldLayoutMode" />
-        <Gap h={6} />
-        <T muted size={12}>{P.layout.note}</T>
       </Card>
 
       <Card title={P.sexTitle} accent={t.amber}>
