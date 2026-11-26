@@ -4,6 +4,10 @@ import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 import { shiftDate, todayISO, type ISODate } from '../core/dates';
 import type { DayEntry, MealSlot } from '../core/types';
+import { applyFoodDays } from '../core/importers';
+import { importFatSecretFile } from '../ui/fatsecret';
+import { importSummaryText } from '../ui/format';
+import { errorText } from '../i18n';
 import { useStore } from '../data/store';
 import { Btn, Card, Gap, NumField, Row, T, TextField } from '../ui/kit';
 import { useTheme } from '../ui/theme';
@@ -19,13 +23,34 @@ export function ChillDay({ sel, setSel, openFood, openPhoto }: {
   openPhoto?: (meal?: MealSlot) => void;
 }) {
   const t = useTheme();
-  const { tx, f } = useI18n();
+  const L = useI18n();
+  const { tx, f } = L;
   const C = tx.chill;
-  const { data, setDay } = useStore();
+  const { data, setDay, replaceDays } = useStore();
   const e = data.days[sel] || {};
   const [active, setActive] = useState<Section | null>(null);
   const [draft, setDraft] = useState<Draft>({});
   const [error, setError] = useState('');
+  const [importMsg, setImportMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [importing, setImporting] = useState(false);
+  // Точно тот же механизм FatSecret, что в обычном дневнике.
+  const importCsv = async () => {
+    if (importing) return;
+    setImporting(true);
+    try {
+      const result = await importFatSecretFile();
+      if (!result) return;
+      if (!result.ok) return setImportMsg({ text: errorText(L, result.error), ok: false });
+      const merged = applyFoodDays(data.days, result.days, result.skipped);
+      replaceDays(merged.days);
+      setImportMsg({ text: importSummaryText(L, merged), ok: true });
+      if (result.days.length === 1 && result.days[0].date !== sel) setSel(result.days[0].date);
+    } catch {
+      setImportMsg({ text: C.importFailed, ok: false });
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const open = (section: Section) => {
     setDraft({
@@ -101,14 +126,14 @@ export function ChillDay({ sel, setSel, openFood, openPhoto }: {
         ))}
       </View>
       <Gap h={12} />
-      {openFood || openPhoto ? (
-        <Card title={C.otherWays} accent={t.blue}>
+      <Card title={C.otherWays} accent={t.blue}>
           <Row gap={8}>
+            <Btn title={importing ? C.importing : C.importFs} onPress={importCsv} disabled={importing} testID="chillImportFs" />
             {openFood ? <Btn title={C.foodCatalog} onPress={openFood} /> : null}
             {openPhoto ? <Btn title={C.photo} onPress={() => openPhoto()} /> : null}
           </Row>
+          {importMsg ? <T size={12} color={importMsg.ok ? t.green : t.red} testID="chillImportResult">{importMsg.text}</T> : null}
         </Card>
-      ) : null}
       <T muted size={12} style={{ marginTop: 10 }}>{C.safeNote}</T>
       <Modal visible={active !== null} transparent animationType="fade" onRequestClose={() => setActive(null)}>
         <View style={{ flex: 1, justifyContent: 'center', backgroundColor: '#000000AA', paddingHorizontal: 16 }}>
@@ -119,6 +144,9 @@ export function ChillDay({ sel, setSel, openFood, openPhoto }: {
               {active === 'weight' ? <NumField label={C.weightKg} value={draft.weight} digits={2} onChange={(v) => set({ weight: v })} testID="chillWeightInput" /> : null}
               {active === 'food' ? (
                 <>
+                  <Btn title={importing ? C.importing : C.importFs} onPress={importCsv} disabled={importing} testID="chillImportFsDialog" />
+                  {importMsg ? <T size={12} color={importMsg.ok ? t.green : t.red}>{importMsg.text}</T> : null}
+                  <Gap h={10} />
                   <NumField label={C.calories} value={draft.kcal} digits={0} onChange={(v) => set({ kcal: v })} testID="chillKcalInput" />
                   <Gap h={8} />
                   <NumField label={C.protein} value={draft.protein} digits={1} onChange={(v) => set({ protein: v })} />
