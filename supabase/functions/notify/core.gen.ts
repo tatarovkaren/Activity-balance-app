@@ -2,6 +2,8 @@
 // Типы, которые серверу не нужны, заменены заглушками.
 type GoalSetting = any;
 type NotifyPrefs = any;
+// Compatibility with the stored Fold layout field; the Edge Function does not use this setting.
+type LayoutMode = 'auto' | 'single' | 'double';
 
 // ======== src/core/dates.ts ========
 // Даты только по местному времени. Никогда не использовать toISOString() для строки даты:
