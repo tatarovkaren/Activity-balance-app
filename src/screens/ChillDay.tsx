@@ -155,7 +155,7 @@ export function ChillDay({ sel, setSel, openFood, openPhoto, openCharts }: {
             <T size={13} bold>{C.weightTrend}</T>
             {weightPoints.length > 0 ? <Chart height={155} spec={{ title: C.weightTrend, from, to: sel, series: [{ label: C.weightTrend, color: t.blue, dots: true, points: weightPoints }] }} /> : <T muted>{C.noWeightTrend}</T>}
           </View>
-          <View style={{ flex: 1, minWidth: columns === 2 ? 260 : 0 }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
             <T size={13} bold>{C.foodTrend}</T>
             {intakePoints.length > 0 ? <Chart height={155} spec={{ title: C.foodTrend, from, to: sel, series: [{ label: C.foodTrend, color: t.amber, bars: true, points: intakePoints }] }} /> : <T muted>{C.noFoodTrend}</T>}
           </View>
