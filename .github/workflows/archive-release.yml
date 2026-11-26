@@ -14,32 +14,59 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Bundle tracked source, project files, tests and documentation without secrets
+        with:
+          persist-credentials: false
+      - name: Bundle tracked source, working files, tests and docs with privacy filtering
         shell: bash
         run: |
           mkdir -p dist
           python3 - <<'PY'
-          import os, re, subprocess, zipfile, hashlib, datetime
-          paths = subprocess.check_output(['git','ls-files','-z']).decode().split('\0')
-          blocked = re.compile(r'(^|/)(\.env[^/]*|\.git|\.npmrc|\.pypirc|credentials[^/]*|secrets?[^/]*|private[-_]?key[^/]*|personal[-_]?data[^/]*)($|/)|\.(pem|p12|pfx|key|sqlite|db)$',re.I)
-          commit = subprocess.check_output(['git','rev-parse','HEAD']).decode().strip()
-          archive = f'dist/activity-balance-source-0.45.0-{commit[:10]}.zip'
-          included = []
-          with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=8) as z:
+          import os, re, subprocess, zipfile, hashlib, datetime, pathlib, json
+          paths = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')
+          blocked = re.compile(r'(^|/)(\.env[^/]*|\.claude|\.git|\.npmrc|\.pypirc|credentials[^/]*|secrets?[^/]*|private[-_]?key[^/]*|personal[-_]?data[^/]*)($|/)|\.(pem|p12|pfx|key|sqlite|db)$', re.I)
+          commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().strip()
+          version = json.loads(pathlib.Path('app.json').read_text())['expo']['version']
+          archive = f'dist/activity-balance-source-{version}-{commit[:10]}-privacy-filtered.zip'
+          included, excluded, redacted = [], [], []
+          with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=8) as z:
               for p in paths:
-                  if not p or blocked.search(p) or not os.path.isfile(p):
+                  if not p or blocked.search(p) or p == 'docs/hand-portion-method.md' or not os.path.isfile(p):
+                      if p:
+                          excluded.append(p)
                       continue
-                  z.write(p,p)
+                  raw = pathlib.Path(p).read_bytes()
+                  try:
+                      content = raw.decode('utf-8')
+                  except UnicodeDecodeError:
+                      z.writestr(p, raw)
+                      included.append(p)
+                      continue
+                  sanitized = content
+                  # Identity and address strings in test fixtures/docs are not part of a portable project backup.
+                  sanitized = sanitized.replace('Карэн', 'Test User').replace('Karen Tatarov', 'Test User')
+                  sanitized = re.sub(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', 'redacted@example.invalid', sanitized)
+                  # Refuse to export obvious private keys or credential tokens.
+                  if re.search(r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|ghp_[A-Za-z0-9]{36}|sk-[A-Za-z0-9]{24,}', sanitized):
+                      raise RuntimeError('Potential private credential in ' + p)
+                  if sanitized != content:
+                      redacted.append(p)
+                  z.writestr(p, sanitized.encode('utf-8'))
                   included.append(p)
-              manifest = f'Activity Balance 0.45.0\nGit commit: {commit}\nUTC: {datetime.datetime.now(datetime.timezone.utc).isoformat()}\nFiles: {len(included)}\nExcluded: environment files, keys, credentials, private databases and personal data by path rules\n'
-              z.writestr('RELEASE_MANIFEST.txt',manifest)
-          with open('dist/SHA256SUMS.txt','w') as f:
-              f.write(hashlib.sha256(open(archive,'rb').read()).hexdigest()+'  '+os.path.basename(archive)+'\n')
-          print(f'{len(included)} tracked files archived: {archive}')
+              manifest = {
+                  'project': 'Activity Balance', 'version': version, 'git_commit': commit,
+                  'utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                  'files': len(included), 'excluded_sensitive_files': excluded,
+                  'sanitized_text_files': redacted,
+                  'note': 'Portable privacy-filtered backup; the canonical complete version is the Git commit. Never store environment keys or personal calibration notes in the Drive archive.'
+              }
+              z.writestr('RELEASE_MANIFEST.json', json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
+          with open('dist/SHA256SUMS.txt', 'w') as f:
+              f.write(hashlib.sha256(pathlib.Path(archive).read_bytes()).hexdigest() + '  ' + os.path.basename(archive) + '\n')
+          print(f'{len(included)} files archived, {len(excluded)} private paths excluded, {len(redacted)} text files sanitized')
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: activity-balance-source-0.45.0
+          name: activity-balance-source-0.45.0-privacy-filtered
           path: dist/*
           retention-days: 90
           if-no-files-found: error
