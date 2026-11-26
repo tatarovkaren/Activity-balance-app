@@ -154,7 +154,7 @@ export function ProfileScreen({ openHand, openHelp, openWiki }: { openHand: () =
         <T muted size={12}>{P.measureFreq}</T>
         <Seg<MeasureFreq> value={p.measureFreq} onChange={(v) => set({ measureFreq: v })} options={MEASURE_FREQS.map((k) => ({ v: k, label: tx.common.freq[k] }))} />
         <Gap h={8} />
-        {p.uiMode !== 'basic' ? (
+        {p.uiMode === 'advanced' ? (
           <>
             <T muted size={12}>{P.bmr}</T>
             <Seg value={p.bmrFormula} onChange={(v) => set({ bmrFormula: v })} options={[{ v: 'mifflin', label: P.mifflin }, { v: 'lean', label: P.lean }]} />
