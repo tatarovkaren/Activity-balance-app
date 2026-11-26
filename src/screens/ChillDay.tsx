@@ -36,6 +36,11 @@ export function ChillDay({ sel, setSel, openFood, openPhoto, openCharts }: {
   const days14 = Array.from({ length: 14 }, (_, i) => shiftDate(from, i));
   const weightPoints = days14.filter((day) => data.days[day]?.weight != null).map((day) => ({ d: day, v: data.days[day].weight! }));
   const intakePoints = days14.filter((day) => data.days[day]?.kcal != null || macroKcal(data.days[day]?.protein, data.days[day]?.fat, data.days[day]?.carbs) != null).map((day) => ({ d: day, v: data.days[day]?.kcal ?? Math.round(macroKcal(data.days[day]?.protein, data.days[day]?.fat, data.days[day]?.carbs)!) }));
+  const stepsPoints = days14.filter((day) => data.days[day]?.steps != null).map((day) => ({ d: day, v: data.days[day].steps! }));
+  const wellbeingPoints = days14.filter((day) => data.days[day]?.wellbeing != null).map((day) => ({ d: day, v: data.days[day].wellbeing! }));
+  const weightChange = weightPoints.length >= 2 ? weightPoints[weightPoints.length - 1].v - weightPoints[0].v : null;
+  const averageSteps = stepsPoints.length ? Math.round(stepsPoints.reduce((sum, p) => sum + p.v, 0) / stepsPoints.length) : null;
+  const averageFeeling = wellbeingPoints.length ? wellbeingPoints.reduce((sum, p) => sum + p.v, 0) / wellbeingPoints.length : null;
   const [active, setActive] = useState<Section | null>(null);
   const [draft, setDraft] = useState<Draft>({});
   const [error, setError] = useState('');
@@ -120,7 +125,7 @@ export function ChillDay({ sel, setSel, openFood, openPhoto, openCharts }: {
         <T muted>{C.subtitle}</T>
       </Card>
       <Gap h={10} />
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }} testID="chillQuickGrid">
         {sections.map((section) => (
           <Pressable
             key={section.id}
@@ -128,11 +133,11 @@ export function ChillDay({ sel, setSel, openFood, openPhoto, openCharts }: {
             accessibilityLabel={section.title}
             testID={'chill-' + section.id}
             onPress={() => open(section.id)}
-            style={{ backgroundColor: t.card, borderColor: t.cardBorder, borderWidth: 1, borderRadius: 16, minWidth: 0, width: '100%', flexGrow: 1, minHeight: 118, padding: 16, justifyContent: 'space-between' }}
+            style={{ backgroundColor: t.card, borderColor: t.cardBorder, borderWidth: 1, borderRadius: 16, minWidth: 0, flexBasis: section.id === 'measure' ? '100%' : '47%', flexGrow: 1, minHeight: 112, padding: 12, justifyContent: 'space-between' }}
           >
             <Row gap={8}>
               <T size={25} color={section.accent}>{section.icon}</T>
-              <T bold size={16}>{section.title}</T>
+              <T bold size={15} style={{ flexShrink: 1 }}>{section.title}</T>
             </Row>
             <T size={14} color={section.value === C.add ? t.muted : t.text}>{section.value}</T>
             <T muted size={12}>{C.tap}</T>
@@ -150,14 +155,34 @@ export function ChillDay({ sel, setSel, openFood, openPhoto, openCharts }: {
       <Card title={C.trendsTitle} accent={t.teal}>
         <T muted size={12}>{C.trendsHint}</T>
         <Gap h={8} />
-        <View style={{ flexDirection: 'column', flexWrap: 'wrap', gap: 10 }}>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <T size={13} bold>{C.weightTrend}</T>
-            {weightPoints.length > 0 ? <Chart height={155} spec={{ title: C.weightTrend, from, to: sel, series: [{ label: C.weightTrend, color: t.blue, dots: true, points: weightPoints }] }} /> : <T muted>{C.noWeightTrend}</T>}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }} testID="chillProgressGrid">
+          <View style={{ flexBasis: '47%', flexGrow: 1, minWidth: 0, padding: 8, backgroundColor: t.bg, borderRadius: 12, borderWidth: 1, borderColor: t.line }} testID="chillWeightTrend">
+            <T bold size={13}>{C.weightTrend}</T>
+            <T size={15} bold color={t.blue}>{weightChange != null ? f.signed(weightChange, 2) + ' ' + tx.common.kg : weightPoints.length ? f.num(weightPoints[weightPoints.length - 1].v, 2) + ' ' + tx.common.kg : '—'}</T>
+            {weightPoints.length >= 2
+              ? <Chart height={112} spec={{ title: C.weightTrend, from, to: sel, series: [{ label: C.weightTrend, color: t.blue, dots: true, points: weightPoints }] }} />
+              : <T muted size={11}>{C.needTwoWeights}</T>}
           </View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <T size={13} bold>{C.foodTrend}</T>
-            {intakePoints.length > 0 ? <Chart height={155} spec={{ title: C.foodTrend, from, to: sel, series: [{ label: C.foodTrend, color: t.amber, bars: true, points: intakePoints }] }} /> : <T muted>{C.noFoodTrend}</T>}
+          <View style={{ flexBasis: '47%', flexGrow: 1, minWidth: 0, padding: 8, backgroundColor: t.bg, borderRadius: 12, borderWidth: 1, borderColor: t.line }} testID="chillFoodTrend">
+            <T bold size={13}>{C.foodTrend}</T>
+            <T size={15} bold color={t.amber}>{intakePoints.length ? f.int(intakePoints[intakePoints.length - 1].v) + ' ' + tx.common.kcal : '—'}</T>
+            {intakePoints.length >= 2
+              ? <Chart height={112} spec={{ title: C.foodTrend, from, to: sel, series: [{ label: C.foodTrend, color: t.amber, bars: true, points: intakePoints }] }} />
+              : <T muted size={11}>{C.needTwoCalories}</T>}
+          </View>
+          <View style={{ flexBasis: '47%', flexGrow: 1, minWidth: 0, padding: 8, backgroundColor: t.bg, borderRadius: 12, borderWidth: 1, borderColor: t.line }} testID="chillStepsTrend">
+            <T bold size={13}>{C.stepsTrend}</T>
+            <T size={15} bold color={t.green}>{averageSteps != null ? C.avgSteps(f.int(averageSteps)) : '—'}</T>
+            {stepsPoints.length >= 2
+              ? <Chart height={112} spec={{ title: C.stepsTrend, from, to: sel, series: [{ label: C.stepsTrend, color: t.green, bars: true, points: stepsPoints }] }} />
+              : <T muted size={11}>{C.needTwoSteps}</T>}
+          </View>
+          <View style={{ flexBasis: '47%', flexGrow: 1, minWidth: 0, padding: 8, backgroundColor: t.bg, borderRadius: 12, borderWidth: 1, borderColor: t.line }} testID="chillFeelingTrend">
+            <T bold size={13}>{C.feelingTrend}</T>
+            <T size={15} bold color={t.violet}>{averageFeeling != null ? C.avgFeeling(f.num(averageFeeling, 1)) : '—'}</T>
+            {wellbeingPoints.length >= 2
+              ? <Chart height={112} spec={{ title: C.feelingTrend, from, to: sel, series: [{ label: C.feelingTrend, color: t.violet, dots: true, points: wellbeingPoints }] }} />
+              : <T muted size={11}>{C.needTwoFeeling}</T>}
           </View>
         </View>
         {openCharts ? <Btn title={C.allCharts} onPress={openCharts} testID="chillAllCharts" /> : null}
