@@ -63,10 +63,10 @@ function Shell() {
     if (Platform.OS === 'web') document.body.style.backgroundColor = t.bg;
   }, [t.bg]);
 
+  const availableWidth = useWindowDimensions().width;
   if (!ready) return <View style={{ flex: 1, backgroundColor: t.bg }} />;
 
   const curator = session.mode !== 'none' && session.role === 'curator';
-  const availableWidth = useWindowDimensions().width;
   const showChillWide = !curator && tab === 'day' && data.profile.uiMode === 'chill' && layoutColumns(availableWidth, data.profile.layoutMode) === 2;
   const maxW = curator ? 1200 : showChillWide ? 1100 : 640;
   // первый шаг клиента — анкета: возраст, рост, вес
