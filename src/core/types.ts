@@ -16,8 +16,8 @@ export type LangPref = 'system' | Lang;
 export type MeasureFreq = 'week' | '2weeks' | 'month';
 export type Plan = 'free' | 'premium';
 /** Режим интерфейса: «базовый» прячет сложные показатели, расчёт одинаковый. */
-export type UiMode = 'basic' | 'advanced';
-export const UI_MODES: UiMode[] = ['basic', 'advanced'];
+export type UiMode = 'chill' | 'basic' | 'advanced';
+export const UI_MODES: UiMode[] = ['chill', 'basic', 'advanced'];
 
 /** Причины ручной отметки «Необычный день». «cycle» — только в женском режиме. */
 export type AnomalyReason = 'trip' | 'feast' | 'illness' | 'incomplete' | 'cycle' | 'other';
