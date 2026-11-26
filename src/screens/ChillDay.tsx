@@ -5,6 +5,8 @@ import { Modal, Pressable, ScrollView, View, useWindowDimensions } from 'react-n
 import { shiftDate, todayISO, type ISODate } from '../core/dates';
 import type { DayEntry, MealSlot } from '../core/types';
 import { applyFoodDays } from '../core/importers';
+import { kcalMismatch, macroKcal } from '../core/energy';
+import { Chart } from '../ui/Chart';
 import { importFatSecretFile } from '../ui/fatsecret';
 import { importSummaryText } from '../ui/format';
 import { errorText } from '../i18n';
@@ -17,11 +19,12 @@ import { layoutColumns } from '../ui/layout';
 type Section = 'weight' | 'food' | 'activity' | 'feeling';
 type Draft = Pick<DayEntry, 'weight' | 'kcal' | 'protein' | 'fat' | 'carbs' | 'steps' | 'workoutMin' | 'wellbeing' | 'comment'>;
 
-export function ChillDay({ sel, setSel, openFood, openPhoto }: {
+export function ChillDay({ sel, setSel, openFood, openPhoto, openCharts }: {
   sel: ISODate;
   setSel: (day: ISODate) => void;
   openFood?: () => void;
   openPhoto?: (meal?: MealSlot) => void;
+  openCharts?: () => void;
 }) {
   const t = useTheme();
   const L = useI18n();
@@ -31,9 +34,15 @@ export function ChillDay({ sel, setSel, openFood, openPhoto }: {
   const width = useWindowDimensions().width;
   const columns = layoutColumns(width, data.profile.layoutMode);
   const e = data.days[sel] || {};
+  const savedMismatch = kcalMismatch(e);
+  const from = shiftDate(sel, -13);
+  const days14 = Array.from({ length: 14 }, (_, i) => shiftDate(from, i));
+  const weightPoints = days14.filter((day) => data.days[day]?.weight != null).map((day) => ({ d: day, v: data.days[day].weight! }));
+  const intakePoints = days14.filter((day) => data.days[day]?.kcal != null || macroKcal(data.days[day]?.protein, data.days[day]?.fat, data.days[day]?.carbs) != null).map((day) => ({ d: day, v: data.days[day]?.kcal ?? Math.round(macroKcal(data.days[day]?.protein, data.days[day]?.fat, data.days[day]?.carbs)!) }));
   const [active, setActive] = useState<Section | null>(null);
   const [draft, setDraft] = useState<Draft>({});
   const [error, setError] = useState('');
+  const draftMismatch = kcalMismatch({ ...draft, kcalManual: draft.kcal != null });
   const [importMsg, setImportMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [importing, setImporting] = useState(false);
   // Точно тот же механизм FatSecret, что в обычном дневнике.
@@ -86,7 +95,7 @@ export function ChillDay({ sel, setSel, openFood, openPhoto }: {
   };
   const sections: { id: Section; icon: string; title: string; value: string; accent: string }[] = [
     { id: 'weight', icon: '⚖', title: C.weight, value: e.weight == null ? C.add : f.num(e.weight, 2) + ' ' + tx.common.kg, accent: t.blue },
-    { id: 'food', icon: '◉', title: C.food, value: e.kcal == null ? C.add : f.int(e.kcal) + ' ' + tx.common.kcal, accent: t.amber },
+    { id: 'food', icon: '◉', title: C.food, value: e.kcal == null && macroKcal(e.protein, e.fat, e.carbs) == null ? C.add : f.int(e.kcal ?? Math.round(macroKcal(e.protein, e.fat, e.carbs)!)) + ' ' + tx.common.kcal, accent: t.amber },
     { id: 'activity', icon: '↗', title: C.activity, value: e.steps == null ? C.add : f.int(e.steps) + ' ' + C.steps, accent: t.green },
     { id: 'feeling', icon: '♡', title: C.feeling, value: e.wellbeing == null ? C.add : e.wellbeing + '/10', accent: t.violet },
   ];
@@ -128,6 +137,29 @@ export function ChillDay({ sel, setSel, openFood, openPhoto }: {
           </Pressable>
         ))}
       </View>
+      {savedMismatch ? (
+        <Card title={C.mismatchTitle} accent={t.amber}>
+          <T color={t.amber} testID="chillKcalMismatch">{tx.day.food.mismatch(f.int(savedMismatch.kcal), f.int(savedMismatch.macro), (savedMismatch.diff > 0 ? '+' : '−') + f.int(Math.abs(savedMismatch.diff)))}</T>
+          <Gap h={6} />
+          <Btn small title={tx.day.food.recalc(f.int(savedMismatch.macro))} onPress={() => setDay(sel, { kcal: undefined, kcalManual: undefined })} testID="chillKcalRecalc" />
+        </Card>
+      ) : null}
+      <Gap h={12} />
+      <Card title={C.trendsTitle} accent={t.teal}>
+        <T muted size={12}>{C.trendsHint}</T>
+        <Gap h={8} />
+        <View style={{ flexDirection: columns === 2 ? 'row' : 'column', flexWrap: 'wrap', gap: 10 }}>
+          <View style={{ flex: 1, minWidth: columns === 2 ? 260 : 0 }}>
+            <T size={13} bold>{C.weightTrend}</T>
+            {weightPoints.length > 0 ? <Chart height={155} spec={{ title: C.weightTrend, from, to: sel, series: [{ label: C.weightTrend, color: t.blue, dots: true, points: weightPoints }] }} /> : <T muted>{C.noWeightTrend}</T>}
+          </View>
+          <View style={{ flex: 1, minWidth: columns === 2 ? 260 : 0 }}>
+            <T size={13} bold>{C.foodTrend}</T>
+            {intakePoints.length > 0 ? <Chart height={155} spec={{ title: C.foodTrend, from, to: sel, series: [{ label: C.foodTrend, color: t.amber, bars: true, points: intakePoints }] }} /> : <T muted>{C.noFoodTrend}</T>}
+          </View>
+        </View>
+        {openCharts ? <Btn title={C.allCharts} onPress={openCharts} testID="chillAllCharts" /> : null}
+      </Card>
       <Gap h={12} />
       <Card title={C.otherWays} accent={t.blue}>
           <Row gap={8}>
@@ -158,6 +190,13 @@ export function ChillDay({ sel, setSel, openFood, openPhoto }: {
                   <Gap h={8} />
                   <NumField label={C.carbs} value={draft.carbs} digits={1} onChange={(v) => set({ carbs: v })} />
                   <T muted size={12}>{C.foodNote}</T>
+                  {draftMismatch ? (
+                    <View style={{ borderColor: t.amber, borderWidth: 1, borderRadius: 10, padding: 10, marginTop: 8 }} testID="chillDraftKcalMismatch">
+                      <T color={t.amber}>{tx.day.food.mismatch(f.int(draftMismatch.kcal), f.int(draftMismatch.macro), (draftMismatch.diff > 0 ? '+' : '−') + f.int(Math.abs(draftMismatch.diff)))}</T>
+                      <Gap h={6} />
+                      <Btn small title={tx.day.food.recalc(f.int(draftMismatch.macro))} onPress={() => set({ kcal: undefined })} testID="chillDraftKcalRecalc" />
+                    </View>
+                  ) : null}
                 </>
               ) : null}
               {active === 'activity' ? (
