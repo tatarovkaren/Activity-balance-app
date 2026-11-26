@@ -1,0 +1,45 @@
+name: Archive released source
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bundle tracked source, project files, tests and documentation without secrets
+        shell: bash
+        run: |
+          mkdir -p dist
+          python3 - <<'PY'
+          import os, re, subprocess, zipfile, hashlib, datetime
+          paths = subprocess.check_output(['git','ls-files','-z']).decode().split('\0')
+          blocked = re.compile(r'(^|/)(\.env[^/]*|\.git|\.npmrc|\.pypirc|credentials[^/]*|secrets?[^/]*|private[-_]?key[^/]*|personal[-_]?data[^/]*)($|/)|\.(pem|p12|pfx|key|sqlite|db)$',re.I)
+          commit = subprocess.check_output(['git','rev-parse','HEAD']).decode().strip()
+          archive = f'dist/activity-balance-source-0.45.0-{commit[:10]}.zip'
+          included = []
+          with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=8) as z:
+              for p in paths:
+                  if not p or blocked.search(p) or not os.path.isfile(p):
+                      continue
+                  z.write(p,p)
+                  included.append(p)
+              manifest = f'Activity Balance 0.45.0\nGit commit: {commit}\nUTC: {datetime.datetime.now(datetime.timezone.utc).isoformat()}\nFiles: {len(included)}\nExcluded: environment files, keys, credentials, private databases and personal data by path rules\n'
+              z.writestr('RELEASE_MANIFEST.txt',manifest)
+          with open('dist/SHA256SUMS.txt','w') as f:
+              f.write(hashlib.sha256(open(archive,'rb').read()).hexdigest()+'  '+os.path.basename(archive)+'\n')
+          print(f'{len(included)} tracked files archived: {archive}')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: activity-balance-source-0.45.0
+          path: dist/*
+          retention-days: 90
+          if-no-files-found: error
