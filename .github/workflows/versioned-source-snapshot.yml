@@ -1,0 +1,79 @@
+name: Versioned source snapshot
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build privacy-filtered repository snapshot
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, pathlib, re, shutil, subprocess, os
+          root = pathlib.Path('release-snapshot')
+          root.mkdir(exist_ok=True)
+          tracked = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')
+          excluded = []
+          sanitized = []
+          for rel in filter(None, tracked):
+              path = pathlib.PurePosixPath(rel)
+              # Never export environment files, private settings, credentials, or personal hand-calibration notes.
+              if (any(part.startswith('.env') for part in path.parts)
+                  or path.parts[0] == '.claude'
+                  or rel == 'docs/hand-portion-method.md'
+                  or path.suffix.lower() in {'.pem', '.p12', '.pfx', '.key'}
+                  or any(part in {'secrets', 'private', 'credentials'} for part in path.parts)):
+                  excluded.append(rel)
+                  continue
+              source = pathlib.Path(rel)
+              if not source.is_file():
+                  continue
+              destination = root / rel
+              destination.parent.mkdir(parents=True, exist_ok=True)
+              data = source.read_bytes()
+              try:
+                  value = data.decode('utf-8')
+              except UnicodeDecodeError:
+                  destination.write_bytes(data)
+                  continue
+              original = value
+              # Redact names and personal emails in the portable copy; canonical code stays in GitHub.
+              for needle in ['Карэн', 'Karen Tatarov']:
+                  value = value.replace(needle, 'Test User')
+              value = re.sub(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', 'redacted@example.invalid', value)
+              if re.search(r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|ghp_[A-Za-z0-9]{36}|sk-[A-Za-z0-9]{24,}', value):
+                  raise RuntimeError('Potential credential found in archive source: ' + rel)
+              destination.write_bytes(value.encode('utf-8'))
+              if value != original:
+                  sanitized.append(rel)
+          manifest = {
+              'repository': 'tatarovkaren/Activity-balance-app',
+              'version': json.loads(pathlib.Path('app.json').read_text())['expo']['version'],
+              'source_commit': os.environ.get('GITHUB_SHA'),
+              'source': 'GitHub tracked tree, with privacy exclusions/redactions',
+              'excluded_private_paths': excluded,
+              'redacted_files': sanitized,
+              'google_drive_project_folder': 'AI/Activity balance app',
+              'note': 'Do not treat this archive as a source for secrets. Private project settings are omitted. Canonical tracked tree is the GitHub commit.',
+          }
+          (root / 'ARCHIVE_MANIFEST.json').write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + '\n')
+          files = [p for p in root.rglob('*') if p.is_file()]
+          print('Prepared', len(files), 'files;', len(excluded), 'excluded;', len(sanitized), 'sanitized')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Activity-Balance-v0.45.0-source-${{ github.sha }}
+          path: release-snapshot/
+          retention-days: 90
+          if-no-files-found: error
