@@ -70,7 +70,8 @@ describe('отчёт дня картинкой', () => {
     expect(svg).toContain('fill="#299DAD"');
     expect(svg).toContain('fill="#EF6570"');
     expect(svg).toContain('fill="url(#hatch)"');
-    expect(svg).toContain('2 183');
+    // RU formatter uses U+00A0 non-breaking space as thousands separator in exported SVG.
+    expect(svg).toContain('2\u00a0183');
     expect(svg).toContain('Перебор калорий +483');
     const accessible = reportSvg(i18nFor('ru'), { ...base, colorblind: true }).svg;
     expect(accessible).toContain('fill="#FFFFFF"');
