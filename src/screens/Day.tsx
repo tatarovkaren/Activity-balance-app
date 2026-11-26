@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Platform, Pressable, View } from 'react-native';
+import { Platform, Pressable, View, useWindowDimensions } from 'react-native';
 import { dayDiff, shiftDate, todayISO, ageAt, type ISODate } from '../core/dates';
 import { bodyFatNorm, carriedMeasure, extraMeasureKeys, measureHint, missingFatFields, navyBodyFat } from '../core/body';
 import { classifyWorkout, KCAL_PER_KG, kcalMismatch, macroKcal } from '../core/energy';
@@ -20,6 +20,7 @@ import { dayPlan, fatTone, kcalTone, proteinTone, type Tone } from '../core/targ
 import { planLine, planNotes, toneColor } from '../ui/targets';
 import { ProposalCards } from './Goal';
 import { useAdvanced } from '../ui/mode';
+import { layoutColumns } from '../ui/layout';
 import { CalendarIcon, DatePicker } from '../ui/DatePicker';
 import { backupDue } from '../core/backup';
 import { dayPart, greetName } from '../core/greeting';
@@ -70,6 +71,8 @@ export function DayScreen({
   // в облаке данные и так сохраняются на сервере — напоминание только без входа и в демо
   const due = session.mode === 'cloud' ? null : backupDue(data.lastBackupAt, Object.keys(days), profile.backupReminder);
   const adv = useAdvanced();
+  const wide = layoutColumns(useWindowDimensions().width, profile.layoutMode) === 2;
+  const columnCard = wide ? { flexBasis: '47%' as const, flexGrow: 1 } : undefined;
   const today = todayISO();
   const set = (patch: Parameters<typeof setDay>[1]) => setDay(sel, patch);
   /** День с записями — точка в календаре. */
@@ -248,8 +251,9 @@ export function DayScreen({
         </Card>
       </View>
 
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
       {/* КБЖУ */}
-      <Card title={D.food.title} accent={t.amber} right={score ? <DayLabel s={score} testID="dayLabel" /> : null}>
+      <Card title={D.food.title} accent={t.amber} style={columnCard} right={score ? <DayLabel s={score} testID="dayLabel" /> : null}>
         <Row gap={6} style={{ marginBottom: 10 }}>
           {openFood ? <Btn small kind="solid" title={D.food.addFood} onPress={openFood} testID="addFood" /> : null}
           {openPhoto ? <Btn small kind="solid" title={D.food.photo} onPress={() => setAskMeal(!askMeal)} testID="photoMeal" /> : null}
@@ -330,7 +334,7 @@ export function DayScreen({
       </Card>
 
       {/* Тренировка */}
-      <Card title={D.workout.title} accent={t.red} right={<WeekCount w={week} />}>
+      <Card title={D.workout.title} accent={t.red} style={columnCard} right={<WeekCount w={week} />}>
         <WeekStrip w={week} sel={sel} curator={!!data.curator} onPick={setSel} />
         <Gap h={10} />
         <Seg<'cardio' | 'strength'>
@@ -384,7 +388,7 @@ export function DayScreen({
       </Card>
 
       {/* Баланс */}
-      <Card title={D.balance.title} accent={t.amber}>
+      <Card title={D.balance.title} accent={t.amber} style={columnCard}>
         {en && en.intake ? (
           <T>
             {D.balance.today}
@@ -447,7 +451,7 @@ export function DayScreen({
       </Card>
 
       {/* Замеры */}
-      <Card title={D.body.title(tx.common.freq[profile.measureFreq])} accent={t.teal}>
+      <Card title={D.body.title(tx.common.freq[profile.measureFreq])} accent={t.teal} style={columnCard}>
         {mh.kind === 'next' ? <T muted size={13}>{D.body.next(f.dmy(mh.date), mh.inDays)}</T> : null}
         {mh.kind === 'due' ? <Note>{D.body.due(f.dmy(mh.last), mh.agoDays)}</Note> : null}
         {mh.kind === 'first' ? <Note>{D.body.first(profile.sex === 'female')}</Note> : null}
@@ -506,6 +510,7 @@ export function DayScreen({
         </Row>
       </Card>
 
+      </View>
       {/* Комментарии куратора к этому дню */}
       {(data.curatorComments || []).some((c) => c.date === sel) ? (
         <Card title={D.curatorNotes} accent={t.blue}>
