@@ -716,7 +716,7 @@ export const en: Dict = {
       chill: 'Chill',
       basic: 'Basic',
       advanced: 'Advanced',
-      chillNote: 'Four simple daily entry buttons. The same diary data is available in Basic and Advanced.',
+      chillNote: 'Five simple daily entry buttons. The same diary data is available in Basic and Advanced.',
       basicNote: 'Just the essentials: weight, steps, food, workouts and the day total. Same calculation, details hidden.',
       advancedNote: 'Everything: burn breakdown, reliability, excluded days, fine goal settings and formulas.',
     },
