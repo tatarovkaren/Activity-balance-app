@@ -17,6 +17,6 @@ export function buildCore(root = '.') {
   const head =
     '// СОБРАНО АВТОМАТИЧЕСКИ из src/core командой `npm run fn:bundle`. Не править руками.\n' +
     '// Типы, которые серверу не нужны, заменены заглушками.\n' +
-    'type GoalSetting = any;\ntype NotifyPrefs = any;\n\n';
+    'type GoalSetting = any;\ntype NotifyPrefs = any;\n// Compatibility with the stored Fold layout field; the Edge Function does not use this setting.\ntype LayoutMode = \'auto\' | \'single\' | \'double\';\n\n';
   return head + parts.join('\n');
 }

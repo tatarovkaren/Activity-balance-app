@@ -9,6 +9,19 @@ export type ChangelogEntry = { v: string } & Record<Lang, string[]>;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    v: '0.45.0',
+    ru: [
+      'Новый режим «Чиловый»: вводите вес, питание, активность, самочувствие и замеры тела через короткие диалоги.',
+      'Смотрите результаты за 14 дней: четыре компактных графика веса, калорий, шагов и самочувствия прямо на вкладке «День».',
+      'В лёгком режиме доступны импорт FatSecret, фото еды и предупреждения при несовпадении калорий с БЖУ.',
+    ],
+    en: [
+      'New Chill mode: log weight, food, activity, wellbeing and body measurements in quick dialogs.',
+      'See your last 14 days right on the Day screen with four compact weight, calories, steps and wellbeing charts.',
+      'Chill mode also offers FatSecret import, food photos and warnings when calories disagree with macros.',
+    ],
+  },
+  {
     v: '0.44.0',
     ru: [
       'Отчёт дня картинкой теперь в стиле Dark Premium: тёмные карточки, выразительная шапка и более чёткие цветовые статусы.',

@@ -2,6 +2,8 @@
 // Типы, которые серверу не нужны, заменены заглушками.
 type GoalSetting = any;
 type NotifyPrefs = any;
+// Compatibility with the stored Fold layout field; the Edge Function does not use this setting.
+type LayoutMode = 'auto' | 'single' | 'double';
 
 // ======== src/core/dates.ts ========
 // Даты только по местному времени. Никогда не использовать toISOString() для строки даты:
@@ -92,8 +94,8 @@ export type LangPref = 'system' | Lang;
 export type MeasureFreq = 'week' | '2weeks' | 'month';
 export type Plan = 'free' | 'premium';
 /** Режим интерфейса: «базовый» прячет сложные показатели, расчёт одинаковый. */
-export type UiMode = 'basic' | 'advanced';
-export const UI_MODES: UiMode[] = ['basic', 'advanced'];
+export type UiMode = 'chill' | 'basic' | 'advanced';
+export const UI_MODES: UiMode[] = ['chill', 'basic', 'advanced'];
 
 /** Причины ручной отметки «Необычный день». «cycle» — только в женском режиме. */
 export type AnomalyReason = 'trip' | 'feast' | 'illness' | 'incomplete' | 'cycle' | 'other';
@@ -131,6 +133,8 @@ export interface Profile {
   plan: Plan;
   /** Базовый — для неподготовленного клиента (по умолчанию), продвинутый — все показатели. */
   uiMode: UiMode;
+  /** Компоновка для широкого экрана: независима от объёма отображаемой информации. */
+  layoutMode?: LayoutMode;
   /** Анкета первого входа пройдена (пол, дата рождения, рост, вес). Нет — показываем анкету. */
   onboarded?: boolean;
   /** Напоминать на «Дне», если резервной копии не было 7 дней. Нет поля — да. */

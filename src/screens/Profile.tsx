@@ -104,7 +104,7 @@ export function ProfileScreen({ openHand, openHelp, openWiki }: { openHand: () =
       <Card title={P.uiMode.title} accent={t.violet}>
         <Seg<UiMode> value={p.uiMode} onChange={(v) => set({ uiMode: v })} options={UI_MODES.map((m) => ({ v: m, label: P.uiMode[m] }))} testID="uiMode" />
         <Gap h={6} />
-        <T muted size={12}>{p.uiMode === 'basic' ? P.uiMode.basicNote : P.uiMode.advancedNote}</T>
+        <T muted size={12}>{p.uiMode === 'chill' ? P.uiMode.chillNote : p.uiMode === 'basic' ? P.uiMode.basicNote : P.uiMode.advancedNote}</T>
       </Card>
 
       <Card title={P.sexTitle} accent={t.amber}>
@@ -147,7 +147,7 @@ export function ProfileScreen({ openHand, openHelp, openWiki }: { openHand: () =
         <T muted size={12}>{P.measureFreq}</T>
         <Seg<MeasureFreq> value={p.measureFreq} onChange={(v) => set({ measureFreq: v })} options={MEASURE_FREQS.map((k) => ({ v: k, label: tx.common.freq[k] }))} />
         <Gap h={8} />
-        {p.uiMode !== 'basic' ? (
+        {p.uiMode === 'advanced' ? (
           <>
             <T muted size={12}>{P.bmr}</T>
             <Seg value={p.bmrFormula} onChange={(v) => set({ bmrFormula: v })} options={[{ v: 'mifflin', label: P.mifflin }, { v: 'lean', label: P.lean }]} />

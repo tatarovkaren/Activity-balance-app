@@ -12,6 +12,7 @@ import { DayScreen } from './src/screens/Day';
 import { FactScreen } from './src/screens/Fact';
 import { ChartsScreen } from './src/screens/Charts';
 import { HandSetup, PhotoScreen } from './src/screens/Photo';
+import { ChillDay } from './src/screens/ChillDay';
 import { ProfileScreen } from './src/screens/Profile';
 import { FoodScreen } from './src/screens/Food';
 import { CuratorScreen } from './src/screens/Curator';
@@ -64,6 +65,7 @@ function Shell() {
   if (!ready) return <View style={{ flex: 1, backgroundColor: t.bg }} />;
 
   const curator = session.mode !== 'none' && session.role === 'curator';
+  // Fold uses one readable column; saved manual column preferences are no longer applied.
   const maxW = curator ? 1200 : 640;
   // первый шаг клиента — анкета: возраст, рост, вес
   const onboarding = session.mode !== 'none' && !curator && !data.profile.onboarded;
@@ -94,7 +96,7 @@ function Shell() {
           <OnboardingScreen />
         ) : (
           <>
-            {tab === 'day' ? <DayScreen sel={sel} setSel={setSel} openFact={() => setTab('fact')} openPhoto={(m) => { setPhotoMeal(m); setTab('photo'); }} openFood={() => setTab('food')} /> : null}
+            {tab === 'day' ? data.profile.uiMode === 'chill' ? <ChillDay sel={sel} setSel={setSel} openCharts={() => setTab('charts')} openPhoto={(m) => { setPhotoMeal(m); setTab('photo'); }} openFood={() => setTab('food')} /> : <DayScreen sel={sel} setSel={setSel} openFact={() => setTab('fact')} openPhoto={(m) => { setPhotoMeal(m); setTab('photo'); }} openFood={() => setTab('food')} /> : null}
             {tab === 'food' ? <FoodScreen sel={sel} onBack={() => setTab('day')} /> : null}
             {tab === 'fact' ? <FactScreen sel={sel} /> : null}
             {tab === 'charts' ? <ChartsScreen sel={sel} /> : null}
@@ -111,8 +113,8 @@ function Shell() {
       </ScrollView>
       {session.mode !== 'none' && !curator && !onboarding ? (
         <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: t.card, borderTopWidth: 1, borderColor: t.line }}>
-          <View style={{ flexDirection: 'row', maxWidth: 640, width: '100%', alignSelf: 'center' }}>
-            {TABS.map((x) => {
+          <View style={{ flexDirection: 'row', maxWidth: maxW, width: '100%', alignSelf: 'center' }}>
+            {TABS.filter((x) => data.profile.uiMode !== 'chill' || x.id === 'day' || x.id === 'charts' || x.id === 'profile').map((x) => {
               const on = tab === x.id || (x.id === 'day' && tab === 'food') || (x.id === 'profile' && (tab === 'hand' || tab === 'help' || tab === 'wiki'));
               return (
                 <Pressable

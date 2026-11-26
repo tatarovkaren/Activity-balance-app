@@ -1,0 +1,264 @@
+// Простой режим: данные общие с обычным дневником, но ввод в коротких диалогах.
+// При отмене ничего не записываем. Не создаём отдельный источник данных.
+import React, { useState } from 'react';
+import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { shiftDate, todayISO, type ISODate } from '../core/dates';
+import type { DayEntry, MealSlot } from '../core/types';
+import { applyFoodDays } from '../core/importers';
+import { kcalMismatch, macroKcal } from '../core/energy';
+import { chillProgress } from '../core/chill-progress';
+import { Chart } from '../ui/Chart';
+import { importFatSecretFile } from '../ui/fatsecret';
+import { importSummaryText } from '../ui/format';
+import { errorText } from '../i18n';
+import { useStore } from '../data/store';
+import { Btn, Card, Gap, NumField, Row, T, TextField } from '../ui/kit';
+import { useTheme } from '../ui/theme';
+import { useI18n } from '../i18n';
+
+type Section = 'weight' | 'food' | 'activity' | 'feeling' | 'measure';
+type Draft = Pick<DayEntry, 'weight' | 'kcal' | 'protein' | 'fat' | 'carbs' | 'steps' | 'workoutMin' | 'wellbeing' | 'comment' | 'neck' | 'waist' | 'hips' | 'chest' | 'biceps'>;
+
+export function ChillDay({ sel, setSel, openFood, openPhoto, openCharts }: {
+  sel: ISODate;
+  setSel: (day: ISODate) => void;
+  openFood?: () => void;
+  openPhoto?: (meal?: MealSlot) => void;
+  openCharts?: () => void;
+}) {
+  const t = useTheme();
+  const L = useI18n();
+  const { tx, f } = L;
+  const C = tx.chill;
+  const { data, setDay, replaceDays } = useStore();
+  const e = data.days[sel] || {};
+  const savedMismatch = kcalMismatch(e);
+  const { from, weightPoints, intakePoints, stepsPoints, wellbeingPoints, weightChange, averageSteps, averageFeeling } = chillProgress(data.days, sel);
+  const [active, setActive] = useState<Section | null>(null);
+  const [draft, setDraft] = useState<Draft>({});
+  const [error, setError] = useState('');
+  const draftMismatch = kcalMismatch({ ...draft, kcalManual: draft.kcal != null });
+  const [importMsg, setImportMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [importing, setImporting] = useState(false);
+  // Точно тот же механизм FatSecret, что в обычном дневнике.
+  const importCsv = async () => {
+    if (importing) return;
+    setImporting(true);
+    try {
+      const result = await importFatSecretFile();
+      if (!result) return;
+      if (!result.ok) return setImportMsg({ text: errorText(L, result.error), ok: false });
+      const merged = applyFoodDays(data.days, result.days, result.skipped);
+      replaceDays(merged.days);
+      setImportMsg({ text: importSummaryText(L, merged), ok: true });
+      if (result.days.length === 1 && result.days[0].date !== sel) setSel(result.days[0].date);
+    } catch {
+      setImportMsg({ text: C.importFailed, ok: false });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const open = (section: Section) => {
+    setDraft({
+      weight: e.weight, kcal: e.kcal, protein: e.protein, fat: e.fat, carbs: e.carbs,
+      steps: e.steps, workoutMin: e.workoutMin, wellbeing: e.wellbeing, comment: e.comment,
+      neck: e.neck, waist: e.waist, hips: e.hips, chest: e.chest, biceps: e.biceps,
+    });
+    setError('');
+    setActive(section);
+  };
+  const set = (patch: Partial<Draft>) => setDraft((old) => ({ ...old, ...patch }));
+  const save = () => {
+    if (!active) return;
+    let patch: Partial<DayEntry>;
+    if (active === 'weight') {
+      if (draft.weight != null && (draft.weight < 20 || draft.weight > 400)) return setError(C.invalidWeight);
+      patch = { weight: draft.weight };
+    } else if (active === 'food') {
+      if ([draft.kcal, draft.protein, draft.fat, draft.carbs].some((v) => v != null && (v < 0 || v > 12000))) return setError(C.invalidValue);
+      patch = { kcal: draft.kcal, kcalManual: draft.kcal != null, protein: draft.protein, fat: draft.fat, carbs: draft.carbs };
+    } else if (active === 'activity') {
+      if (draft.steps != null && (draft.steps < 0 || draft.steps > 200000)) return setError(C.invalidValue);
+      if (draft.workoutMin != null && (draft.workoutMin < 0 || draft.workoutMin > 1440)) return setError(C.invalidValue);
+      patch = { steps: draft.steps, workoutMin: draft.workoutMin };
+    } else if (active === 'measure') {
+      if ([draft.neck, draft.waist, draft.hips, draft.chest, draft.biceps].some((v) => v != null && (!Number.isFinite(v) || v <= 0 || v > 300))) return setError(C.invalidMeasure);
+      patch = { neck: draft.neck, waist: draft.waist, hips: draft.hips, chest: draft.chest, biceps: draft.biceps };
+    } else {
+      if (draft.wellbeing != null && (!Number.isInteger(draft.wellbeing) || draft.wellbeing < 1 || draft.wellbeing > 10)) return setError(C.invalidFeeling);
+      patch = { wellbeing: draft.wellbeing, comment: draft.comment };
+    }
+    setDay(sel, patch);
+    setActive(null);
+  };
+  const sections: { id: Section; icon: string; title: string; value: string; accent: string }[] = [
+    { id: 'weight', icon: '⚖', title: C.weight, value: e.weight == null ? C.add : f.num(e.weight, 2) + ' ' + tx.common.kg, accent: t.blue },
+    { id: 'food', icon: '◉', title: C.food, value: e.kcal == null && macroKcal(e.protein, e.fat, e.carbs) == null ? C.add : f.int(e.kcal ?? Math.round(macroKcal(e.protein, e.fat, e.carbs)!)) + ' ' + tx.common.kcal, accent: t.amber },
+    { id: 'activity', icon: '↗', title: C.activity, value: e.steps == null ? C.add : f.int(e.steps) + ' ' + C.steps, accent: t.green },
+    { id: 'feeling', icon: '♡', title: C.feeling, value: e.wellbeing == null ? C.add : e.wellbeing + '/10', accent: t.violet },
+    { id: 'measure', icon: '◎', title: C.measure, value: e.waist != null ? C.waist + ': ' + f.num(e.waist, 1) + ' ' + tx.common.cm : [e.neck,e.hips,e.chest,e.biceps].some(v => v != null) ? C.recorded : C.add, accent: t.teal },
+  ];
+  return (
+    <View testID="chillDay">
+      <Row style={{ justifyContent: 'space-between', marginBottom: 12 }}>
+        <View style={{ flexShrink: 1 }}>
+          <T muted size={12} style={{ letterSpacing: 1 }}>{C.title}</T>
+          <T size={24} bold>{f.longDate(sel)}</T>
+        </View>
+        <Row gap={5}>
+          <Btn small title="‹" onPress={() => setSel(shiftDate(sel, -1))} testID="chillPrevDay" />
+          {sel !== todayISO() ? <Btn small title={tx.common.today} onPress={() => setSel(todayISO())} /> : null}
+          <Btn small title="›" onPress={() => setSel(shiftDate(sel, 1))} disabled={sel >= todayISO()} testID="chillNextDay" />
+        </Row>
+      </Row>
+      <Card accent={t.teal}>
+        <T bold size={20}>{C.welcome}</T>
+        <Gap h={4} />
+        <T muted>{C.subtitle}</T>
+      </Card>
+      <Gap h={10} />
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }} testID="chillQuickGrid">
+        {sections.map((section) => (
+          <Pressable
+            key={section.id}
+            accessibilityRole="button"
+            accessibilityLabel={section.title}
+            testID={'chill-' + section.id}
+            onPress={() => open(section.id)}
+            style={{ backgroundColor: t.card, borderColor: t.cardBorder, borderWidth: 1, borderRadius: 16, minWidth: 0, flexBasis: section.id === 'measure' ? '100%' : '47%', flexGrow: 1, minHeight: 112, padding: 12, justifyContent: 'space-between' }}
+          >
+            <Row gap={8}>
+              <T size={25} color={section.accent}>{section.icon}</T>
+              <T bold size={15} style={{ flexShrink: 1 }}>{section.title}</T>
+            </Row>
+            <T size={14} color={section.value === C.add ? t.muted : t.text}>{section.value}</T>
+            <T muted size={12}>{C.tap}</T>
+          </Pressable>
+        ))}
+      </View>
+      {savedMismatch ? (
+        <Card title={C.mismatchTitle} accent={t.amber}>
+          <T color={t.amber} testID="chillKcalMismatch">{tx.day.food.mismatch(f.int(savedMismatch.kcal), f.int(savedMismatch.macro), (savedMismatch.diff > 0 ? '+' : '−') + f.int(Math.abs(savedMismatch.diff)))}</T>
+          <Gap h={6} />
+          <Btn small title={tx.day.food.recalc(f.int(savedMismatch.macro))} onPress={() => setDay(sel, { kcal: undefined, kcalManual: undefined })} testID="chillKcalRecalc" />
+        </Card>
+      ) : null}
+      <Gap h={12} />
+      <Card title={C.trendsTitle} accent={t.teal}>
+        <T muted size={12}>{C.trendsHint}</T>
+        <Gap h={8} />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }} testID="chillProgressGrid">
+          <View style={{ flexBasis: '47%', flexGrow: 1, minWidth: 0, padding: 8, backgroundColor: t.bg, borderRadius: 12, borderWidth: 1, borderColor: t.line }} testID="chillWeightTrend">
+            <T bold size={13}>{C.weightTrend}</T>
+            <T size={15} bold color={t.blue}>{weightChange != null ? f.signed(weightChange, 2) + ' ' + tx.common.kg : weightPoints.length ? f.num(weightPoints[weightPoints.length - 1].v, 2) + ' ' + tx.common.kg : '—'}</T>
+            {weightPoints.length >= 2
+              ? <Chart height={112} spec={{ title: C.weightTrend, from, to: sel, series: [{ label: C.weightTrend, color: t.blue, dots: true, points: weightPoints }] }} />
+              : <T muted size={11}>{C.needTwoWeights}</T>}
+          </View>
+          <View style={{ flexBasis: '47%', flexGrow: 1, minWidth: 0, padding: 8, backgroundColor: t.bg, borderRadius: 12, borderWidth: 1, borderColor: t.line }} testID="chillFoodTrend">
+            <T bold size={13}>{C.foodTrend}</T>
+            <T size={15} bold color={t.amber}>{intakePoints.length ? f.int(intakePoints[intakePoints.length - 1].v) + ' ' + tx.common.kcal : '—'}</T>
+            {intakePoints.length >= 2
+              ? <Chart height={112} spec={{ title: C.foodTrend, from, to: sel, series: [{ label: C.foodTrend, color: t.amber, bars: true, points: intakePoints }] }} />
+              : <T muted size={11}>{C.needTwoCalories}</T>}
+          </View>
+          <View style={{ flexBasis: '47%', flexGrow: 1, minWidth: 0, padding: 8, backgroundColor: t.bg, borderRadius: 12, borderWidth: 1, borderColor: t.line }} testID="chillStepsTrend">
+            <T bold size={13}>{C.stepsTrend}</T>
+            <T size={15} bold color={t.green}>{averageSteps != null ? C.avgSteps(f.int(averageSteps)) : '—'}</T>
+            {stepsPoints.length >= 2
+              ? <Chart height={112} spec={{ title: C.stepsTrend, from, to: sel, series: [{ label: C.stepsTrend, color: t.green, bars: true, points: stepsPoints }] }} />
+              : <T muted size={11}>{C.needTwoSteps}</T>}
+          </View>
+          <View style={{ flexBasis: '47%', flexGrow: 1, minWidth: 0, padding: 8, backgroundColor: t.bg, borderRadius: 12, borderWidth: 1, borderColor: t.line }} testID="chillFeelingTrend">
+            <T bold size={13}>{C.feelingTrend}</T>
+            <T size={15} bold color={t.violet}>{averageFeeling != null ? C.avgFeeling(f.num(averageFeeling, 1)) : '—'}</T>
+            {wellbeingPoints.length >= 2
+              ? <Chart height={112} spec={{ title: C.feelingTrend, from, to: sel, series: [{ label: C.feelingTrend, color: t.violet, dots: true, points: wellbeingPoints }] }} />
+              : <T muted size={11}>{C.needTwoFeeling}</T>}
+          </View>
+        </View>
+        {openCharts ? <Btn title={C.allCharts} onPress={openCharts} testID="chillAllCharts" /> : null}
+      </Card>
+      <Gap h={12} />
+      <Card title={C.otherWays} accent={t.blue}>
+          <Row gap={8}>
+            <Btn title={importing ? C.importing : C.importFs} onPress={importCsv} disabled={importing} testID="chillImportFs" />
+            {openFood ? <Btn title={C.foodCatalog} onPress={openFood} /> : null}
+            {openPhoto ? <Btn title={C.photo} onPress={() => openPhoto()} /> : null}
+          </Row>
+          {importMsg ? <T size={12} color={importMsg.ok ? t.green : t.red} testID="chillImportResult">{importMsg.text}</T> : null}
+        </Card>
+      <T muted size={12} style={{ marginTop: 10 }}>{C.safeNote}</T>
+      <Modal visible={active !== null} transparent animationType="fade" onRequestClose={() => setActive(null)}>
+        <View style={{ flex: 1, justifyContent: 'center', backgroundColor: '#000000AA', paddingHorizontal: 16 }}>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingVertical: 30 }}>
+            <View style={{ width: '100%', maxWidth: 480, alignSelf: 'center', padding: 18, borderRadius: 20, backgroundColor: t.card, borderWidth: 1, borderColor: t.line }}>
+              <T size={21} bold>{active ? sections.find((s) => s.id === active)?.title : ''}</T>
+              <Gap h={12} />
+              {active === 'weight' ? <NumField label={C.weightKg} value={draft.weight} digits={2} onChange={(v) => set({ weight: v })} testID="chillWeightInput" /> : null}
+              {active === 'food' ? (
+                <>
+                  <Btn title={importing ? C.importing : C.importFs} onPress={importCsv} disabled={importing} testID="chillImportFsDialog" />
+                  {importMsg ? <T size={12} color={importMsg.ok ? t.green : t.red}>{importMsg.text}</T> : null}
+                  <Gap h={10} />
+                  <NumField label={C.calories} value={draft.kcal} digits={0} onChange={(v) => set({ kcal: v })} testID="chillKcalInput" />
+                  <Gap h={8} />
+                  <NumField label={C.protein} value={draft.protein} digits={1} onChange={(v) => set({ protein: v })} />
+                  <Gap h={8} />
+                  <NumField label={C.fat} value={draft.fat} digits={1} onChange={(v) => set({ fat: v })} />
+                  <Gap h={8} />
+                  <NumField label={C.carbs} value={draft.carbs} digits={1} onChange={(v) => set({ carbs: v })} />
+                  <T muted size={12}>{C.foodNote}</T>
+                  {draftMismatch ? (
+                    <View style={{ borderColor: t.amber, borderWidth: 1, borderRadius: 10, padding: 10, marginTop: 8 }} testID="chillDraftKcalMismatch">
+                      <T color={t.amber}>{tx.day.food.mismatch(f.int(draftMismatch.kcal), f.int(draftMismatch.macro), (draftMismatch.diff > 0 ? '+' : '−') + f.int(Math.abs(draftMismatch.diff)))}</T>
+                      <Gap h={6} />
+                      <Btn small title={tx.day.food.recalc(f.int(draftMismatch.macro))} onPress={() => set({ kcal: undefined })} testID="chillDraftKcalRecalc" />
+                    </View>
+                  ) : null}
+                </>
+              ) : null}
+              {active === 'activity' ? (
+                <>
+                  <NumField label={C.steps} value={draft.steps} digits={0} onChange={(v) => set({ steps: v })} testID="chillStepsInput" />
+                  <Gap h={8} />
+                  <NumField label={C.workout} value={draft.workoutMin} digits={0} onChange={(v) => set({ workoutMin: v })} />
+                </>
+              ) : null}
+              {active === 'measure' ? (
+                <>
+                  <T muted size={12}>{C.measureHelp}</T>
+                  <Gap h={10} />
+                  <NumField label={C.neck} value={draft.neck} digits={1} onChange={(v) => set({ neck: v })} suffix={tx.common.cm} testID="chillNeckInput" />
+                  <Gap h={8} />
+                  <NumField label={C.waist} value={draft.waist} digits={1} onChange={(v) => set({ waist: v })} suffix={tx.common.cm} testID="chillWaistInput" />
+                  <Gap h={8} />
+                  {data.profile.sex === 'female' ? <><NumField label={C.hips} value={draft.hips} digits={1} onChange={(v) => set({ hips: v })} suffix={tx.common.cm} testID="chillHipsInput" /><Gap h={8} /></> : null}
+                  <NumField label={C.chest} value={draft.chest} digits={1} onChange={(v) => set({ chest: v })} suffix={tx.common.cm} testID="chillChestInput" />
+                  <Gap h={8} />
+                  <NumField label={C.biceps} value={draft.biceps} digits={1} onChange={(v) => set({ biceps: v })} suffix={tx.common.cm} testID="chillBicepsInput" />
+                  {data.profile.sex !== 'female' ? <><Gap h={8} /><NumField label={C.hipsOptional} value={draft.hips} digits={1} onChange={(v) => set({ hips: v })} suffix={tx.common.cm} testID="chillHipsInput" /></> : null}
+                  <Gap h={6} /><T muted size={12}>{C.measureTrendHint}</T>
+                </>
+              ) : null}
+              {active === 'feeling' ? (
+                <>
+                  <NumField label={C.feelingScore} value={draft.wellbeing} digits={0} onChange={(v) => set({ wellbeing: v })} testID="chillFeelingInput" />
+                  <Gap h={8} />
+                  <TextField label={C.comment} value={draft.comment} onChange={(v) => set({ comment: v })} multiline />
+                </>
+              ) : null}
+              {error ? <T color={t.red} size={12}>{error}</T> : null}
+              <Gap h={16} />
+              <Row gap={8}>
+                <Btn kind="solid" title={C.save} onPress={save} testID="chillSave" />
+                <Btn title={C.cancel} onPress={() => setActive(null)} testID="chillCancel" />
+              </Row>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+    </View>
+  );
+}
