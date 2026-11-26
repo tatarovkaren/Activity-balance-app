@@ -1,7 +1,7 @@
 // Простой режим: данные общие с обычным дневником, но ввод в коротких диалогах.
 // При отмене ничего не записываем. Не создаём отдельный источник данных.
 import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { Modal, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
 import { shiftDate, todayISO, type ISODate } from '../core/dates';
 import type { DayEntry, MealSlot } from '../core/types';
 import { applyFoodDays } from '../core/importers';
@@ -12,6 +12,7 @@ import { useStore } from '../data/store';
 import { Btn, Card, Gap, NumField, Row, T, TextField } from '../ui/kit';
 import { useTheme } from '../ui/theme';
 import { useI18n } from '../i18n';
+import { layoutColumns } from '../ui/layout';
 
 type Section = 'weight' | 'food' | 'activity' | 'feeling';
 type Draft = Pick<DayEntry, 'weight' | 'kcal' | 'protein' | 'fat' | 'carbs' | 'steps' | 'workoutMin' | 'wellbeing' | 'comment'>;
@@ -27,6 +28,8 @@ export function ChillDay({ sel, setSel, openFood, openPhoto }: {
   const { tx, f } = L;
   const C = tx.chill;
   const { data, setDay, replaceDays } = useStore();
+  const width = useWindowDimensions().width;
+  const columns = layoutColumns(width, data.profile.layoutMode);
   const e = data.days[sel] || {};
   const [active, setActive] = useState<Section | null>(null);
   const [draft, setDraft] = useState<Draft>({});
@@ -114,7 +117,7 @@ export function ChillDay({ sel, setSel, openFood, openPhoto }: {
             accessibilityLabel={section.title}
             testID={'chill-' + section.id}
             onPress={() => open(section.id)}
-            style={{ backgroundColor: t.card, borderColor: t.cardBorder, borderWidth: 1, borderRadius: 16, minWidth: 145, flexBasis: '44%', flexGrow: 1, minHeight: 118, padding: 16, justifyContent: 'space-between' }}
+            style={{ backgroundColor: t.card, borderColor: t.cardBorder, borderWidth: 1, borderRadius: 16, minWidth: columns === 2 ? 260 : 0, width: columns === 2 ? '48%' : '100%', flexGrow: 1, minHeight: 118, padding: 16, justifyContent: 'space-between' }}
           >
             <Row gap={8}>
               <T size={25} color={section.accent}>{section.icon}</T>
