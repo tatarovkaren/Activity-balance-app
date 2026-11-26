@@ -96,8 +96,8 @@ type LangPref = 'system' | Lang;
 type MeasureFreq = 'week' | '2weeks' | 'month';
 type Plan = 'free' | 'premium';
 /** Режим интерфейса: «базовый» прячет сложные показатели, расчёт одинаковый. */
-type UiMode = 'basic' | 'advanced';
-const UI_MODES: UiMode[] = ['basic', 'advanced'];
+type UiMode = 'chill' | 'basic' | 'advanced';
+const UI_MODES: UiMode[] = ['chill', 'basic', 'advanced'];
 
 /** Причины ручной отметки «Необычный день». «cycle» — только в женском режиме. */
 type AnomalyReason = 'trip' | 'feast' | 'illness' | 'incomplete' | 'cycle' | 'other';
@@ -135,6 +135,8 @@ interface Profile {
   plan: Plan;
   /** Базовый — для неподготовленного клиента (по умолчанию), продвинутый — все показатели. */
   uiMode: UiMode;
+  /** Компоновка для широкого экрана: независима от объёма отображаемой информации. */
+  layoutMode?: LayoutMode;
   /** Анкета первого входа пройдена (пол, дата рождения, рост, вес). Нет — показываем анкету. */
   onboarded?: boolean;
   /** Напоминать на «Дне», если резервной копии не было 7 дней. Нет поля — да. */
