@@ -104,7 +104,7 @@ export function ProfileScreen({ openHand, openHelp, openWiki }: { openHand: () =
       <Card title={P.uiMode.title} accent={t.violet}>
         <Seg<UiMode> value={p.uiMode} onChange={(v) => set({ uiMode: v })} options={UI_MODES.map((m) => ({ v: m, label: P.uiMode[m] }))} testID="uiMode" />
         <Gap h={6} />
-        <T muted size={12}>{p.uiMode === 'basic' ? P.uiMode.basicNote : P.uiMode.advancedNote}</T>
+        <T muted size={12}>{p.uiMode === 'chill' ? P.uiMode.chillNote : p.uiMode === 'basic' ? P.uiMode.basicNote : P.uiMode.advancedNote}</T>
       </Card>
 
       <Card title={P.sexTitle} accent={t.amber}>
