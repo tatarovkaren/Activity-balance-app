@@ -684,6 +684,13 @@ export const en: Dict = {
   },
 
   profile: {
+    layout: {
+      title: 'Screen layout',
+      auto: 'Auto',
+      single: '1 column',
+      double: '2 columns',
+      note: 'A narrow cover screen uses one column. Two columns are available when the unfolded screen is wide enough. No restart needed.',
+    },
     title: 'Profile',
     uiMode: {
       title: 'App mode',
