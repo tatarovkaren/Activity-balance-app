@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, View, type ScrollViewInstance } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, View, useWindowDimensions, type ScrollViewInstance } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { todayISO, type ISODate } from './src/core/dates';
 import type { MealSlot } from './src/core/types';
 import { StoreProvider, useStore } from './src/data/store';
 import { TextSizeProvider, ThemeProvider, useFs, useTheme } from './src/ui/theme';
 import { T } from './src/ui/kit';
+import { layoutColumns } from './src/ui/layout';
 import { I18nProvider, useI18n } from './src/i18n';
 import { LoginScreen } from './src/screens/Login';
 import { DayScreen } from './src/screens/Day';
@@ -65,7 +66,9 @@ function Shell() {
   if (!ready) return <View style={{ flex: 1, backgroundColor: t.bg }} />;
 
   const curator = session.mode !== 'none' && session.role === 'curator';
-  const maxW = curator ? 1200 : 640;
+  const availableWidth = useWindowDimensions().width;
+  const showChillWide = !curator && tab === 'day' && data.profile.uiMode === 'chill' && layoutColumns(availableWidth, data.profile.layoutMode) === 2;
+  const maxW = curator ? 1200 : showChillWide ? 1100 : 640;
   // первый шаг клиента — анкета: возраст, рост, вес
   const onboarding = session.mode !== 'none' && !curator && !data.profile.onboarded;
 
