@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import type { ISODate } from '../core/dates';
 import { goalForecast, PARAMS } from '../core/adaptive';
 import { useStore } from '../data/store';
@@ -12,6 +12,7 @@ import { Chart } from '../ui/Chart';
 import { dayPlan, factLags, planForecast } from '../core/targets';
 import { factForecastText, planForecastText } from '../ui/targets';
 import { useAdvanced } from '../ui/mode';
+import { layoutColumns } from '../ui/layout';
 
 export function FactScreen({ sel }: { sel: ISODate }) {
   const t = useTheme();
@@ -31,6 +32,8 @@ export function FactScreen({ sel }: { sel: ISODate }) {
       : null;
   const premiumLocked = tariff === 'free';
   const adv = useAdvanced();
+  const wide = layoutColumns(useWindowDimensions().width, profile.layoutMode) === 2;
+  const columnCard = wide ? { flexBasis: '47%' as const, flexGrow: 1 } : undefined;
 
   if (!r)
     return (
@@ -47,7 +50,8 @@ export function FactScreen({ sel }: { sel: ISODate }) {
       <T size={22} bold>{F.title}</T>
       <T muted size={13}>{F.subtitle(dm(sel))}</T>
       <Gap h={12} />
-      <Card accent={t.amber}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+      <Card accent={t.amber} style={columnCard}>
         <T bold mono size={32} color={t.amber}>{c.main}</T>
         <T muted size={13}>{c.sub}</T>
         {adv ? (
@@ -70,7 +74,7 @@ export function FactScreen({ sel }: { sel: ISODate }) {
       </Card>
 
       {adv && pts.length >= 7 ? (
-        <Card title={F.chartTitle(PARAMS.WIN)} accent={t.amber}>
+        <Card title={F.chartTitle(PARAMS.WIN)} accent={t.amber} style={columnCard}>
           <Chart
             height={150}
             exportName={`${F.chartFile}-${sel}`}
@@ -90,7 +94,7 @@ export function FactScreen({ sel }: { sel: ISODate }) {
       ) : null}
 
       {adv ? (
-      <Card title={F.excluded} accent={t.red}>
+      <Card title={F.excluded} accent={t.red} style={columnCard}>
         {r.exclList.length ? (
           r.exclList.map((x) => (
             <Row key={x.d} gap={6} style={{ marginBottom: 4 }}>
@@ -136,16 +140,17 @@ export function FactScreen({ sel }: { sel: ISODate }) {
       </Card>
       ) : null}
 
-      <Card title={pf ? tx.target.forecastTitle : F.goalTitle} accent={t.blue}>
+      <Card title={pf ? tx.target.forecastTitle : F.goalTitle} accent={t.blue} style={columnCard}>
         {pf ? <T size={14}>{planForecastText(L, pf)}</T> : null}
         <T size={14}>{pf ? factForecastText(L, goal) : goalText(L, goal)}</T>
         {pf && factLags(pf, goal) ? <Note>{tx.target.lag}</Note> : null}
         {r.trendW ? <T muted size={12}>{F.trendNow(f.num(r.trendW, 1), r.slope != null ? f.signed(r.slope * 7) : '')}</T> : null}
       </Card>
 
-      <Card title={F.howTitle} accent={t.muted}>
+      <Card title={F.howTitle} accent={t.muted} style={columnCard}>
         <T muted size={13}>{adv ? F.how(profile.sex === 'female') : F.howBasic}</T>
       </Card>
+      </View>
     </View>
   );
 }
