@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import { dateRange, dayDiff, isISODate, shiftDate, type ISODate } from '../core/dates';
 import { wls } from '../core/adaptive';
 import { navyBodyFat } from '../core/body';
@@ -11,6 +11,7 @@ import { useTheme } from '../ui/theme';
 import { Chart } from '../ui/Chart';
 import { useI18n } from '../i18n';
 import { useAdvanced } from '../ui/mode';
+import { layoutColumns } from '../ui/layout';
 
 type Scale = 'week' | 'month' | '3m' | 'all' | 'custom';
 
@@ -27,6 +28,8 @@ export function ChartsScreen({ sel }: { sel: ISODate }) {
   const [cTo, setCTo] = useState('');
   const d = useDerived(profile, days, keep, sel);
   const adv = useAdvanced();
+  const wide = layoutColumns(useWindowDimensions().width, profile.layoutMode) === 2;
+  const columnCard = wide ? { flexBasis: '47%' as const, flexGrow: 1 } : undefined;
   const volumeColor: Record<(typeof VOLUME_KEYS)[number], string> = { chest: t.blue, waist: t.amber, hips: t.red, biceps: t.green, neck: t.muted };
 
   const allDates = Object.keys(days).sort();
@@ -96,7 +99,8 @@ export function ChartsScreen({ sel }: { sel: ISODate }) {
       {freeCut ? <T muted size={12} style={{ marginTop: 6 }}>{C.freeCut}</T> : null}
       <Gap h={12} />
 
-      <Card title={C.weightTitle} accent={t.blue}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+      <Card title={C.weightTitle} accent={t.blue} style={columnCard}>
         {series.weights.length ? (
           <>
             <Chart
@@ -119,7 +123,7 @@ export function ChartsScreen({ sel }: { sel: ISODate }) {
         )}
       </Card>
 
-      <Card title={C.kcalTitle} accent={t.amber}>
+      <Card title={C.kcalTitle} accent={t.amber} style={columnCard}>
         {series.intake.length ? (
           <Chart
             exportName={`${C.files.kcal}-${from}-${to}`}
@@ -141,7 +145,7 @@ export function ChartsScreen({ sel }: { sel: ISODate }) {
       </Card>
 
       {adv ? (
-      <Card title={C.deficitTitle} accent={t.green}>
+      <Card title={C.deficitTitle} accent={t.green} style={columnCard}>
         {series.expected.length ? (
           <>
             <Chart
@@ -165,7 +169,7 @@ export function ChartsScreen({ sel }: { sel: ISODate }) {
       </Card>
       ) : null}
 
-      <Card title={C.fatTitle} accent={t.teal}>
+      <Card title={C.fatTitle} accent={t.teal} style={columnCard}>
         {series.fat.length ? (
           <Chart
             height={140}
@@ -177,7 +181,7 @@ export function ChartsScreen({ sel }: { sel: ISODate }) {
         )}
       </Card>
 
-      <Card title={C.volumesTitle} accent={t.violet}>
+      <Card title={C.volumesTitle} accent={t.violet} style={columnCard}>
         {series.volumes.length ? (
           <>
             <Chart
@@ -197,6 +201,7 @@ export function ChartsScreen({ sel }: { sel: ISODate }) {
           <T muted>{C.noVolumes}</T>
         )}
       </Card>
+      </View>
     </View>
   );
 }
