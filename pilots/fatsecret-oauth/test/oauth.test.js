@@ -27,7 +27,7 @@ test('month parameter rejects future/invalid months',()=>{
   assert.equal(monthDate('not-a-month'),null);
   assert.equal(monthDate('2026-13'),null);
   assert.equal(monthDate('2099-01'),null);
-  assert.equal(monthDate('2026-11'),Math.floor(Date.parse('2026-11-15T00:00:00Z')/86400000));
+  assert.equal(monthDate('2026-11'),Math.floor(Date.parse('2026-11-01T00:00:00Z')/86400000));
 });
 test('one or several days maps to only daily nutrition fields',()=>{
   const one=parseMonth(JSON.stringify({month:{day:{date_int:20000,calories:'1700',protein:'100',fat:'60',carbohydrate:'200'}}}));
