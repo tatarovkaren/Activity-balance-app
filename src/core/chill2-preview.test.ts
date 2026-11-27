@@ -1,3 +1,4 @@
+// @ts-ignore Node built-ins are provided by Vitest at runtime; this app does not include @types/node.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
