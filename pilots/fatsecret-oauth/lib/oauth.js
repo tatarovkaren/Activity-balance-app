@@ -81,7 +81,7 @@ export const isGet=(req,res)=>{if(req.method==='GET')return true;json(res,405,{e
 export const isPost=(req,res)=>{if(req.method==='POST')return true;json(res,405,{error:'method_not_allowed'});return false;};
 export function monthDate(month) {
   if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month||''))return null;
-  const d=new Date(month+'-15T00:00:00Z');
+  const d=new Date(month+'-01T00:00:00Z');
   if(!Number.isFinite(d.getTime()) || d.getTime()>Date.now()+86400000)return null;
   return Math.floor(d.getTime()/86400000);
 }
