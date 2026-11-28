@@ -1,0 +1,80 @@
+name: Archive Preview version to Google Drive
+
+on:
+  push:
+    branches: ['preview/project-automation']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  archive:
+    if: github.ref == 'refs/heads/preview/project-automation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Check version or archive configuration change
+        id: version
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch || "$BEFORE" =~ ^0+$ ]]; then
+            echo "archive=true" >> "$GITHUB_OUTPUT"
+          elif ! git cat-file -e "$BEFORE^{commit}"; then
+            echo "::error::Cannot verify the previous version"
+            exit 1
+          elif ! git diff --quiet "$BEFORE" HEAD -- .github/workflows/project-backup-preview.yml scripts/archive-project.py; then
+            echo "archive=true" >> "$GITHUB_OUTPUT"
+          else
+            node --input-type=module <<'JS'
+          import { execFileSync } from 'node:child_process';
+          import { appendFileSync } from 'node:fs';
+          const version = (ref, file) =>
+            JSON.parse(execFileSync('git', ['show', `${ref}:${file}`], { encoding: 'utf8' }));
+          const previous = process.env.BEFORE;
+          if (version(previous, 'package.json').version !== version('HEAD', 'package.json').version ||
+              version(previous, 'app.json').expo.version !== version('HEAD', 'app.json').expo.version) {
+            appendFileSync(process.env.GITHUB_OUTPUT, 'archive=true\n');
+          }
+          JS
+          fi
+      - name: Build and check archive
+        if: steps.version.outputs.archive == 'true'
+        run: |
+          python3 scripts/archive-project.py
+          (cd dist && sha256sum -c SHA256SUMS.txt && unzip -tq activity-balance-source-*.zip)
+      - uses: actions/upload-artifact@v4
+        if: steps.version.outputs.archive == 'true'
+        with:
+          name: snapshot-${{ github.sha }}
+          path: dist/*
+          if-no-files-found: error
+      - name: Copy to Drive and verify content
+        if: steps.version.outputs.archive == 'true'
+        env:
+          DRIVE_FOLDER_ID: ${{ vars.ACTIVITY_BALANCE_PREVIEW_DRIVE_FOLDER_ID }}
+          RCLONE_CONFIG_ACTIVITYDRIVE_TYPE: drive
+          RCLONE_CONFIG_ACTIVITYDRIVE_CLIENT_ID: ${{ secrets.ACTIVITY_BALANCE_DRIVE_CLIENT_ID }}
+          RCLONE_CONFIG_ACTIVITYDRIVE_CLIENT_SECRET: ${{ secrets.ACTIVITY_BALANCE_DRIVE_CLIENT_SECRET }}
+          RCLONE_CONFIG_ACTIVITYDRIVE_TOKEN: ${{ secrets.ACTIVITY_BALANCE_DRIVE_TOKEN }}
+          RCLONE_CONFIG_ACTIVITYDRIVE_SCOPE: drive.file
+        run: |
+          if [[ -z "$DRIVE_FOLDER_ID" || -z "$RCLONE_CONFIG_ACTIVITYDRIVE_CLIENT_ID" ||
+                -z "$RCLONE_CONFIG_ACTIVITYDRIVE_CLIENT_SECRET" || -z "$RCLONE_CONFIG_ACTIVITYDRIVE_TOKEN" ]]; then
+            echo "::error::Preview Drive folder or OAuth settings missing"
+            exit 1
+          fi
+          sudo apt-get update -qq
+          sudo apt-get install -y rclone
+          archive=(dist/activity-balance-source-*.zip)
+          name=$(basename "${archive[0]}")
+          export RCLONE_CONFIG_ACTIVITYDRIVE_ROOT_FOLDER_ID="$DRIVE_FOLDER_ID"
+          rclone copyto --immutable "${archive[0]}" "activitydrive:$name"
+          expected=$(sha256sum "${archive[0]}" | cut -d ' ' -f 1)
+          actual=$(rclone cat "activitydrive:$name" | sha256sum | cut -d ' ' -f 1)
+          test "$expected" = "$actual"
