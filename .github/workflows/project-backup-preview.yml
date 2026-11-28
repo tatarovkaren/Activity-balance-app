@@ -18,7 +18,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Check version change
+      - name: Check version or archive configuration change
         id: version
         env:
           BEFORE: ${{ github.event.before }}
@@ -28,6 +28,8 @@ jobs:
           elif ! git cat-file -e "$BEFORE^{commit}"; then
             echo "::error::Cannot verify the previous version"
             exit 1
+          elif ! git diff --quiet "$BEFORE" HEAD -- .github/workflows/project-backup-preview.yml scripts/archive-project.py; then
+            echo "archive=true" >> "$GITHUB_OUTPUT"
           else
             node --input-type=module <<'JS'
           import { execFileSync } from 'node:child_process';
