@@ -20,3 +20,22 @@ export function planFatSecretImport(rows: readonly FatSecretDay[], days: DayMap)
     return { date: row.date, status: same ? 'unchanged' : occupied ? 'conflict' : 'new', incoming: {...row}, existing };
   }).sort((a,b) => a.date.localeCompare(b.date));
 }
+
+/** Pure staging only. Caller must persist with concurrency protection; never write a stale snapshot. */
+export function stageFatSecretImport(rows: readonly FatSecretDay[], latest: DayMap, selectedDates: readonly string[], now: number) {
+  if (!Number.isFinite(now) || now <= 0) throw new Error('Invalid timestamp');
+  const selected = new Set(selectedDates);
+  const preview = planFatSecretImport(rows, latest);
+  if (selectedDates.length !== selected.size || [...selected].some(date => !preview.some(p => p.date === date))) throw new Error('Invalid selection');
+  const days: DayMap = {...latest};
+  const applied: string[] = [], conflicts: string[] = [], unchanged: string[] = [];
+  for (const p of preview) {
+    if (!selected.has(p.date)) continue;
+    if (p.status === 'conflict') { conflicts.push(p.date); continue; }
+    if (p.status === 'unchanged') { unchanged.push(p.date); continue; }
+    const {kcal,protein,fat,carbs} = p.incoming;
+    days[p.date] = {...latest[p.date],kcal,protein,fat,carbs,kcalManual:true,updatedAt:now};
+    applied.push(p.date);
+  }
+  return {days,applied,conflicts,unchanged};
+}
