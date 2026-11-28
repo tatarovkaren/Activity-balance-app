@@ -7,7 +7,7 @@ const fields = ['kcal', 'protein', 'fat', 'carbs'] as const;
 /** Pure preview only: no network, mutation or persistence. Existing nutrition is never overwritten. */
 export function planFatSecretImport(rows: readonly FatSecretDay[], days: DayMap): FatSecretPreview[] {
   const seen = new Set<string>();
-  return rows.map(row => {
+  return rows.map<FatSecretPreview>(row => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date) || !Number.isFinite(Date.parse(row.date)) ||
         new Date(row.date).toISOString().slice(0, 10) !== row.date || seen.has(row.date) ||
         fields.some(k => typeof row[k] !== 'number' || !Number.isFinite(row[k]) || row[k] < 0)) {
