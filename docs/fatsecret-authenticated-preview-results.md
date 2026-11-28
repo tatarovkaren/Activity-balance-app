@@ -1,0 +1,2 @@
+# Authenticated Preview results — 2026-11-28
+Owner supplied browser screenshot showing 7/7 PASS: two real sessions, initial record, synthetic nutrition import, stale write rejected, weight and nutrition preserved, steps saved, B cannot see A's data. Isolated Preview only. This validates the exercised REST/RPC path, not the complete app adapter, concurrent sessions, cross-account writes, expired tokens, Telegram or OAuth integration. No production release or merge approved.

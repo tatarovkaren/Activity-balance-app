@@ -1978,12 +1978,17 @@ async function sendSummary(userId: string, chatId: number, p: Prefs, to: ISODate
 
 /** Записать поле дня. Остальные поля дня остаются как были (пустое не затирает заполненное). */
 async function saveField(userId: string, date: ISODate, field: BotField, value: number) {
-  const { data: row, error } = await admin.from('day_entries').select('data').eq('user_id', userId).eq('date', date).maybeSingle();
-  if (error) throw error;
-  const r = applyQuick(row?.data || undefined, field, value, Date.now());
-  const up = await admin.from('day_entries').upsert({ user_id: userId, date, data: r.entry, updated_at: new Date().toISOString() }, { onConflict: 'user_id,date' });
-  if (up.error) throw up.error;
-  return r.prev;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data: row, error } = await admin.from('day_entries').select('data').eq('user_id', userId).eq('date', date).maybeSingle();
+    if (error) throw error;
+    const r = applyQuick(row?.data || undefined, field, value, Date.now());
+    const result = row
+      ? await admin.from('day_entries').update({ data: r.entry, updated_at: new Date().toISOString() }).eq('user_id', userId).eq('date', date).eq('data', JSON.stringify(row.data)).select('date')
+      : await admin.from('day_entries').upsert({ user_id: userId, date, data: r.entry }, { onConflict: 'user_id,date', ignoreDuplicates: true }).select('date');
+    if (result.error) throw result.error;
+    if (result.data?.length === 1) return r.prev;
+  }
+  throw new Error('Concurrent diary update; retry required');
 }
 
 async function linkedUser(chatId: number): Promise<{ userId: string; p: Prefs } | null> {
