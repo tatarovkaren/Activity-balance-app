@@ -324,6 +324,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
     try {
       if (dates.length) await r.pushDays(changes);
+      if (repo.current !== r) return;
       if (pendingProfile.current) await r.pushProfile(dataRef.current.profile, dataRef.current.keep);
       if (repo.current !== r) return;
       dates.forEach((d) => { if (dayRevision.current.get(d) === revisions.get(d)) pendingDays.current.delete(d); });
@@ -356,6 +357,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setSync({ kind: 'busy', code: 'connecting' });
     try {
       const snap = await r.pull();
+      if (repo.current !== r) return;
       setData((cur) => {
         const pending = pendingDays.current.size > 0 || pendingProfile.current;
         let days: DayMap;
@@ -485,7 +487,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       touchDays([date]);
     },
     replaceDays: (days) => {
-      const changed = Object.keys(days).filter((d) => days[d] !== dataRef.current.days[d]);
+      const changed = [...new Set([...Object.keys(days), ...Object.keys(dataRef.current.days)])].filter((d) => days[d] !== dataRef.current.days[d]);
       setData((cur) => ({ ...cur, days }));
       touchDays(changed);
     },
@@ -668,6 +670,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     logout: async () => {
       if (session.mode === 'cloud') {
         await pushNow();
+        // Do not discard pending data or expose it to a different account.
+        if (pushing.current || pendingDays.current.size || pendingProfile.current) {
+          setSync({ kind: 'offline', code: 'offlineSaved' });
+          return;
+        }
         // этот браузер больше не получает уведомления вышедшего пользователя
         await disablePush().catch(() => {});
         await signOut();
