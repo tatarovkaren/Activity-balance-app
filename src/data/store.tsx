@@ -218,6 +218,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const repo = useRef<CloudRepo | null>(null);
   const pendingDays = useRef<Set<ISODate>>(new Set());
   const pendingProfile = useRef(false);
+  const dayRevision = useRef(new Map<ISODate, number>());
+  const profileRevision = useRef(0);
+  const pushing = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dataRef = useRef(data);
   dataRef.current = data;
@@ -307,10 +310,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // ---- облако ----
   const pushNow = useCallback(async () => {
     const r = repo.current;
-    if (!r) return;
+    if (!r || pushing.current) return;
     if (!pendingDays.current.size && !pendingProfile.current) return;
     setSync({ kind: 'busy', code: 'saving' });
+    pushing.current = true;
     const dates = [...pendingDays.current];
+    const revisions = new Map(dates.map(d => [d, dayRevision.current.get(d)]));
+    const profileVersion = profileRevision.current;
     const changes: Record<ISODate, DayEntry | null> = {};
     for (const d of dates) {
       const e = dataRef.current.days[d];
@@ -319,14 +325,21 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     try {
       if (dates.length) await r.pushDays(changes);
       if (pendingProfile.current) await r.pushProfile(dataRef.current.profile, dataRef.current.keep);
-      dates.forEach((d) => pendingDays.current.delete(d));
-      pendingProfile.current = false;
+      if (repo.current !== r) return;
+      dates.forEach((d) => { if (dayRevision.current.get(d) === revisions.get(d)) pendingDays.current.delete(d); });
+      if (profileRevision.current === profileVersion) pendingProfile.current = false;
       persistPending();
       setSync({ kind: 'ok', code: 'saved', at: hhmm() });
     } catch {
       setSync({ kind: 'offline', code: 'offlineSaved' });
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(pushNow, 30000);
+    } finally {
+      pushing.current = false;
+      if (repo.current === r && (pendingDays.current.size || pendingProfile.current)) {
+        if (timer.current) clearTimeout(timer.current);
+        timer.current = setTimeout(pushNow, 30000);
+      }
     }
   }, []);
 
@@ -428,10 +441,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // ---- действия ----
   const touchDays = (dates: ISODate[]) => {
-    dates.forEach((d) => pendingDays.current.add(d));
+    dates.forEach((d) => { pendingDays.current.add(d); dayRevision.current.set(d, (dayRevision.current.get(d) ?? 0) + 1); });
     schedulePush();
   };
   const touchProfile = () => {
+    profileRevision.current++;
     pendingProfile.current = true;
     schedulePush();
   };
