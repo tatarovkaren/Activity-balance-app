@@ -25,3 +25,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build:web
+      - name: Check project archive integrity
+        run: |
+          python3 scripts/archive-project.py
+          (cd dist && sha256sum -c SHA256SUMS.txt && unzip -tq activity-balance-source-*.zip)
